@@ -2,68 +2,50 @@
 import re
 import spacy
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 from sqlmodel import Session, select
 from app.models import Article, Trend
 
 nlp = spacy.load("en_core_web_sm")
 
 def clean_text(raw_html: str) -> str:
-    """
-    Strips HTML tags and removes weird encoded junk.
-    """
-    if not raw_html:
-        return ""
-    # 1. Remove HTML tags like <img...>, <div...>, etc.
+    if not raw_html: return ""
     clean_r = re.compile('<.*?>')
-    text = re.sub(clean_r, '', raw_html)
-    
-    # 2. Basic cleanup of weird whitespace
-    text = text.replace('\n', ' ').strip()
-    return text
+    return re.sub(clean_r, '', raw_html).replace('\n', ' ').strip()
 
 def analyze_articles(session: Session):
-    print("🧠 Starting Smart Analysis...")
-    
-    statement = select(Article).where(Article.is_processed == False)
-    articles = session.exec(statement).all()
-    
-    if not articles:
-        print("zzz No new articles.")
-        return 0
+    # 1. Get Unprocessed Articles
+    articles = session.exec(select(Article).where(Article.is_processed == False)).all()
+    if not articles: return 0
 
     keyword_counts = Counter()
     
     for article in articles:
-        # CLEAN THE TEXT before it hits the Brain
-        cleaned_title = clean_text(article.title)
-        cleaned_snippet = clean_text(article.content_snippet)
-        full_text = f"{cleaned_title} {cleaned_snippet}"
-        
+        full_text = f"{clean_text(article.title)} {clean_text(article.content_snippet)}" # type: ignore
         doc = nlp(full_text)
         
-        tokens = []
+        # A. Extract Single Nouns (Unigrams)
         for token in doc:
-            # THE JUNIOR GENIUS FILTER:
-            # 1. Must be a Noun or Proper Noun
-            # 2. No stop words or punctuation
-            # 3. MUST be alphabetic (removes height="360" and Base64 junk)
-            # 4. Length between 3 and 20 chars (skips "ai" or "supercalifragilistic...")
-            if (token.pos_ in ["NOUN", "PROPN"] and 
-                not token.is_stop and 
-                not token.is_punct and 
-                token.is_alpha and 
-                3 <= len(token.text) <= 20):
-                
-                tokens.append(token.lemma_.lower())
+            if (token.pos_ in ["NOUN", "PROPN"] and not token.is_stop and 
+                token.is_alpha and 3 <= len(token.text) <= 20):
+                keyword_counts.update([token.lemma_.lower()])
         
-        keyword_counts.update(tokens)
+        # B. Extract Phrases (Bi-grams/Noun Chunks)
+        # This catches things like "Social Media" or "Artificial Intelligence"
+        for chunk in doc.noun_chunks:
+            clean_chunk = chunk.text.lower().strip()
+            if len(clean_chunk.split()) > 1 and not any(t.is_stop for t in chunk):
+                keyword_counts.update([clean_chunk])
+
         article.is_processed = True
         session.add(article)
 
-    # Save Trends
+    # 2. Update Trends
     today = date.today()
-    for word, count in keyword_counts.most_common(20):
+    yesterday = today - timedelta(days=1)
+    
+    for word, count in keyword_counts.most_common(40):
+        # Get/Update Today's Record
         statement = select(Trend).where(Trend.keyword == word, Trend.trend_date == today)
         trend = session.exec(statement).first()
         
@@ -74,5 +56,38 @@ def analyze_articles(session: Session):
         session.add(trend)
     
     session.commit()
-    print("✅ Clean analysis complete.")
     return len(articles)
+
+def get_enriched_trends(session: Session):
+    """
+    Calculates Velocity and groups data for the Frontend.
+    """
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    
+    # Get all trends for today and yesterday
+    today_trends = session.exec(select(Trend).where(Trend.trend_date == today)).all()
+    yesterday_trends = session.exec(select(Trend).where(Trend.trend_date == yesterday)).all()
+    
+    y_map = {t.keyword: t.count for t in yesterday_trends}
+    
+    results = []
+    for t in today_trends:
+        prev_count = y_map.get(t.keyword, 0)
+        
+        # Velocity Logic
+        if prev_count == 0:
+            velocity = "NEW"
+        else:
+            change = ((t.count - prev_count) / prev_count) * 100
+            velocity = f"{'+' if change >= 0 else ''}{int(change)}%"
+            
+        results.append({
+            "keyword": t.keyword,
+            "count": t.count,
+            "velocity": velocity,
+            "is_new": prev_count == 0
+        })
+    
+    # Sort by count (highest first)
+    return sorted(results, key=lambda x: x['count'], reverse=True)
