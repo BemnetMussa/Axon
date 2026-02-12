@@ -1,0 +1,26 @@
+# Python virtual environment
+.venv/
+venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables
+.env
+
+# IDE-specific files (common examples)
+.vscode/
+.idea/
+
+# Logs and temporary files
+*.log
+*.tmp
+temp/
+tmp/
+
+# Docker-related (if any dynamically generated files outside of .dockerignore)
+# builder-*-*-*.tar
+# Dockerfile.*
+# *.bak

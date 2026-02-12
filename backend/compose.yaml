@@ -1,0 +1,30 @@
+services:
+  web:
+    build: .
+    container_name: axon_backend
+    command: gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://axon:axon123@db:5432/axon_db
+
+  db:
+    image: postgres:15
+    container_name: axon_db
+    restart: always
+    environment:
+      POSTGRES_USER: axon
+      POSTGRES_PASSWORD: axon123
+      POSTGRES_DB: axon_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+
