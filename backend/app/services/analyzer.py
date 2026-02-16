@@ -1,93 +1,64 @@
-# backend/app/services/analyzer.py
-import re
-import spacy
-from collections import Counter
-from datetime import date, timedelta
+import os
+from groq import Groq
 from sqlmodel import Session, select
-from app.models import Article, Trend
+from app.models import Article
+from dotenv import load_dotenv
 
-nlp = spacy.load("en_core_web_sm")
+load_dotenv()
 
-def clean_text(raw_html: str) -> str:
-    if not raw_html: return ""
-    clean_r = re.compile('<.*?>')
-    return re.sub(clean_r, '', raw_html).replace('\n', ' ').strip()
+# Initialize Groq Client
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# backend/app/services/analyzer.py
+
+def classify_article(title: str, url: str, source: str) -> str:
+    t, u, s = title.lower(), url.lower(), source.lower()
+
+    if "arxiv" in u or "arxiv" in s or "nature.com" in u or "research" in t or "theory" in t:
+        return "Breakthrough"
+
+    if "ask hn" in s or any(w in t for w in ["problem", "issue", "why doesn't", "rant", "sucks", "broken"]):
+        return "Problem"
+        
+    if any(w in t for w in ["ai", "llm", "gpt", "model", "openai", "claude", "weights"]):
+        return "AI"
+    
+    if "github" in u or "github" in s or "show hn" in t or "release" in t or "repo" in t:
+        return "Project"
+    
+    return "Project"# Default to Builder Log if uncaught from these elite sources
+
+def generate_insight(title: str, content: str) -> str:
+    if not client.api_key: return "AI Offline. No insight generated."
+    prompt = f"Act as a technical startup advisor. In exactly ONE short, punchy sentence, what is the strategic opportunity or technical primitive here? Title: {title}. Content: {content[:500]}"
+    try:
+        res = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile",
+            max_tokens=60
+        )
+        return res.choices[0].message.content.strip().replace('"', '') # type: ignore
+    except Exception as e:
+        return "Insight generation failed."
+
+def generate_deep_brief(title: str, content: str) -> str:
+    prompt = f"Analyze this for a Technical Founder. Break it down into 3 short bullet points: 1. The Technical Primitive. 2. Market Impact. 3. The Build-Opportunity. \nTitle: {title}\nContent: {content}"
+    try:
+        res = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile",
+            max_tokens=250
+        )
+        return res.choices[0].message.content.strip() # type: ignore
+    except:
+        return "Deep brief generation failed."
 
 def analyze_articles(session: Session):
-    # 1. Get Unprocessed Articles
     articles = session.exec(select(Article).where(Article.is_processed == False)).all()
-    if not articles: return 0
-
-    keyword_counts = Counter()
-    
     for article in articles:
-        full_text = f"{clean_text(article.title)} {clean_text(article.content_snippet)}" # type: ignore
-        doc = nlp(full_text)
-        
-        # A. Extract Single Nouns (Unigrams)
-        for token in doc:
-            if (token.pos_ in ["NOUN", "PROPN"] and not token.is_stop and 
-                token.is_alpha and 3 <= len(token.text) <= 20):
-                keyword_counts.update([token.lemma_.lower()])
-        
-        # B. Extract Phrases (Bi-grams/Noun Chunks)
-        # This catches things like "Social Media" or "Artificial Intelligence"
-        for chunk in doc.noun_chunks:
-            clean_chunk = chunk.text.lower().strip()
-            if len(clean_chunk.split()) > 1 and not any(t.is_stop for t in chunk):
-                keyword_counts.update([clean_chunk])
-
+        article.category = classify_article(article.title, article.url, article.source)
+        article.insight = generate_insight(article.title, article.content_snippet or "")
         article.is_processed = True
         session.add(article)
-
-    # 2. Update Trends
-    today = date.today()
-    yesterday = today - timedelta(days=1)
-    
-    for word, count in keyword_counts.most_common(40):
-        # Get/Update Today's Record
-        statement = select(Trend).where(Trend.keyword == word, Trend.trend_date == today)
-        trend = session.exec(statement).first()
-        
-        if trend:
-            trend.count += count
-        else:
-            trend = Trend(keyword=word, count=count, trend_date=today)
-        session.add(trend)
-    
     session.commit()
     return len(articles)
-
-def get_enriched_trends(session: Session):
-    """
-    Calculates Velocity and groups data for the Frontend.
-    """
-    today = date.today()
-    yesterday = today - timedelta(days=1)
-    
-    # Get all trends for today and yesterday
-    today_trends = session.exec(select(Trend).where(Trend.trend_date == today)).all()
-    yesterday_trends = session.exec(select(Trend).where(Trend.trend_date == yesterday)).all()
-    
-    y_map = {t.keyword: t.count for t in yesterday_trends}
-    
-    results = []
-    for t in today_trends:
-        prev_count = y_map.get(t.keyword, 0)
-        
-        # Velocity Logic
-        if prev_count == 0:
-            velocity = "NEW"
-        else:
-            change = ((t.count - prev_count) / prev_count) * 100
-            velocity = f"{'+' if change >= 0 else ''}{int(change)}%"
-            
-        results.append({
-            "keyword": t.keyword,
-            "count": t.count,
-            "velocity": velocity,
-            "is_new": prev_count == 0
-        })
-    
-    # Sort by count (highest first)
-    return sorted(results, key=lambda x: x['count'], reverse=True)

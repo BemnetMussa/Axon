@@ -2,3 +2,7 @@ fastapi
 gunicorn
 psycopg2-binary
 sqlalchemy
+sqlmodel 
+groq
+feedparser
+httpx

@@ -10,9 +10,10 @@ class Article(SQLModel, table=True):
     source: str
     published_date: datetime
     content_snippet: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    is_processed: bool = Field(default=False) 
-
+    insight: Optional[str] = None      # <-- The AI Gold
+    category: str = Field(default="General")
+    is_processed: bool = Field(default=False)
+    
 class Trend(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     keyword: str = Field(index=True)
