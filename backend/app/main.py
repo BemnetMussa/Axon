@@ -1,4 +1,3 @@
-# backend/app/main.py
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
@@ -52,3 +51,35 @@ def read_trends():
 @app.get("/")
 def health():
     return {"status": "Axon Hunter is Online"}
+
+# backend/app/main.py
+
+@app.post("/articles/{article_id}/view")
+def track_view(article_id: int, session: Session = Depends(get_session)):
+    """Increment view count when user selects/opens article"""
+    article = session.get(Article, article_id)
+    if not article:
+        return {"error": "Not found"}
+    
+    article.views += 1
+    article.last_viewed = datetime.utcnow()
+    
+    # Recalculate engagement score
+    article.engagement_score = calculate_engagement(article)
+    
+    session.add(article)
+    session.commit()
+    return {"status": "success", "views": article.views}
+
+def calculate_engagement(article: Article) -> float:
+    """
+    Calculate engagement score (0-100)
+    Formula: views weight 70%, likes weight 30%
+    """
+    # Normalize views (assume 1000+ views = max)
+    views_score = min((article.views / 10), 70)
+    
+    # Normalize likes (assume 100+ likes = max)
+    likes_score = min((article.likes / 3), 30)
+    
+    return round(views_score + likes_score, 2)

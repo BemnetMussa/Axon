@@ -69,40 +69,28 @@ async def hunt_github(client: httpx.AsyncClient):
         return []
 
 async def hunt_challenges(client: httpx.AsyncClient):
-    """Quadrant: CHALLENGES & FEEDBACK - Hunts for technical friction."""
-    signals = []
+    """Refined: Specifically hunts for technical friction and rants."""
+    url = "https://google.serper.dev/search"
+    # THE "FOUNDER" QUERY: Targeting engineer rants and bottleneck discussions
+    queries = [
+        "site:news.ycombinator.com 'the problem with' OR 'frustrating' AI engineering",
+        "site:reddit.com/r/programming 'unsolved' OR 'bottleneck' limitation",
+        "site:reddit.com/r/machinelearning 'failed to' OR 'difficult to' implement"
+    ]
     
-    # 1. Serper Search (Reddit/Forum Rants)
-    if SERPER_KEY:
+    signals = []
+    for q in queries:
         try:
-            search_url = "https://google.serper.dev/search"
-            payload = {
-                "q": "site:reddit.com OR site:news.ycombinator.com 'unsolved' OR 'bottleneck' OR 'major problem' software engineering",
-                "tbs": "qdr:w" # Last week
-            }
-            res = await client.post(search_url, json=payload, headers={'X-API-KEY': SERPER_KEY}, timeout=15.0)
+            payload = {"q": q, "tbs": "qdr:w"} # Last week only
+            res = await client.post(url, json=payload, headers={'X-API-KEY': SERPER_KEY}, timeout=10.0) # type: ignore
             for r in res.json().get('organic', []):
                 domain = r['link'].split('/')[2].replace('www.', '')
                 signals.append({
                     "title": r['title'], "url": r['link'], "snippet": r['snippet'],
                     "source": domain, "category": "Problem"
                 })
-        except Exception as e:
-            print(f"⚠️ Serper Hunter Error: {e}")
-
-    # 2. Ask HN (Hacker News community signals)
-    try:
-        hn_res = await client.get("https://hnrss.org/ask", timeout=10.0)
-        feed = feedparser.parse(hn_res.text)
-        for e in feed.entries[:5]:
-            signals.append({
-                "title": e.title, "url": e.link, "snippet": clean_text(e.summary), # type: ignore 
-                "source": "HackerNews", "category": "Problem"
-            })
-    except: pass
-    
+        except: continue
     return signals
-
 # --- MASTER INGESTION ---
 
 async def ingest_intelligence(session: Session):
@@ -176,3 +164,37 @@ async def ingest_intelligence(session: Session):
         session.commit()
         print(f"✅ Sync Complete. {len(final_to_save)} items stored in Intelligence Silos.")
         return len(final_to_save)
+
+# backend/app/services/fetcher.py
+
+async def fetch_source_engagement(client: httpx.AsyncClient, article: dict) -> dict:
+    """Fetch likes/upvotes from original source"""
+    
+    # Hacker News
+    if "news.ycombinator.com" in article['url']:
+        # Extract HN item ID from URL
+        match = re.search(r'id=(\d+)', article['url'])
+        if match:
+            hn_id = match.group(1)
+            try:
+                res = await client.get(f"https://hacker-news.firebaseio.com/v0/item/{hn_id}.json")
+                data = res.json()
+                article['likes'] = data.get('score', 0)  # HN upvotes
+            except:
+                pass
+    
+    # Reddit
+    elif "reddit.com" in article['url']:
+        # Reddit API would need OAuth, skip for now or use simple scrape
+        article['likes'] = 0  # Placeholder
+    
+    # GitHub stars (already have from API)
+    elif article['source'] == 'GitHub':
+        # Already captured in hunt_github
+        pass
+    
+    # ArXiv, MIT Tech, OpenAI - no direct engagement metrics
+    else:
+        article['likes'] = 0
+    
+    return article
