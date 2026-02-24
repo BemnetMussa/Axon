@@ -13,188 +13,191 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- CONFIGURATION ---
-SERPER_KEY = os.getenv("SERPER_API_KEY")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
-# Headers to prevent being blocked by ArXiv/News sites
+# SENIOR DECISION: Thresholds for "Viral" bypass
+HN_THRESHOLD = 15
+GITHUB_THRESHOLD = 200
+REDDIT_THRESHOLD = 30
+LOBSTERS_THRESHOLD = 10
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
+BLACK_LIST = {"medium.com", "dev.to", "facebook.com", "linkedin.com", "designgurus.io", "geeksforgeeks.org", "youtube.com"}
+
 # --- UTILITIES ---
 
-def clean_text(raw_html: str) -> str:
-    """Aggressively strips HTML and junk footers."""
-    if not raw_html: return ""
-    # Decode HTML entities
-    text = html.unescape(raw_html)
-    # Remove 'Comments' links
-    text = re.sub(r'<a\s+[^>]*>.*?Comments.*?</a>', '', text, flags=re.IGNORECASE)
-    # Strip all tags
-    text = re.sub(r'<.*?>', '', text)
-    return text.strip()
-
-async def get_deep_content(client: httpx.AsyncClient, url: str) -> str:
-    """Scrapes the actual webpage if the RSS summary is thin."""
+def is_gold(url: str, title: str, engagement: int = 0, source: str = "") -> bool:
     try:
-        response = await client.get(url, timeout=12.0, follow_redirects=True, headers=HEADERS)
-        if response.status_code != 200: return ""
-        doc = Document(response.text)
-        summary_html = doc.summary()
-        return clean_text(summary_html)[:800]
-    except:
-        return ""
+        if source.lower() == "hackernews" and engagement >= HN_THRESHOLD: return True
+        if source.lower() == "github" and engagement >= GITHUB_THRESHOLD: return True
+        if source.lower() == "reddit" and engagement >= REDDIT_THRESHOLD: return True
+        if source.lower() == "lobsters" and engagement >= LOBSTERS_THRESHOLD: return True
+        
+        domain = url.split('/')[2].replace('www.', '')
+        if any(bad in domain for bad in BLACK_LIST): return False
+        
+        fluff = {"career", "interview", "hired", "salary", "beginner", "roadmap", "job", "tutorial"}
+        if any(w in title.lower() for w in fluff): return False
+        return True
+    except: return False
 
-# --- THE HUNTERS ---
+# --- THE GOLD HUNTERS ---
 
-async def hunt_github(client: httpx.AsyncClient):
-    """Quadrant: PROJECTS - Finds top-tier GitHub repos from the last 30 days."""
-    last_month = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-    # Filter for high-signal repositories (>500 stars)
-    url = f"https://api.github.com/search/repositories?q=pushed:>{last_month}+stars:>500&sort=stars&order=desc"
+async def hunt_infrastructure(client: httpx.AsyncClient):
+    """INFRASTRUCTURE: Mining the hardware and scaling layer."""
+    infra_feeds = [
+        ("NVIDIA", "https://developer.nvidia.com/blog/feed/"),
+        ("Pinecone", "https://www.pinecone.io/blog/rss.xml"),
+        ("Modal", "https://modal.com/blog/rss.xml"),
+        ("Cerebras", "https://www.cerebras.net/blog/feed/")
+    ]
+    signals = []
+    for name, url in infra_feeds:
+        try:
+            res = await client.get(url, timeout=12.0)
+            feed = feedparser.parse(res.text)
+            for e in feed.entries[:5]:
+                signals.append({
+                    "title": f"[{name.upper()}] {e.title}",
+                    "url": e.link,
+                    "snippet": e.get('summary', '')[:400],
+                    "source": name,
+                    "category": "AI" # Will be re-classified or put in Infra
+                })
+        except: continue
+    return signals
+
+async def hunt_expert_blogs(client: httpx.AsyncClient):
+    """ALPHA: Personal signals from Elite Engineers."""
+    experts = [
+        ("Karpathy", "https://karpathy.github.io/feed.xml"),
+        ("SimonW", "https://simonwillison.net/atom/everything/"),
+        ("LilianWeng", "https://lilianweng.github.io/feed.xml"),
+        ("Fast.ai", "https://www.fast.ai/posts/index.xml"),
+        ("Altman", "https://blog.samaltman.com/rss")
+    ]
+    signals = []
+    for name, url in experts:
+        try:
+            res = await client.get(url, timeout=12.0)
+            feed = feedparser.parse(res.text)
+            for e in feed.entries[:3]:
+                signals.append({
+                    "title": e.title,
+                    "url": e.link,
+                    "snippet": e.get('summary', '')[:400],
+                    "source": name,
+                    "category": "Project"
+                })
+        except: continue
+    return signals
+
+async def hunt_lobsters(client: httpx.AsyncClient):
+    """DISCOURSE: High-signal technical community."""
+    try:
+        res = await client.get("https://lobste.rs/rss", timeout=10.0)
+        feed = feedparser.parse(res.text)
+        signals = []
+        for e in feed.entries[:15]:
+            # Simple point extraction from description if available, else default
+            signals.append({
+                "title": e.title,
+                "url": e.link,
+                "snippet": e.get('summary', '')[:300],
+                "source": "Lobsters",
+                "category": "Problem"
+            })
+        return signals
+    except: return []
+
+async def hunt_alpha_github(client: httpx.AsyncClient):
+    """ALPHA: Rising technical projects."""
+    last_30 = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    query = f"created:>{last_30} stars:>20 (engine OR compiler OR llm OR tool OR infra OR kernel OR inference)"
+    url = f"https://api.github.com/search/repositories?q={query}&sort=stars&order=desc"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
-    
     try:
         res = await client.get(url, headers=headers, timeout=15.0)
         items = res.json().get('items', [])
         return [{
-            "title": f"{i['name']}: {i['description'] or 'New project'}",
+            "title": f"{i['name']}: {i['description'] or 'Technical Repo'}",
             "url": i['html_url'],
-            "snippet": f"Language: {i['language']} | Stars: {i['stargazers_count']}",
+            "snippet": f"Stars: {i['stargazers_count']} | {i['language']}",
             "source": "GitHub",
-            "category": "Project"
-        } for i in items[:10]]
-    except Exception as e:
-        print(f"⚠️ GitHub Hunter Error: {e}")
-        return []
+            "category": "Project",
+            "likes": i['stargazers_count']
+        } for i in items if is_gold(i['html_url'], i['name'], i['stargazers_count'], "github")]
+    except: return []
 
-async def hunt_challenges(client: httpx.AsyncClient):
-    """Refined: Specifically hunts for technical friction and rants."""
-    url = "https://google.serper.dev/search"
-    # THE "FOUNDER" QUERY: Targeting engineer rants and bottleneck discussions
-    queries = [
-        "site:news.ycombinator.com 'the problem with' OR 'frustrating' AI engineering",
-        "site:reddit.com/r/programming 'unsolved' OR 'bottleneck' limitation",
-        "site:reddit.com/r/machinelearning 'failed to' OR 'difficult to' implement"
-    ]
-    
+async def hunt_discourse_hn(client: httpx.AsyncClient):
+    """DISCOURSE: Technical discussions on HN."""
+    url = f"https://hn.algolia.com/api/v1/search?tags=(ask_hn,show_hn)&numericFilters=num_comments>10&hitsPerPage=40"
+    try:
+        res = await client.get(url, timeout=10.0)
+        hits = res.json().get('hits', [])
+        return [{
+            "title": h['title'],
+            "url": f"https://news.ycombinator.com/item?id={h['objectID']}",
+            "snippet": h.get('story_text', '')[:300] or h['title'],
+            "source": "HackerNews",
+            "category": "Problem" if "ask hn" in h['title'].lower() else "Project",
+            "likes": h['points']
+        } for h in hits]
+    except: return []
+
+async def hunt_pulse_rss(client: httpx.AsyncClient):
+    """AI PULSE: Model Creators."""
+    feeds = [("OpenAI", "https://openai.com/news/rss.xml"), ("DeepMind", "https://deepmind.google/blog/rss.xml"), ("Anthropic", "https://www.anthropic.com/index.xml")]
     signals = []
-    for q in queries:
+    for name, url in feeds:
         try:
-            payload = {"q": q, "tbs": "qdr:w"} # Last week only
-            res = await client.post(url, json=payload, headers={'X-API-KEY': SERPER_KEY}, timeout=10.0) # type: ignore
-            for r in res.json().get('organic', []):
-                domain = r['link'].split('/')[2].replace('www.', '')
-                signals.append({
-                    "title": r['title'], "url": r['link'], "snippet": r['snippet'],
-                    "source": domain, "category": "Problem"
-                })
+            res = await client.get(url, timeout=10.0, follow_redirects=True)
+            feed = feedparser.parse(res.text)
+            for e in feed.entries[:8]:
+                signals.append({"title": e.title, "url": e.link, "snippet": e.get('summary', '')[:400], "source": name, "category": "AI"})
         except: continue
     return signals
-# --- MASTER INGESTION ---
+
+async def hunt_research_arxiv(client: httpx.AsyncClient):
+    """RESEARCH: High volume ArXiv."""
+    url = "https://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG&sortBy=submittedDate&max_results=40"
+    try:
+        res = await client.get(url, timeout=15.0)
+        feed = feedparser.parse(res.text)
+        return [{"title": e.title, "url": e.link, "snippet": e.summary[:500], "source": "ArXiv", "category": "Breakthrough"} for e in feed.entries]
+    except: return []
 
 async def ingest_intelligence(session: Session):
-    """Orchestrates the global 4-pillar data sync."""
-    print("🚀 AXON: Initiating Global Intelligence Gathering...")
-    
-    async with httpx.AsyncClient(headers=HEADERS) as client:
-        # 1. Parallel fetch from all elite sources
+    print("🚀 AXON: Deep Mining Infrastructure & Expert Signals...")
+    async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True) as client:
         tasks = [
-            hunt_github(client),    # Projects
-            hunt_challenges(client), # Challenges
-            client.get("https://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG&sortBy=submittedDate&max_results=10"), # Breakthroughs
-            client.get("https://www.technologyreview.com/topic/artificial-intelligence/feed/"), # AI News
-            client.get("https://openai.com/news/rss.xml") # AI News (OpenAI)
+            hunt_alpha_github(client), hunt_discourse_hn(client), hunt_pulse_rss(client), 
+            hunt_research_arxiv(client), hunt_infrastructure(client), hunt_expert_blogs(client),
+            hunt_lobsters(client)
         ]
-        
         results = await asyncio.gather(*tasks)
-        
-        raw_signals = results[0] + results[1] # Start with GitHub and Problems
+        raw_signals = results[0] + results[1] + results[2] + results[3] + results[4] + results[5] + results[6]
 
-        # 2. Parse Breakthroughs (ArXiv)
-        arxiv_feed = feedparser.parse(results[2].text)
-        for e in arxiv_feed.entries:
-            raw_signals.append({
-                "title": e.title, "url": e.link, "snippet": clean_text(e.summary), # type: ignore
-                "source": "ArXiv", "category": "Breakthrough"
-            })
-            
-        # 3. Parse AI News (MIT Tech Review & OpenAI)
-        for i in [3, 4]:
-            feed = feedparser.parse(results[i].text)
-            source_name = "MIT Tech" if "technologyreview" in results[i].url.__str__() else "OpenAI"
-            for e in feed.entries[:5]:
-                raw_signals.append({
-                    "title": e.title, "url": e.link, "snippet": clean_text(e.get('summary', '')), # type: ignore
-                    "source": source_name, "category": "AI"
-                })
-
-        # 4. Filter for NEW items and Deep Scrape
+        all_existing_urls = set(session.exec(select(Article.url)).all())
         final_to_save = []
+        seen_in_this_batch = set()
+        source_counts = {}
+
         for sig in raw_signals:
-            if not sig.get('url'): continue
-            existing = session.exec(select(Article).where(Article.url == sig['url'])).first()
-            if existing: continue
+            url = sig.get('url'); source = sig['source']; likes = sig.get('likes', 0)
+            if not url or url in all_existing_urls or url in seen_in_this_batch: continue
+            if not is_gold(url, sig['title'], likes, source): continue
+            source_counts[source] = source_counts.get(source, 0) + 1
+            if source_counts[source] > 10: continue 
             final_to_save.append(sig)
+            seen_in_this_batch.add(url)
 
-        if not final_to_save:
-            print("✅ No new signals found in this cycle.")
-            return 0
-
-        print(f"🔍 Deep scanning {len(final_to_save)} new signals for AI analysis...")
-        # Concurrent Deep Scrape
-        scrape_tasks = [get_deep_content(client, s['url']) for s in final_to_save]
-        deep_contents = await asyncio.gather(*scrape_tasks)
-
-        # 5. Commit to Database
-        for i, sig in enumerate(final_to_save):
-            # Use deep content if original snippet was thin
-            content = deep_contents[i] if len(sig['snippet']) < 100 else sig['snippet']
-            
-            article = Article(
-                title=sig['title'],
-                url=sig['url'],
-                source=sig['source'],
-                published_date=datetime.utcnow(),
-                content_snippet=content,
-                category=sig['category']
-            )
+        if not final_to_save: return 0
+        for sig in final_to_save:
+            article = Article(title=sig['title'], url=sig['url'], source=sig['source'], published_date=datetime.utcnow(), content_snippet=sig['snippet'], category=sig['category'], likes=likes)
             session.add(article)
-            
         session.commit()
-        print(f"✅ Sync Complete. {len(final_to_save)} items stored in Intelligence Silos.")
         return len(final_to_save)
-
-# backend/app/services/fetcher.py
-
-async def fetch_source_engagement(client: httpx.AsyncClient, article: dict) -> dict:
-    """Fetch likes/upvotes from original source"""
-    
-    # Hacker News
-    if "news.ycombinator.com" in article['url']:
-        # Extract HN item ID from URL
-        match = re.search(r'id=(\d+)', article['url'])
-        if match:
-            hn_id = match.group(1)
-            try:
-                res = await client.get(f"https://hacker-news.firebaseio.com/v0/item/{hn_id}.json")
-                data = res.json()
-                article['likes'] = data.get('score', 0)  # HN upvotes
-            except:
-                pass
-    
-    # Reddit
-    elif "reddit.com" in article['url']:
-        # Reddit API would need OAuth, skip for now or use simple scrape
-        article['likes'] = 0  # Placeholder
-    
-    # GitHub stars (already have from API)
-    elif article['source'] == 'GitHub':
-        # Already captured in hunt_github
-        pass
-    
-    # ArXiv, MIT Tech, OpenAI - no direct engagement metrics
-    else:
-        article['likes'] = 0
-    
-    return article

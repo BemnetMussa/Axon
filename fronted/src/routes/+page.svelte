@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, type Trend, type Article } from '../lib/api';
-	import { Zap, RefreshCw, ExternalLink, Globe } from 'lucide-svelte';
+	import { Zap, RefreshCw, ExternalLink, Globe, Eye, Heart, TrendingUp } from 'lucide-svelte';
 
 	// Svelte 5 uses "Runes" ($state) instead of let
 	let trends = $state<Trend[]>([]);
@@ -27,6 +27,20 @@
 		await api.triggerRefresh();
 		await loadDashboard();
 		refreshing = false;
+	}
+
+	async function handleArticleClick(article: Article) {
+		// Local update for UI responsiveness
+		article.views += 1;
+		
+		// Await the backend update
+		try {
+			await api.trackView(article.id);
+		} catch (e) {
+			console.error("Failed to track view", e);
+		}
+		
+		window.open(article.url, '_blank');
 	}
 
 	onMount(() => loadDashboard());
@@ -95,16 +109,37 @@
 					</div>
 				{:else}
 					{#each articles as article}
-						<a href={article.url} target="_blank" class="block p-5 rounded-2xl bg-zinc-900/30 border border-zinc-800 hover:border-zinc-700 transition-all group">
+						<button 
+							onclick={() => handleArticleClick(article)}
+							class="w-full text-left p-5 rounded-2xl bg-zinc-900/30 border border-zinc-800 hover:border-zinc-700 transition-all group block"
+						>
 							<div class="flex justify-between items-start mb-3">
-								<div class="flex items-center gap-2 text-[10px] font-bold uppercase text-emerald-500/80">
-									<Globe class="w-3 h-3" /> {article.source}
+								<div class="flex items-center gap-3">
+									<div class="flex items-center gap-2 text-[10px] font-bold uppercase text-emerald-500/80">
+										<Globe class="w-3 h-3" /> {article.source}
+									</div>
+									<span class="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-500 border border-zinc-700">{article.category}</span>
 								</div>
 								<ExternalLink class="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors" />
 							</div>
 							<h3 class="text-zinc-100 font-medium text-lg group-hover:text-emerald-400 transition-colors">{article.title}</h3>
 							<p class="text-sm text-zinc-500 mt-2 line-clamp-2">{article.content_snippet}</p>
-						</a>
+							
+							<div class="flex items-center gap-6 mt-4 pt-4 border-t border-zinc-800/50">
+								<div class="flex items-center gap-1.5 text-xs text-zinc-500">
+									<Eye class="w-3.5 h-3.5" />
+									<span>{article.views || 0}</span>
+								</div>
+								<div class="flex items-center gap-1.5 text-xs text-zinc-500">
+									<Heart class="w-3.5 h-3.5" />
+									<span>{article.likes || 0}</span>
+								</div>
+								<div class="flex items-center gap-1.5 text-xs font-medium text-emerald-500/80 ml-auto">
+									<TrendingUp class="w-3.5 h-3.5" />
+									<span>{article.engagement_score || 0}% Score</span>
+								</div>
+							</div>
+						</button>
 					{/each}
 				{/if}
 			</div>

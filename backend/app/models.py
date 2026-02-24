@@ -1,5 +1,5 @@
 # backend/app/models.py
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 from sqlmodel import Field, SQLModel
 

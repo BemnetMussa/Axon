@@ -15,6 +15,10 @@ export interface Article {
     source: string;
     published_date: string;
     content_snippet: string;
+    category: string;
+    views: number;
+    likes: number;
+    engagement_score: number;
 }
 
 export const api = {
@@ -27,8 +31,12 @@ export const api = {
         const res = await fetch(url);
         return res.json();
     },
-    triggerRefresh: async () => {
-        await fetch(`${BASE_URL}/ingest`, { method: 'POST' });
-        await fetch(`${BASE_URL}/analyze`, { method: 'POST' });
-    }
-};
+        triggerRefresh: async () => {
+            await fetch(`${BASE_URL}/ingest`, { method: 'POST' });
+            await fetch(`${BASE_URL}/analyze`, { method: 'POST' });
+        },
+        trackView: async (id: number) => {
+            await fetch(`${BASE_URL}/articles/${id}/view`, { method: 'POST' });
+        }
+    };
+    
