@@ -47,14 +47,18 @@ class AxonTerminal:
         table.add_column("ID", style=f"bold {color}", width=4)
         table.add_column("Source", width=10)
         table.add_column("Title", ratio=1, overflow="ellipsis")
-        table.add_column("Views", width=8, justify="right")
+        table.add_column("Views", width=8, justify="right") # THE 4th COLUMN
         
         for i, item in enumerate(items):
             display_id = start_id + i
             visible_list.append(item)
             is_selected = (len(visible_list) - 1) == self.selected_idx
+            
+            # Formatting view count per your solution
+            raw_views = item.get('views', 0)
+            view_text = f"{raw_views/1000:.1f}k" if raw_views >= 1000 else str(raw_views)
+            
             title_style = self.get_engagement_style(item.get('engagement_score', 0))
-            view_text = self.format_views(item.get('views', 0))
             source_style = self.get_source_color(item['source'])
             source_name = item['source'].upper()[:8].ljust(8)
             
@@ -64,9 +68,19 @@ class AxonTerminal:
             clean_title = clean_title.strip()[:85]
             
             if is_selected:
-                table.add_row(Text(f"{display_id:02}", style="black on white"), Text(source_name, style="black on white"), Text(clean_title, style="black on white"), Text(view_text, style="black on white"))
+                table.add_row(
+                    Text(f"{display_id:02}", style="black on white"), 
+                    Text(source_name, style="black on white"), 
+                    Text(clean_title, style="black on white"), 
+                    Text(view_text, style="black on white")
+                )
             else:
-                table.add_row(Text(f"{display_id:02}", style=f"bold {color}"), Text(source_name, style=source_style), Text(clean_title, style=title_style), Text(view_text, style="dim white"))
+                table.add_row(
+                    Text(f"{display_id:02}", style=f"bold {color}"), 
+                    Text(source_name, style=source_style), 
+                    Text(clean_title, style=title_style), 
+                    Text(view_text, style="dim cyan") # Using your suggested color
+                )
         return Panel(table, title=f"[bold {color}]{title}[/]", border_style=color, padding=(0, 1))
 
     def get_engagement_style(self, score: float) -> str:
