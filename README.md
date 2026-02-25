@@ -489,9 +489,9 @@ Inspired by the need to stay ahead in a rapidly evolving tech landscape.
 ## 📧 Contact
 
 Questions? Open an issue or reach out:
-- GitHub Issues: https://github.com/yourusername/axon-intelligence/issues
-- Twitter: @yourhandle
+- GitHub Issues: https://github.com/bemnetmussa/axon/issues
+- Twitter: @https://x.com/BemnetMussa
 
 ---
 
-**Built for builders who want to see the future forming. 🚀**
+**Built for curious builders who want to see the future forming. 🚀**
