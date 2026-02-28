@@ -8,6 +8,8 @@ Axon continuously scans global data sources, analyzes signals with AI, and prese
 
 ## 📸 Screenshot
 
+
+
 ```
 ┌─ SCIENCE ──────────────────────────────┬─ CODE ─────────────────────────────┐
 │ 01  OPENAI   Scaling social science   │ 11  GITHUB  Bolt-Inference Rust    │
@@ -24,6 +26,7 @@ Axon continuously scans global data sources, analyzes signals with AI, and prese
 └─────────────────────────────────────────────────────────────────────────────┘
 CMD: 1-40=Select | O=Open | X=Deep | S=Sync | Q=Quit
 AXON>
+
 ```
 
 ---
