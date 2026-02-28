@@ -47,16 +47,15 @@ class AxonTerminal:
         table.add_column("ID", style=f"bold {color}", width=4)
         table.add_column("Source", width=10)
         table.add_column("Title", ratio=1, overflow="ellipsis")
-        table.add_column("Views", width=8, justify="right") # THE 4th COLUMN
+        table.add_column("SIGNAL", width=8, justify="right")
         
         for i, item in enumerate(items):
             display_id = start_id + i
             visible_list.append(item)
             is_selected = (len(visible_list) - 1) == self.selected_idx
             
-            # Formatting view count per your solution
-            raw_views = item.get('views', 0)
-            view_text = f"{raw_views/1000:.1f}k" if raw_views >= 1000 else str(raw_views)
+            metric = item.get('likes', 0)
+            metric_display = f"{metric/1000:.1f}k" if metric >= 1000 else str(metric)
             
             title_style = self.get_engagement_style(item.get('engagement_score', 0))
             source_style = self.get_source_color(item['source'])
@@ -68,19 +67,9 @@ class AxonTerminal:
             clean_title = clean_title.strip()[:85]
             
             if is_selected:
-                table.add_row(
-                    Text(f"{display_id:02}", style="black on white"), 
-                    Text(source_name, style="black on white"), 
-                    Text(clean_title, style="black on white"), 
-                    Text(view_text, style="black on white")
-                )
+                table.add_row(Text(f"{display_id:02}", style="black on white"), Text(source_name, style="black on white"), Text(clean_title, style="black on white"), Text(metric_display, style="black on white"))
             else:
-                table.add_row(
-                    Text(f"{display_id:02}", style=f"bold {color}"), 
-                    Text(source_name, style=source_style), 
-                    Text(clean_title, style=title_style), 
-                    Text(view_text, style="dim cyan") # Using your suggested color
-                )
+                table.add_row(Text(f"{display_id:02}", style=f"bold {color}"), Text(source_name, style=source_style), Text(clean_title, style=title_style), Text(metric_display, style="dim cyan"))
         return Panel(table, title=f"[bold {color}]{title}[/]", border_style=color, padding=(0, 1))
 
     def get_engagement_style(self, score: float) -> str:
@@ -140,10 +129,27 @@ class AxonTerminal:
                             self.status_msg = "SYNC COMPLETE"
                         except Exception as e: self.status_msg = f"SYNC ERROR"
                 elif cmd == 'o' and self.brief_data:
-                    try: httpx.post(f"{BASE_URL}/articles/{self.brief_data['id']}/view")
+                    url = self.brief_data['url']
+                    self.status_msg = f"OPENING {self.brief_data['source']}..."
+                    try: httpx.post(f"{BASE_URL}/articles/{self.brief_data['id']}/view", timeout=2.0)
                     except: pass
-                    webbrowser.open(self.brief_data['url'])
-                    import time; time.sleep(0.1); self.fetch_data() 
+                    
+                    # PROACTIVE OPENER: Prioritize Windows host if in WSL
+                    is_wsl = False
+                    try:
+                        with open('/proc/version', 'r') as f:
+                            if 'microsoft' in f.read().lower(): is_wsl = True
+                    except: pass
+
+                    if is_wsl:
+                        # Direct jump to Windows host
+                        os.system(f'explorer.exe "{url}" > /dev/null 2>&1')
+                    else:
+                        # Standard Linux/Mac behavior
+                        if not webbrowser.open(url):
+                            os.system(f'xdg-open "{url}" > /dev/null 2>&1')
+                    
+                    import time; time.sleep(0.1); self.fetch_data()
                 elif cmd == 'x' and self.brief_data:
                     self.status_msg = "GENERATING REPORT..."
                     with console.status(f"[bold blue]AXON: Decrypting signals...", spinner="bouncingBar"):
