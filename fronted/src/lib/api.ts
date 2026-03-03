@@ -39,6 +39,14 @@ export const api = {
     trackView: async (id: number) => {
         await fetch(`${BASE_URL}/articles/${id}/view`, { method: 'POST' });
     },
+    chatWithArticle: async (id: number, question: string): Promise<{ answer: string }> => {
+        const res = await fetch(`${BASE_URL}/articles/${id}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question })
+        });
+        return res.json();
+    },
     getBrief: async (id: number): Promise<{ title: string, brief: string }> => {
         const res = await fetch(`${BASE_URL}/brief/${id}`);
         return res.json();

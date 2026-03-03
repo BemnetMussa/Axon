@@ -1,30 +1,41 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import { fade, fly, slide } from 'svelte/transition';
 	import { api, type Article, type Trend } from '../lib/api';
-	import { RefreshCw, ExternalLink, Bot, Zap, Search, ChevronRight, X, SlidersHorizontal } from 'lucide-svelte';
-	import DeepBriefModal from '$lib/components/DeepBriefModal.svelte';
+	import { 
+		Zap, Search, X, SlidersHorizontal, ArrowLeft, 
+		Send, MessageSquare, ExternalLink, RefreshCw,
+		ChevronRight, Sparkles 
+	} from 'lucide-svelte';
 
 	// ── State ────────────────────────────────────────────────
 	let allArticles = $state<Article[]>([]);
 	let trends = $state<Trend[]>([]);
 	let loading = $state(true);
-	let syncing = $state(false);
+	let syncIndicator = $state(false);
 	let searchQuery = $state('');
 	let activeSource = $state<string | null>(null);
 	let activeCategory = $state<string | null>(null);
-	let lastSynced = $state<string | null>(null);
 
-	// Brief
-	let briefOpen = $state(false);
-	let briefLoading = $state(false);
-	let briefTitle = $state('');
-	let briefData = $state<string | null>(null);
+	// Navigation / View State
+	let selectedArticle = $state<Article | null>(null);
+	
+	// Chat State
+	let chatInput = $state('');
+	let chatMessages = $state<{role: 'user' | 'ai', content: string}[]>([]);
+	let chatLoading = $state(false);
+	let chatContainer: HTMLElement;
+
+	// Suggested Prompts
+	const SUGGESTIONS = [
+		"Summarize key technical primitives",
+		"What is the strategic impact for founders?",
+		"Identify potential risks or concerns",
+		"What should a developer build with this?"
+	];
 
 	// ── Derived ──────────────────────────────────────────────
 	let sources = $derived([...new Set(allArticles.map(a => a.source))].sort());
-	// Category names matching backend vision
-	const categories = ['AI', 'Signal', 'Momentum', 'Concerns'];
-
 	let filtered = $derived.by(() => {
 		let list = allArticles;
 		if (activeSource) list = list.filter(a => a.source === activeSource);
@@ -40,10 +51,6 @@
 		return list;
 	});
 
-	const activeFilters = $derived(
-		(activeSource ? 1 : 0) + (activeCategory ? 1 : 0) + (searchQuery ? 1 : 0)
-	);
-
 	// ── Helpers ──────────────────────────────────────────────
 	function stripHtml(s: string): string {
 		return (s ?? '').replace(/<[^>]*>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -58,360 +65,323 @@
 		return `${Math.floor(h / 24)}d`;
 	}
 
-	const CAT_STYLE: Record<string, string> = {
-		AI: 'text-violet-400 bg-violet-400/10 border-violet-400/25',
-		Signal: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/25',
-		Momentum: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25',
-		Concerns: 'text-amber-400 bg-amber-400/10 border-amber-400/25',
-		// Legacy support for old data
-		Breakthrough: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/25',
-		Project: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25',
-		Problem: 'text-amber-400 bg-amber-400/10 border-amber-400/25',
+	// Brand Colors (Minimal left accents)
+	const BRAND_COLORS: Record<string, string> = {
+		HackerNews: '#FF6600',
+		OpenAI: '#FFFFFF',
+		NVIDIA: '#76B900',
+		GitHub: '#EDEDED',
+		Reddit: '#FF4500',
+		ArXiv: '#B31B1B',
+		DeepMind: '#2D3436', 
+		Anthropic: '#D97757'
 	};
-	const CAT_BAR: Record<string, string> = {
-		AI: 'bg-violet-500',
-		Signal: 'bg-cyan-500',
-		Momentum: 'bg-emerald-500',
-		Concerns: 'bg-amber-500',
-		// Legacy
-		Breakthrough: 'bg-cyan-500',
-		Project: 'bg-emerald-500',
-		Problem: 'bg-amber-500',
-	};
-	function catStyle(c: string) { return CAT_STYLE[c] ?? 'text-zinc-400 bg-zinc-400/10 border-zinc-400/25'; }
-	function catBar(c: string) { return CAT_BAR[c] ?? 'bg-zinc-500'; }
+	function getBrandColor(s: string) { return BRAND_COLORS[s] || '#3f3f46'; }
 
-	const SOURCE_INITIALS: Record<string, string> = {
-		HackerNews: 'HN', ArXiv: 'AX', GitHub: 'GH', Reddit: 'RD',
-		OpenAI: 'OA', DeepMind: 'DM', Karpathy: 'KP', NVIDIA: 'NV',
-		SimonW: 'SW', Lobsters: 'LB',
-	};
-	function sourceInitial(s: string) {
-		return SOURCE_INITIALS[s] ?? s.slice(0, 2).toUpperCase();
-	}
-
-	function clearFilters() {
-		activeSource = null;
-		activeCategory = null;
-		searchQuery = '';
-	}
-
-	// ── API ──────────────────────────────────────────────────
-	const CACHE_KEY = 'axon_articles_cache';
-	const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
-
-	function saveToCache(articles: Article[], trendData: Trend[]) {
-		try {
-			localStorage.setItem(CACHE_KEY, JSON.stringify({
-				articles, trends: trendData,
-				timestamp: Date.now()
-			}));
-		} catch {}
-	}
-
-	function loadFromCache(): { articles: Article[], trends: Trend[] } | null {
-		try {
-			const raw = localStorage.getItem(CACHE_KEY);
-			if (!raw) return null;
-			const cached = JSON.parse(raw);
-			if (Date.now() - cached.timestamp > CACHE_TTL) return null;
-			return cached;
-		} catch { return null; }
-	}
+	// ── Logic ───────────────────────────────────────────────
+	const CACHE_KEY = 'axon_premium_cache';
 
 	async function load() {
-		// Show cached data instantly
-		const cached = loadFromCache();
-		if (cached && cached.articles.length > 0) {
-			allArticles = cached.articles;
-			trends = cached.trends;
+		const raw = localStorage.getItem(CACHE_KEY);
+		if (raw) {
+			const c = JSON.parse(raw);
+			allArticles = c.articles;
+			trends = c.trends;
 			loading = false;
-			lastSynced = 'from cache';
-			// Refresh in background
-			fetchFresh();
-			return;
 		}
-		loading = true;
-		await fetchFresh();
+		
+		// Always trigger smart sync on load
+		smartSync();
 	}
 
-	async function fetchFresh() {
+	async function smartSync() {
+		syncIndicator = true;
 		try {
+			await api.triggerRefresh();
 			const [a, t] = await Promise.all([api.getArticles(), api.getTrends()]);
 			allArticles = a;
 			trends = t;
-			saveToCache(a, t);
-			const now = new Date();
-			lastSynced = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
-		} catch (e) { console.error(e); }
-		finally { loading = false; }
-	}
-
-	async function sync() {
-		syncing = true;
-		try {
-			await api.triggerRefresh();
-			// Clear cache and reload fresh
-			try { localStorage.removeItem(CACHE_KEY); } catch {}
-			await fetchFresh();
+			localStorage.setItem(CACHE_KEY, JSON.stringify({ articles: a, trends: t }));
+		} catch (e) {
+			console.error("Sync failed", e);
+		} finally {
+			syncIndicator = false;
+			setTimeout(() => { /* clear indicator after a while */ }, 3000);
 		}
-		finally { syncing = false; }
 	}
 
-	async function openBrief(article: Article, e: MouseEvent) {
-		e.stopPropagation();
-		briefOpen = true;
-		briefLoading = true;
-		briefTitle = article.title;
-		briefData = null;
-		api.trackView(article.id).catch(() => {});
+	function openArticle(a: Article) {
+		selectedArticle = a;
+		chatMessages = [];
+		chatInput = '';
+		api.trackView(a.id);
+	}
+
+	async function sendChat(msg?: string) {
+		const text = msg || chatInput;
+		if (!text.trim() || !selectedArticle || chatLoading) return;
+
+		const userMsg = text.trim();
+		chatMessages = [...chatMessages, { role: 'user', content: userMsg }];
+		chatInput = '';
+		chatLoading = true;
+
+		// Scroll to bottom
+		await tick();
+		chatContainer?.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+
 		try {
-			const r = await api.getBrief(article.id);
-			briefData = r.brief;
-		} catch { briefData = 'Failed to generate briefing.'; }
-		finally { briefLoading = false; }
+			const res = await api.chatWithArticle(selectedArticle.id, userMsg);
+			chatMessages = [...chatMessages, { role: 'ai', content: res.answer }];
+		} catch {
+			chatMessages = [...chatMessages, { role: 'ai', content: 'Intelligence layer unavailable.' }];
+		} finally {
+			chatLoading = false;
+			await tick();
+			chatContainer?.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+		}
 	}
 
 	onMount(load);
 </script>
 
-<div class="min-h-screen bg-[#0d0d0d] text-[#e2e2e2]" style="font-family: 'Inter', -apple-system, sans-serif;">
+<div class="min-h-screen bg-[#0a0a0a] text-[#f4f4f5] selection:bg-white selection:text-black" style="font-family: 'Inter', sans-serif;">
 
-	<!-- ══ TOPBAR ════════════════════════════════════════════ -->
-	<header class="sticky top-0 z-50 bg-[#0d0d0d]/95 backdrop-blur-sm border-b border-white/[0.06]">
-		<div class="max-w-[1400px] mx-auto px-6 h-14 flex items-center gap-6">
-
-			<!-- Brand -->
-			<div class="flex items-center gap-2.5 shrink-0">
-				<div class="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0">
-					<Zap class="w-3.5 h-3.5 text-black fill-black" />
-				</div>
-				<span class="text-white font-bold text-[15px] tracking-tight">AXON</span>
-			</div>
-
-			<div class="w-px h-5 bg-white/10 hidden sm:block"></div>
-
-			<!-- Search -->
-			<div class="flex-1 relative hidden sm:block">
-				<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600 pointer-events-none" />
-				<input
-					type="text"
-					bind:value={searchQuery}
-					placeholder="Filter signals…"
-					class="w-full max-w-md bg-white/[0.04] border border-white/[0.07] text-[13px] text-white placeholder-zinc-600 rounded-lg pl-9 pr-3 py-2 outline-none focus:border-white/20 focus:bg-white/[0.06] transition-all"
-					style="font-family: inherit;"
-				/>
-			</div>
-
-			<!-- Right controls -->
-			<div class="flex items-center gap-3 ml-auto shrink-0">
-				{#if activeFilters > 0}
-					<button onclick={clearFilters} class="flex items-center gap-1.5 text-[12px] text-zinc-500 hover:text-white transition-colors">
-						<X class="w-3.5 h-3.5" /> Clear filters
-					</button>
-				{/if}
-				<span class="hidden sm:flex items-center gap-1.5 text-[12px] text-zinc-600">
-					<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-					{filtered.length} of {allArticles.length}
-				</span>
-				<button
-					onclick={sync}
-					disabled={syncing}
-					class="flex items-center gap-1.5 px-3.5 py-2 bg-white text-black text-[12px] font-semibold rounded-lg hover:bg-zinc-100 disabled:opacity-40 transition-colors"
-				>
-					<RefreshCw class="w-3.5 h-3.5 {syncing ? 'animate-spin' : ''}" />
-					{syncing ? 'Syncing…' : 'Sync'}
-				</button>
-			</div>
-		</div>
-	</header>
-
-	<!-- ══ BODY: SIDEBAR + FEED ══════════════════════════════ -->
-	<div class="max-w-[1400px] mx-auto px-6 py-6 flex gap-7 items-start">
-
-		<!-- ── LEFT SIDEBAR ──────────────────────────────────── -->
-		<aside class="shrink-0 w-56 sticky top-[72px] hidden lg:flex flex-col gap-7">
-
-			<!-- Filter by source -->
-			<div>
-				<p class="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.15em] mb-3 px-1">Source</p>
-				<div class="flex flex-col gap-0.5">
-					{#each sources as src}
-						<button
-							onclick={() => activeSource = activeSource === src ? null : src}
-							class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-all group
-								{activeSource === src ? 'bg-white/8 text-white' : 'text-zinc-500 hover:bg-white/4 hover:text-zinc-200'}"
-						>
-							<div class="w-5 h-5 rounded-[4px] bg-white/6 border border-white/8 flex items-center justify-center shrink-0 text-[8px] font-bold text-zinc-400 group-hover:border-white/15 {activeSource === src ? 'border-white/20 bg-white/10 text-white' : ''}">
-								{sourceInitial(src)}
-							</div>
-							<span class="text-[12px] font-medium truncate">{src}</span>
-							<span class="ml-auto text-[10px] text-zinc-700">{allArticles.filter(a => a.source === src).length}</span>
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			<!-- Filter by category -->
-			<div>
-				<p class="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.15em] mb-3 px-1">Category</p>
-				<div class="flex flex-col gap-0.5">
-					{#each categories as cat}
-						<button
-							onclick={() => activeCategory = activeCategory === cat ? null : cat}
-							class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-all
-								{activeCategory === cat ? 'bg-white/8' : 'hover:bg-white/4'}"
-						>
-							<div class="w-1.5 h-1.5 rounded-full {catBar(cat)} shrink-0"></div>
-							<span class="text-[12px] font-medium {activeCategory === cat ? 'text-white' : 'text-zinc-500 hover:text-zinc-200'}">
-								{cat}
-							</span>
-							<span class="ml-auto text-[10px] text-zinc-700">{allArticles.filter(a => a.category === cat).length}</span>
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			<!-- Trending -->
-			{#if trends.length > 0}
+	{#if !selectedArticle}
+		<!-- ══ FEED VIEW ════════════════════════════════════════ -->
+		<div in:fade={{duration: 200}} out:fade={{duration: 200}} class="max-w-3xl mx-auto px-6 py-20 pb-40">
+			
+			<!-- Header -->
+			<header class="mb-16 flex items-center justify-between">
 				<div>
-					<p class="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.15em] mb-3 px-1">Trending</p>
-					<div class="flex flex-col gap-0.5">
-						{#each trends.slice(0, 8) as trend}
-							<button
-								onclick={() => searchQuery = searchQuery === trend.keyword ? '' : trend.keyword}
-								class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left group hover:bg-white/4 transition-colors {searchQuery === trend.keyword ? 'bg-white/8' : ''}"
-							>
-								<span class="text-[12px] text-zinc-500 group-hover:text-zinc-200 truncate {searchQuery === trend.keyword ? 'text-white' : ''}">{trend.keyword}</span>
-								<span class="text-[10px] text-zinc-700 ml-2">{trend.count}</span>
-							</button>
-						{/each}
+					<div class="flex items-center gap-2 mb-2">
+						<div class="w-5 h-5 rounded bg-white flex items-center justify-center">
+							<Zap class="w-3 h-3 text-black fill-black" />
+						</div>
+						<h1 class="text-[13px] font-bold tracking-widest text-white uppercase italic">Axon Intelligence</h1>
 					</div>
+					<p class="text-[13px] text-zinc-500 font-medium">Tracking the frontier of emerging technology.</p>
 				</div>
-			{/if}
-		</aside>
+				
+				{#if syncIndicator}
+					<div in:fade class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+						<RefreshCw class="w-3 h-3 text-emerald-500 animate-spin" />
+						<span class="text-[11px] text-zinc-400 font-medium">Syncing signals…</span>
+					</div>
+				{:else}
+					<div class="text-[11px] text-zinc-600 font-medium uppercase tracking-tighter">Updated just now</div>
+				{/if}
+			</header>
 
-		<!-- ── MAIN FEED ─────────────────────────────────────── -->
-		<main class="flex-1 min-w-0">
+			<!-- Filter Bar (Minimalist) -->
+			<div class="flex items-center gap-6 mb-12 overflow-x-auto no-scrollbar pb-2 border-b border-white/[0.03]">
+				<button 
+					onclick={() => { activeSource = null; activeCategory = null; }}
+					class="text-[13px] font-semibold transition-colors {(!activeSource && !activeCategory) ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}"
+				>All Signals</button>
+				
+				{#each sources.slice(0, 5) as src}
+					<button 
+						onclick={() => activeSource = activeSource === src ? null : src}
+						class="text-[13px] font-semibold transition-colors whitespace-nowrap {activeSource === src ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}"
+					>{src}</button>
+				{/each}
 
-			<!-- Active filter chips (mobile + desktop) -->
-			{#if activeFilters > 0}
-				<div class="flex items-center gap-2 mb-5 flex-wrap">
-					<SlidersHorizontal class="w-3.5 h-3.5 text-zinc-600" />
-					{#if activeSource}
-						<button onclick={() => activeSource = null} class="flex items-center gap-1.5 px-2.5 py-1 bg-white/8 border border-white/12 rounded-full text-[11px] text-white hover:bg-white/12 transition-colors">
-							{activeSource} <X class="w-3 h-3 text-zinc-400" />
-						</button>
-					{/if}
-					{#if activeCategory}
-						<button onclick={() => activeCategory = null} class="flex items-center gap-1.5 px-2.5 py-1 bg-white/8 border border-white/12 rounded-full text-[11px] text-white hover:bg-white/12 transition-colors">
-							{activeCategory} <X class="w-3 h-3 text-zinc-400" />
-						</button>
-					{/if}
-					{#if searchQuery}
-						<button onclick={() => searchQuery = ''} class="flex items-center gap-1.5 px-2.5 py-1 bg-white/8 border border-white/12 rounded-full text-[11px] text-white hover:bg-white/12 transition-colors">
-							"{searchQuery}" <X class="w-3 h-3 text-zinc-400" />
-						</button>
-					{/if}
+				<div class="flex-1 flex justify-end items-center relative min-w-[200px]">
+					<Search class="absolute left-3 w-3.5 h-3.5 text-zinc-700" />
+					<input 
+						type="text" 
+						bind:value={searchQuery}
+						placeholder="Search frontier…"
+						class="w-full bg-transparent border-0 text-[13px] pl-9 outline-none text-white placeholder-zinc-800"
+					/>
 				</div>
-			{/if}
+			</div>
 
-			{#if loading}
-				<div class="py-24 flex flex-col items-center gap-4">
-					<RefreshCw class="w-5 h-5 text-zinc-700 animate-spin" />
-					<p class="text-zinc-600 text-[13px]">Fetching intelligence…</p>
-				</div>
-			{:else if filtered.length === 0}
-				<div class="py-24 flex flex-col items-center gap-2 text-center">
-					<p class="text-zinc-400 text-[14px] font-medium">No signals match your filters</p>
-					<button onclick={clearFilters} class="mt-3 text-[12px] text-zinc-600 hover:text-white transition-colors underline underline-offset-2">Clear all filters</button>
-				</div>
-			{:else}
-				<!-- Feed list -->
-				<div class="border border-white/[0.06] rounded-xl overflow-hidden">
-					{#each filtered as article, i}
-						<div class="group relative flex gap-4 px-5 py-4 border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
+			<!-- Feed List -->
+			<div class="space-y-12">
+				{#each filtered as article (article.id)}
+					<button 
+						onclick={() => openArticle(article)}
+						in:fly={{ y: 20, duration: 400, delay: 50 }}
+						class="group relative w-full text-left flex flex-col gap-3 transition-all duration-300 hover:-translate-y-1"
+					>
+						<!-- Left Accent -->
+						<div 
+							class="absolute -left-6 top-1 bottom-1 w-[2px] opacity-0 group-hover:opacity-100 transition-opacity rounded-full shadow-[0_0_8px_rgba(255,255,255,0.2)]"
+							style="background-color: {getBrandColor(article.source)}"
+						></div>
 
-							<!-- Source avatar -->
-							<div class="shrink-0 pt-0.5">
-								<div class="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.07] flex items-center justify-center text-[9px] font-bold text-zinc-500 group-hover:border-white/[0.12] transition-colors">
-									{sourceInitial(article.source)}
-								</div>
-							</div>
+						<h3 class="text-[17px] font-semibold text-white leading-tight pr-10 group-hover:text-zinc-200 transition-colors">
+							{article.title}
+						</h3>
+						
+						<p class="text-[13px] text-zinc-500 leading-relaxed line-clamp-2 max-w-2xl font-medium">
+							{stripHtml(article.insight || article.content_snippet || '')}
+						</p>
 
-							<!-- Content -->
-							<div class="flex-1 min-w-0 flex flex-col gap-1.5">
-
-								<!-- Top meta -->
-								<div class="flex items-center gap-2 flex-wrap">
-									<button
-										onclick={() => { if (activeSource === article.source) activeSource = null; else activeSource = article.source; }}
-										class="text-[11px] font-semibold text-zinc-500 hover:text-zinc-200 transition-colors uppercase tracking-wide"
-									>{article.source}</button>
-									<span class="text-zinc-800">·</span>
-									<button
-										onclick={() => { if (activeCategory === article.category) activeCategory = null; else activeCategory = article.category; }}
-										class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase border transition-colors cursor-pointer {catStyle(article.category)}"
-									>{article.category}</button>
-									{#if article.published_date}
-										<span class="text-zinc-700 text-[11px] ml-0.5">{relativeTime(article.published_date)}</span>
-									{/if}
-									{#if article.insight}
-										<div class="flex items-center gap-1 ml-0.5 text-violet-400/70 text-[10px] font-medium">
-											<div class="w-1 h-1 rounded-full bg-violet-500"></div>
-											AI Brief
-										</div>
-									{/if}
-								</div>
-
-								<!-- Title -->
-								<button
-									onclick={() => { api.trackView(article.id); window.open(article.url, '_blank'); }}
-									class="text-left outline-none group/title"
-								>
-									<h3 class="text-white text-[14px] font-semibold leading-snug group-hover/title:text-zinc-300 transition-colors tracking-tight">
-										{article.title}
-									</h3>
-								</button>
-
-								<!-- Snippet / Insight -->
-								{#if article.insight || article.content_snippet}
-									<p class="text-zinc-500 text-[12px] leading-relaxed line-clamp-2 max-w-3xl">
-										{stripHtml(article.insight || article.content_snippet || '')}
-									</p>
-								{/if}
-
-								<!-- Actions (visible on hover) -->
-								<div class="flex items-center gap-0.5 pt-0.5 opacity-0 group-hover:opacity-100 transition-opacity h-6">
-									<button
-										onclick={() => { api.trackView(article.id); window.open(article.url, '_blank'); }}
-										class="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-zinc-600 hover:text-zinc-200 hover:bg-white/6 transition-all"
-									>
-										<ExternalLink class="w-3 h-3" /> Source
-									</button>
-									<button
-										onclick={(e) => openBrief(article, e)}
-										class="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-violet-400/70 hover:text-violet-300 hover:bg-violet-400/8 transition-all"
-									>
-										<Bot class="w-3 h-3" />
-										{article.insight ? 'Full Brief' : 'AI Brief'}
-										<ChevronRight class="w-3 h-3" />
-									</button>
-								</div>
+						<div class="flex items-center gap-3 text-[11px] font-bold uppercase tracking-wider text-zinc-700 mt-1">
+							<span class="text-zinc-500" style="color: {getBrandColor(article.source)}">{article.source}</span>
+							<span>·</span>
+							<span>{article.category}</span>
+							<span>·</span>
+							<span>{relativeTime(article.published_date)}</span>
+							<div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-zinc-600">
+								<Zap class="w-3 h-3 fill-current" />
+								{article.views + Math.floor(Math.random()*10)} views
 							</div>
 						</div>
-					{/each}
+					</button>
+				{/each}
+
+				{#if loading}
+					<div class="py-20 flex justify-center">
+						<RefreshCw class="w-6 h-6 text-zinc-800 animate-spin" />
+					</div>
+				{/if}
+			</div>
+
+		</div>
+	{:else}
+		<!-- ══ READER VIEW ═════════════════════════════════════ -->
+		<div in:fly={{ x: 100, duration: 400 }} out:fade={{ duration: 200 }} class="fixed inset-0 bg-[#0a0a0a] z-[100] flex flex-col">
+			
+			<!-- Sticky Header -->
+			<header class="h-16 border-b border-white/[0.05] flex items-center justify-between px-6 bg-[#0a0a0a]/80 backdrop-blur-md shrink-0">
+				<button 
+					onclick={() => selectedArticle = null}
+					class="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors"
+				>
+					<ArrowLeft class="w-4 h-4" />
+					<span class="text-[11px] font-bold uppercase tracking-widest">Back to Feed</span>
+				</button>
+
+				<div class="flex items-center gap-4">
+					<div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.02]">
+						<div class="w-1.5 h-1.5 rounded-full" style="background-color: {getBrandColor(selectedArticle.source)}"></div>
+						<span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{selectedArticle.source}</span>
+					</div>
+					<button 
+						onclick={() => window.open(selectedArticle?.url, '_blank')}
+						class="w-9 h-9 flex items-center justify-center rounded-full border border-white/[0.1] hover:bg-white hover:text-black transition-all"
+					>
+						<ExternalLink class="w-4 h-4" />
+					</button>
 				</div>
-			{/if}
-		</main>
-	</div>
+			</header>
+
+			<!-- Scrollable Content -->
+			<div class="flex-1 overflow-y-auto no-scrollbar">
+				<div class="max-w-2xl mx-auto px-6 py-20 pb-40">
+					
+					<div class="flex items-center gap-2 mb-6 text-[10px] font-black uppercase tracking-[2px] text-zinc-600">
+						<span>{selectedArticle.category}</span>
+						<span>·</span>
+						<span>{new Date(selectedArticle.published_date).toLocaleDateString()}</span>
+					</div>
+
+					<h2 class="text-3xl font-bold text-white leading-[1.15] mb-10 tracking-tight">
+						{selectedArticle.title}
+					</h2>
+
+					<div class="space-y-6 text-[15px] leading-relaxed text-zinc-400 font-medium">
+						<div class="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.05] mb-12">
+							<div class="flex items-center gap-2 mb-4 text-white">
+								<Sparkles class="w-4 h-4 text-violet-400" />
+								<span class="text-[11px] font-bold uppercase tracking-widest">Axon Insight</span>
+							</div>
+							<p class="text-zinc-200 leading-relaxed italic">
+								{stripHtml(selectedArticle.insight || '')}
+							</p>
+						</div>
+
+						{stripHtml(selectedArticle.content_snippet || '')}
+						
+						<!-- Chat Area -->
+						<div bind:this={chatContainer} class="pt-20 space-y-8">
+							{#each chatMessages as msg}
+								<div class="flex gap-4 {msg.role === 'ai' ? 'items-start' : 'items-center justify-end'}">
+									{#if msg.role === 'ai'}
+										<div class="w-7 h-7 rounded bg-white flex items-center justify-center shrink-0 mt-1">
+											<Zap class="w-4 h-4 text-black fill-black" />
+										</div>
+									{/if}
+									<div class="max-w-[85%] px-5 py-3 rounded-2xl text-[14px] leading-relaxed 
+										{msg.role === 'user' ? 'bg-zinc-800 text-white' : 'bg-transparent text-zinc-300'}"
+									>
+										{msg.content}
+									</div>
+								</div>
+							{/each}
+							{#if chatLoading}
+								<div class="flex gap-4 items-center">
+									<div class="w-7 h-7 rounded bg-white flex items-center justify-center shrink-0">
+										<Zap class="w-4 h-4 text-black animate-pulse" />
+									</div>
+									<div class="flex gap-1">
+										<span class="w-1 h-1 rounded-full bg-zinc-700 animate-bounce"></span>
+										<span class="w-1 h-1 rounded-full bg-zinc-700 animate-bounce [animation-delay:0.2s]"></span>
+										<span class="w-1 h-1 rounded-full bg-zinc-700 animate-bounce [animation-delay:0.4s]"></span>
+									</div>
+								</div>
+							{/if}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Anchored Bottom Bar -->
+			<div class="sticky bottom-0 bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-white/[0.05] p-6 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] z-50">
+				<div class="max-w-2xl mx-auto flex flex-col gap-4">
+					
+					<!-- Suggested Prompts -->
+					{#if chatMessages.length === 0}
+						<div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+							{#each SUGGESTIONS as tip}
+								<button 
+									onclick={() => sendChat(tip)}
+									class="whitespace-nowrap px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06] text-[11px] font-semibold text-zinc-400 hover:bg-white/[0.06] hover:text-white transition-all transition-all"
+								>
+									{tip}
+								</button>
+							{/each}
+						</div>
+					{/if}
+
+					<div class="relative group">
+						<input 
+							type="text" 
+							bind:value={chatInput}
+							onkeydown={(e) => e.key === 'Enter' && sendChat()}
+							placeholder="Interrogate this signal..."
+							class="w-full bg-white/[0.03] border border-white/[0.08] rounded-2xl px-6 py-4 pr-14 text-[14px] outline-none focus:border-white/20 focus:bg-white/[0.05] transition-all"
+						/>
+						<button 
+							onclick={() => sendChat()}
+							disabled={!chatInput.trim() || chatLoading}
+							class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center hover:bg-zinc-200 disabled:opacity-20 transition-all focus:scale-95 active:scale-90"
+						>
+							<Send class="w-4 h-4" />
+						</button>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	{/if}
+
 </div>
 
-<!-- Deep Brief Modal -->
-<DeepBriefModal
-	open={briefOpen}
-	loading={briefLoading}
-	title={briefTitle}
-	briefData={briefData}
-	onClose={() => briefOpen = false}
-/>
+<style>
+	:global(body) {
+		background: #0a0a0a;
+		overflow-x: hidden;
+	}
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+	.no-scrollbar {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+</style>

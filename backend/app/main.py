@@ -3,10 +3,11 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 from sqlalchemy import update
+from pydantic import BaseModel
 from app.core.database import init_db, get_session
 from app.models import Article, Trend
 from app.services.fetcher import ingest_intelligence
-from app.services.analyzer import analyze_articles, generate_deep_brief
+from app.services.analyzer import analyze_articles, generate_deep_brief, chat_about_article
 
 app = FastAPI(title="Axon Intelligence Engine")
 
@@ -58,9 +59,26 @@ def get_brief(article_id: int, session: Session = Depends(get_session)):
     brief = generate_deep_brief(article.title, article.content_snippet or "")
     return {"title": article.title, "brief": brief}
 
+
+class ChatRequest(BaseModel):
+    question: str
+
+@app.post("/articles/{article_id}/chat")
+def article_chat(article_id: int, req: ChatRequest, session: Session = Depends(get_session)):
+    article = session.get(Article, article_id)
+    if not article:
+        return {"error": "Not found"}
+    answer = chat_about_article(
+        title=article.title,
+        content=article.content_snippet or "",
+        insight=article.insight or "",
+        question=req.question
+    )
+    return {"answer": answer}
+
+
 @app.post("/articles/{article_id}/view")
 def track_view(article_id: int, session: Session = Depends(get_session)):
-    # SENIOR DECISION: Atomic increment to prevent lost updates
     stmt = (
         update(Article)
         .where(Article.id == article_id)

@@ -138,3 +138,31 @@ def analyze_articles(session: Session):
     update_trends(session, articles)
     session.commit()
     return len(articles)
+def chat_about_article(title: str, content: str, insight: str, question: str) -> str:
+    """Answers a user question about a specific article using its context."""
+    if not client.api_key:
+        return "AI chat offline."
+    
+    clean_content = re.sub(r'<[^>]+>', '', content).strip()[:1500]
+    
+    prompt = f"""You are Axon, an AI tech intelligence assistant. You are helping a builder/founder understand a specific signal.
+    
+Article Title: {title}
+Context Snippet: {clean_content}
+AI Insight: {insight}
+
+User Question: {question}
+
+Provide a concise, expert answer based on the context above. If the context doesn't have enough info, use your general knowledge but stay focused on the implications for the user (founder/developer). Be direct and tactical. No conversational filler."""
+
+    try:
+        res = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile",
+            max_tokens=300,
+            temperature=0.6
+        )
+        return res.choices[0].message.content.strip()  # type: ignore
+    except Exception as e:
+        print(f"Chat error: {e}")
+        return "Sorry, I couldn't process that question right now."
