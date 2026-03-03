@@ -1,369 +1,417 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { api, type Trend, type Article } from '../lib/api';
-	import { Zap, RefreshCw, ExternalLink, Globe, Eye, Heart, TrendingUp, Bot, ArrowRight, Activity, Command } from 'lucide-svelte';
+	import { onMount } from 'svelte';
+	import { api, type Article, type Trend } from '../lib/api';
+	import { RefreshCw, ExternalLink, Bot, Zap, Search, ChevronRight, X, SlidersHorizontal } from 'lucide-svelte';
 	import DeepBriefModal from '$lib/components/DeepBriefModal.svelte';
 
+	// ── State ────────────────────────────────────────────────
+	let allArticles = $state<Article[]>([]);
 	let trends = $state<Trend[]>([]);
-	let articles = $state<Article[]>([]);
-	let selectedTrend = $state<string | null>(null);
 	let loading = $state(true);
-	let refreshing = $state(false);
+	let syncing = $state(false);
+	let searchQuery = $state('');
+	let activeSource = $state<string | null>(null);
+	let activeCategory = $state<string | null>(null);
+	let lastSynced = $state<string | null>(null);
 
-	// Keyboard Navigation state
-	let selectedIndex = $state<number>(-1);
+	// Brief
+	let briefOpen = $state(false);
+	let briefLoading = $state(false);
+	let briefTitle = $state('');
+	let briefData = $state<string | null>(null);
 
-	// Deep Brief Modal state
-	let briefModalOpen = $state(false);
-	let loadingBrief = $state(false);
-	let currentBriefTitle = $state("");
-	let currentBriefData = $state<string | null>(null);
+	// ── Derived ──────────────────────────────────────────────
+	let sources = $derived([...new Set(allArticles.map(a => a.source))].sort());
+	// Category names matching backend vision
+	const categories = ['AI', 'Signal', 'Momentum', 'Concerns'];
 
-	async function loadDashboard(keyword: string | null = null) {
-		loading = true;
-		selectedTrend = keyword;
-		selectedIndex = -1; // reset selection on load
+	let filtered = $derived.by(() => {
+		let list = allArticles;
+		if (activeSource) list = list.filter(a => a.source === activeSource);
+		if (activeCategory) list = list.filter(a => a.category === activeCategory);
+		if (searchQuery.trim()) {
+			const q = searchQuery.toLowerCase();
+			list = list.filter(a =>
+				a.title.toLowerCase().includes(q) ||
+				a.source.toLowerCase().includes(q) ||
+				(a.content_snippet || '').toLowerCase().includes(q)
+			);
+		}
+		return list;
+	});
+
+	const activeFilters = $derived(
+		(activeSource ? 1 : 0) + (activeCategory ? 1 : 0) + (searchQuery ? 1 : 0)
+	);
+
+	// ── Helpers ──────────────────────────────────────────────
+	function stripHtml(s: string): string {
+		return (s ?? '').replace(/<[^>]*>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+	}
+
+	function relativeTime(dateStr: string): string {
+		if (!dateStr) return '';
+		const diff = Date.now() - new Date(dateStr).getTime();
+		const h = Math.floor(diff / 3_600_000);
+		if (h < 1) return `${Math.floor(diff / 60_000)}m`;
+		if (h < 24) return `${h}h`;
+		return `${Math.floor(h / 24)}d`;
+	}
+
+	const CAT_STYLE: Record<string, string> = {
+		AI: 'text-violet-400 bg-violet-400/10 border-violet-400/25',
+		Signal: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/25',
+		Momentum: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25',
+		Concerns: 'text-amber-400 bg-amber-400/10 border-amber-400/25',
+		// Legacy support for old data
+		Breakthrough: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/25',
+		Project: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25',
+		Problem: 'text-amber-400 bg-amber-400/10 border-amber-400/25',
+	};
+	const CAT_BAR: Record<string, string> = {
+		AI: 'bg-violet-500',
+		Signal: 'bg-cyan-500',
+		Momentum: 'bg-emerald-500',
+		Concerns: 'bg-amber-500',
+		// Legacy
+		Breakthrough: 'bg-cyan-500',
+		Project: 'bg-emerald-500',
+		Problem: 'bg-amber-500',
+	};
+	function catStyle(c: string) { return CAT_STYLE[c] ?? 'text-zinc-400 bg-zinc-400/10 border-zinc-400/25'; }
+	function catBar(c: string) { return CAT_BAR[c] ?? 'bg-zinc-500'; }
+
+	const SOURCE_INITIALS: Record<string, string> = {
+		HackerNews: 'HN', ArXiv: 'AX', GitHub: 'GH', Reddit: 'RD',
+		OpenAI: 'OA', DeepMind: 'DM', Karpathy: 'KP', NVIDIA: 'NV',
+		SimonW: 'SW', Lobsters: 'LB',
+	};
+	function sourceInitial(s: string) {
+		return SOURCE_INITIALS[s] ?? s.slice(0, 2).toUpperCase();
+	}
+
+	function clearFilters() {
+		activeSource = null;
+		activeCategory = null;
+		searchQuery = '';
+	}
+
+	// ── API ──────────────────────────────────────────────────
+	const CACHE_KEY = 'axon_articles_cache';
+	const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
+	function saveToCache(articles: Article[], trendData: Trend[]) {
 		try {
-			const [tData, aData] = await Promise.all([
-				api.getTrends(),
-				api.getArticles(keyword || undefined)
-			]);
-			trends = tData;
-			articles = aData;
-		} catch (e) {
-			console.error("Failed to load dashboard data", e);
-		} finally {
+			localStorage.setItem(CACHE_KEY, JSON.stringify({
+				articles, trends: trendData,
+				timestamp: Date.now()
+			}));
+		} catch {}
+	}
+
+	function loadFromCache(): { articles: Article[], trends: Trend[] } | null {
+		try {
+			const raw = localStorage.getItem(CACHE_KEY);
+			if (!raw) return null;
+			const cached = JSON.parse(raw);
+			if (Date.now() - cached.timestamp > CACHE_TTL) return null;
+			return cached;
+		} catch { return null; }
+	}
+
+	async function load() {
+		// Show cached data instantly
+		const cached = loadFromCache();
+		if (cached && cached.articles.length > 0) {
+			allArticles = cached.articles;
+			trends = cached.trends;
 			loading = false;
-		}
-	}
-
-	async function handleRefresh() {
-		refreshing = true;
-		try {
-			await api.triggerRefresh();
-			await loadDashboard(selectedTrend);
-		} finally {
-			refreshing = false;
-		}
-	}
-
-	async function handleArticleClick(article: Article, index: number) {
-		selectedIndex = index;
-		article.views += 1;
-		try {
-			await api.trackView(article.id);
-		} catch (e) {
-			console.error("Failed to track view", e);
-		}
-		window.open(article.url, '_blank');
-	}
-
-	async function triggerDeepBrief(article: Article, index?: number) {
-		if (index !== undefined) selectedIndex = index;
-		
-		briefModalOpen = true;
-		loadingBrief = true;
-		currentBriefTitle = article.title;
-		currentBriefData = null;
-
-		try {
-			const res = await api.getBrief(article.id);
-			currentBriefData = res.brief;
-		} catch (e) {
-			console.error("Failed to fetch deep brief", e);
-			currentBriefData = "Failed to load Deep Briefing. Please try again later.";
-		} finally {
-			loadingBrief = false;
-		}
-	}
-
-	function handleKeydown(e: KeyboardEvent) {
-		// Don't intercept if modal is open or typing in input
-		if (briefModalOpen || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+			lastSynced = 'from cache';
+			// Refresh in background
+			fetchFresh();
 			return;
 		}
+		loading = true;
+		await fetchFresh();
+	}
 
-		if (articles.length === 0) return;
+	async function fetchFresh() {
+		try {
+			const [a, t] = await Promise.all([api.getArticles(), api.getTrends()]);
+			allArticles = a;
+			trends = t;
+			saveToCache(a, t);
+			const now = new Date();
+			lastSynced = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+		} catch (e) { console.error(e); }
+		finally { loading = false; }
+	}
 
-		switch (e.key) {
-			case 'ArrowDown':
-			case 'j':
-				e.preventDefault();
-				selectedIndex = Math.min(selectedIndex + 1, articles.length - 1);
-				scrollToSelected();
-				break;
-			case 'ArrowUp':
-			case 'k':
-				e.preventDefault();
-				selectedIndex = Math.max(selectedIndex - 1, 0);
-				scrollToSelected();
-				break;
-			case 'o':
-			case 'Enter':
-				if (selectedIndex >= 0 && selectedIndex < articles.length) {
-					e.preventDefault();
-					handleArticleClick(articles[selectedIndex], selectedIndex);
-				}
-				break;
-			case 'x':
-			case 'X':
-				if (selectedIndex >= 0 && selectedIndex < articles.length) {
-					e.preventDefault();
-					triggerDeepBrief(articles[selectedIndex]);
-				}
-				break;
-			case 's':
-			case 'S':
-				e.preventDefault();
-				handleRefresh();
-				break;
-			case 'Escape':
-				selectedIndex = -1;
-				selectedTrend = null;
-				loadDashboard();
-				break;
+	async function sync() {
+		syncing = true;
+		try {
+			await api.triggerRefresh();
+			// Clear cache and reload fresh
+			try { localStorage.removeItem(CACHE_KEY); } catch {}
+			await fetchFresh();
 		}
+		finally { syncing = false; }
 	}
 
-	function scrollToSelected() {
-		// Small delay to let DOM update if needed, but in Svelte 5 runes it's synchronous mostly
-		setTimeout(() => {
-			const activeEl = document.getElementById(`article-${selectedIndex}`);
-			if (activeEl) {
-				activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-			}
-		}, 10);
+	async function openBrief(article: Article, e: MouseEvent) {
+		e.stopPropagation();
+		briefOpen = true;
+		briefLoading = true;
+		briefTitle = article.title;
+		briefData = null;
+		api.trackView(article.id).catch(() => {});
+		try {
+			const r = await api.getBrief(article.id);
+			briefData = r.brief;
+		} catch { briefData = 'Failed to generate briefing.'; }
+		finally { briefLoading = false; }
 	}
 
-	onMount(() => loadDashboard());
+	onMount(load);
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<div class="min-h-screen bg-[#0d0d0d] text-[#e2e2e2]" style="font-family: 'Inter', -apple-system, sans-serif;">
 
-<div class="min-h-screen bg-[#060608] text-zinc-400 font-sans selection:bg-emerald-500/30">
-	<!-- Top Navigation -->
-	<header class="border-b border-zinc-900 bg-[#060608]/80 backdrop-blur-xl sticky top-0 z-40">
-		<div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-			<div class="flex items-center gap-3">
-				<div class="w-8 h-8 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center justify-center text-emerald-400">
-					<Activity class="w-5 h-5" />
+	<!-- ══ TOPBAR ════════════════════════════════════════════ -->
+	<header class="sticky top-0 z-50 bg-[#0d0d0d]/95 backdrop-blur-sm border-b border-white/[0.06]">
+		<div class="max-w-[1400px] mx-auto px-6 h-14 flex items-center gap-6">
+
+			<!-- Brand -->
+			<div class="flex items-center gap-2.5 shrink-0">
+				<div class="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0">
+					<Zap class="w-3.5 h-3.5 text-black fill-black" />
 				</div>
-				<h1 class="text-white font-bold tracking-tight text-xl">AXON<span class="text-emerald-500">_</span></h1>
-				<span class="ml-4 px-2 py-0.5 text-[10px] font-mono tracking-widest text-emerald-400 bg-emerald-500/10 rounded uppercase border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-					Intelligence Layer
-				</span>
+				<span class="text-white font-bold text-[15px] tracking-tight">AXON</span>
 			</div>
 
-			<div class="flex items-center gap-6">
-				<div class="hidden md:flex items-center gap-4 text-xs font-mono text-zinc-500">
-					<span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 bg-zinc-900 rounded border border-zinc-800 text-zinc-400">↑↓</kbd> Nav</span>
-					<span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 bg-zinc-900 rounded border border-zinc-800 text-zinc-400">O</kbd> Open</span>
-					<span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 rounded shadow-[0_0_8px_rgba(16,185,129,0.15)]">X</kbd> AI Brief</span>
-				</div>
+			<div class="w-px h-5 bg-white/10 hidden sm:block"></div>
 
-				<button 
-					onclick={handleRefresh}
-					disabled={refreshing}
-					class="group flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900/50 border border-zinc-800 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50"
+			<!-- Search -->
+			<div class="flex-1 relative hidden sm:block">
+				<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600 pointer-events-none" />
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="Filter signals…"
+					class="w-full max-w-md bg-white/[0.04] border border-white/[0.07] text-[13px] text-white placeholder-zinc-600 rounded-lg pl-9 pr-3 py-2 outline-none focus:border-white/20 focus:bg-white/[0.06] transition-all"
+					style="font-family: inherit;"
+				/>
+			</div>
+
+			<!-- Right controls -->
+			<div class="flex items-center gap-3 ml-auto shrink-0">
+				{#if activeFilters > 0}
+					<button onclick={clearFilters} class="flex items-center gap-1.5 text-[12px] text-zinc-500 hover:text-white transition-colors">
+						<X class="w-3.5 h-3.5" /> Clear filters
+					</button>
+				{/if}
+				<span class="hidden sm:flex items-center gap-1.5 text-[12px] text-zinc-600">
+					<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+					{filtered.length} of {allArticles.length}
+				</span>
+				<button
+					onclick={sync}
+					disabled={syncing}
+					class="flex items-center gap-1.5 px-3.5 py-2 bg-white text-black text-[12px] font-semibold rounded-lg hover:bg-zinc-100 disabled:opacity-40 transition-colors"
 				>
-					<RefreshCw class="w-4 h-4 text-zinc-400 group-hover:text-emerald-400 transition-colors {refreshing ? 'animate-spin text-emerald-500' : ''}" />
-					<span class="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">Sync Intel</span>
-					<span class="hidden lg:inline-flex ml-2 text-[10px] font-mono text-zinc-600">S</span>
+					<RefreshCw class="w-3.5 h-3.5 {syncing ? 'animate-spin' : ''}" />
+					{syncing ? 'Syncing…' : 'Sync'}
 				</button>
 			</div>
 		</div>
 	</header>
 
-	<main class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-12 gap-8 lg:gap-12 relative">
-		
-		<!-- Left Sidebar: Trends -->
-		<section class="col-span-12 lg:col-span-3 space-y-6">
-			<div class="flex items-center justify-between">
-				<h2 class="text-white font-medium flex items-center gap-2 tracking-wide text-sm uppercase text-zinc-400">
-					<Zap class="w-4 h-4 text-emerald-400" />
-					Signal Momentum
-				</h2>
-			</div>
+	<!-- ══ BODY: SIDEBAR + FEED ══════════════════════════════ -->
+	<div class="max-w-[1400px] mx-auto px-6 py-6 flex gap-7 items-start">
 
-			<div class="space-y-2 relative">
-				<!-- Gradient fade at bottom of list -->
-				<div class="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-[#060608] to-transparent z-10 pointer-events-none fade-out"></div>
-				
-				<div class="max-h-[calc(100vh-200px)] overflow-y-auto no-scrollbar pb-12 space-y-2">
-					{#each trends as trend}
-						<button 
-							onclick={() => loadDashboard(trend.keyword)}
-							class="w-full text-left p-4 rounded-xl transition-all group relative overflow-hidden outline-none {selectedTrend === trend.keyword ? 'border-emerald-500/50 bg-emerald-500/5' : 'bg-transparent border border-transparent hover:bg-zinc-900/50'}"
+		<!-- ── LEFT SIDEBAR ──────────────────────────────────── -->
+		<aside class="shrink-0 w-56 sticky top-[72px] hidden lg:flex flex-col gap-7">
+
+			<!-- Filter by source -->
+			<div>
+				<p class="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.15em] mb-3 px-1">Source</p>
+				<div class="flex flex-col gap-0.5">
+					{#each sources as src}
+						<button
+							onclick={() => activeSource = activeSource === src ? null : src}
+							class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-all group
+								{activeSource === src ? 'bg-white/8 text-white' : 'text-zinc-500 hover:bg-white/4 hover:text-zinc-200'}"
 						>
-							{#if selectedTrend === trend.keyword}
-								<div class="absolute left-0 inset-y-0 w-1 bg-emerald-500"></div>
-							{/if}
-							
-							<div class="flex justify-between items-center ml-1">
-								<div>
-									<p class="text-[15px] font-medium transition-colors capitalize {selectedTrend === trend.keyword ? 'text-emerald-400' : 'text-zinc-300 group-hover:text-white'}">
-										{trend.keyword}
-									</p>
-									<p class="text-xs mt-1 text-zinc-600 font-mono">{trend.count} signals</p>
-								</div>
-								<div class="flex items-center">
-									<TrendingUp class="w-3 h-3 mr-1 {trend.is_new ? 'text-violet-400' : 'text-emerald-400'}" />
-								</div>
+							<div class="w-5 h-5 rounded-[4px] bg-white/6 border border-white/8 flex items-center justify-center shrink-0 text-[8px] font-bold text-zinc-400 group-hover:border-white/15 {activeSource === src ? 'border-white/20 bg-white/10 text-white' : ''}">
+								{sourceInitial(src)}
 							</div>
+							<span class="text-[12px] font-medium truncate">{src}</span>
+							<span class="ml-auto text-[10px] text-zinc-700">{allArticles.filter(a => a.source === src).length}</span>
 						</button>
 					{/each}
 				</div>
 			</div>
-		</section>
 
-		<!-- Right Content: The Feed -->
-		<section class="col-span-12 lg:col-span-9 space-y-6">
-			<div class="flex items-center justify-between border-b border-zinc-900 pb-4">
-				<div class="flex items-center gap-3">
-					<h2 class="text-white text-xl font-medium tracking-tight">
-						{selectedTrend ? `Vector Intersect: ${selectedTrend}` : 'Global Intelligence Stream'}
-					</h2>
-					<span class="px-2 py-0.5 rounded-full bg-zinc-900 text-xs text-zinc-500 font-mono">
-						{articles.length} active
-					</span>
+			<!-- Filter by category -->
+			<div>
+				<p class="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.15em] mb-3 px-1">Category</p>
+				<div class="flex flex-col gap-0.5">
+					{#each categories as cat}
+						<button
+							onclick={() => activeCategory = activeCategory === cat ? null : cat}
+							class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-all
+								{activeCategory === cat ? 'bg-white/8' : 'hover:bg-white/4'}"
+						>
+							<div class="w-1.5 h-1.5 rounded-full {catBar(cat)} shrink-0"></div>
+							<span class="text-[12px] font-medium {activeCategory === cat ? 'text-white' : 'text-zinc-500 hover:text-zinc-200'}">
+								{cat}
+							</span>
+							<span class="ml-auto text-[10px] text-zinc-700">{allArticles.filter(a => a.category === cat).length}</span>
+						</button>
+					{/each}
 				</div>
-				
-				{#if selectedTrend}
-					<button 
-						onclick={() => loadDashboard(null)} 
-						class="text-xs hover:text-white text-zinc-500 flex items-center gap-1 transition-colors px-3 py-1.5 rounded-full hover:bg-zinc-900"
-					>
-						Clear Filter <kbd class="ml-1 text-[9px] bg-zinc-800 px-1 rounded uppercase">Esc</kbd>
-					</button>
-				{/if}
 			</div>
 
-			<div class="grid gap-3 relative">
-				{#if loading}
-					<div class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#060608]/50 backdrop-blur-sm pt-20">
-						<div class="w-12 h-12 border border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
-						<p class="mt-4 text-emerald-500 font-mono text-xs uppercase tracking-widest animate-pulse">Scanning Grid...</p>
-					</div>
-					<!-- Skeleton loaders -->
-					{#each Array(5) as _}
-						<div class="h-40 rounded-xl bg-zinc-900/30 border border-zinc-900 animate-pulse"></div>
-					{/each}
-				{:else}
-					{#each articles as article, index}
-						<div 
-							id="article-{index}"
-							class="group relative w-full text-left p-5 xl:p-6 rounded-2xl transition-all block ring-1 outline-none isolate overflow-hidden {selectedIndex === index ? 'bg-zinc-900/80 ring-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.05)] scale-[1.01] z-10' : 'bg-transparent ring-zinc-800/50 hover:bg-zinc-900/40 hover:ring-zinc-700/50'}"
-						>
-							{#if selectedIndex === index}
-								<!-- Active Selection Highlight Elements -->
-								<div class="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-l-2xl"></div>
-								<div class="absolute top-0 right-0 p-3 opacity-20">
-									<Command class="w-24 h-24 text-emerald-500 animate-pulse-slow" />
-								</div>
-							{/if}
-
-							<div class="relative z-10 flex justify-between items-start mb-3">
-								<div class="flex items-center gap-3">
-									<div class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-500/90">
-										<Globe class="w-3.5 h-3.5" /> {article.source}
-									</div>
-									<div class="w-1 h-1 rounded-full bg-zinc-700"></div>
-									<span class="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800">
-										{article.category}
-									</span>
-								</div>
-								
-								<!-- Hover Action Menu -->
-								<div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-									<button 
-										onclick={() => triggerDeepBrief(article, index)}
-										class="flex items-center gap-1.5 px-3 py-1.5 rounded hover:bg-emerald-500/10 text-zinc-400 hover:text-emerald-400 transition-colors bg-black/40 border border-zinc-800 backdrop-blur"
-										title="AI Deep Briefing (Press X)"
-									>
-										<Bot class="w-3.5 h-3.5" />
-										<span class="text-xs font-medium">Analyze</span>
-									</button>
-									<button 
-										onclick={() => handleArticleClick(article, index)}
-										class="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors bg-black/40 border border-zinc-800 backdrop-blur"
-										title="Open Source (Press O)"
-									>
-										<ExternalLink class="w-4 h-4" />
-									</button>
-								</div>
-							</div>
-							
-							<h3 
-								class="cursor-pointer text-zinc-100 font-medium text-lg lg:text-xl leading-tight mt-1 transition-colors {selectedIndex === index ? 'text-white' : 'group-hover:text-emerald-50'}" 
-								onclick={() => handleArticleClick(article, index)}
-								onkeydown={(e) => { if (e.key === 'Enter') handleArticleClick(article, index); }}
-								role="button"
-								tabindex="0"
+			<!-- Trending -->
+			{#if trends.length > 0}
+				<div>
+					<p class="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.15em] mb-3 px-1">Trending</p>
+					<div class="flex flex-col gap-0.5">
+						{#each trends.slice(0, 8) as trend}
+							<button
+								onclick={() => searchQuery = searchQuery === trend.keyword ? '' : trend.keyword}
+								class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left group hover:bg-white/4 transition-colors {searchQuery === trend.keyword ? 'bg-white/8' : ''}"
 							>
-								{article.title}
-							</h3>
-							
-							<p class="text-sm text-zinc-500 mt-2.5 line-clamp-2 leading-relaxed max-w-4xl">
-								{article.content_snippet}
-							</p>
-							
-							<div class="flex items-center gap-6 mt-5 pt-5 border-t border-zinc-800/50">
-								<div class="flex items-center gap-1.5 text-xs text-zinc-500">
-									<Eye class="w-4 h-4 text-zinc-600" />
-									<span class="font-mono">{article.views || 0}</span>
+								<span class="text-[12px] text-zinc-500 group-hover:text-zinc-200 truncate {searchQuery === trend.keyword ? 'text-white' : ''}">{trend.keyword}</span>
+								<span class="text-[10px] text-zinc-700 ml-2">{trend.count}</span>
+							</button>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		</aside>
+
+		<!-- ── MAIN FEED ─────────────────────────────────────── -->
+		<main class="flex-1 min-w-0">
+
+			<!-- Active filter chips (mobile + desktop) -->
+			{#if activeFilters > 0}
+				<div class="flex items-center gap-2 mb-5 flex-wrap">
+					<SlidersHorizontal class="w-3.5 h-3.5 text-zinc-600" />
+					{#if activeSource}
+						<button onclick={() => activeSource = null} class="flex items-center gap-1.5 px-2.5 py-1 bg-white/8 border border-white/12 rounded-full text-[11px] text-white hover:bg-white/12 transition-colors">
+							{activeSource} <X class="w-3 h-3 text-zinc-400" />
+						</button>
+					{/if}
+					{#if activeCategory}
+						<button onclick={() => activeCategory = null} class="flex items-center gap-1.5 px-2.5 py-1 bg-white/8 border border-white/12 rounded-full text-[11px] text-white hover:bg-white/12 transition-colors">
+							{activeCategory} <X class="w-3 h-3 text-zinc-400" />
+						</button>
+					{/if}
+					{#if searchQuery}
+						<button onclick={() => searchQuery = ''} class="flex items-center gap-1.5 px-2.5 py-1 bg-white/8 border border-white/12 rounded-full text-[11px] text-white hover:bg-white/12 transition-colors">
+							"{searchQuery}" <X class="w-3 h-3 text-zinc-400" />
+						</button>
+					{/if}
+				</div>
+			{/if}
+
+			{#if loading}
+				<div class="py-24 flex flex-col items-center gap-4">
+					<RefreshCw class="w-5 h-5 text-zinc-700 animate-spin" />
+					<p class="text-zinc-600 text-[13px]">Fetching intelligence…</p>
+				</div>
+			{:else if filtered.length === 0}
+				<div class="py-24 flex flex-col items-center gap-2 text-center">
+					<p class="text-zinc-400 text-[14px] font-medium">No signals match your filters</p>
+					<button onclick={clearFilters} class="mt-3 text-[12px] text-zinc-600 hover:text-white transition-colors underline underline-offset-2">Clear all filters</button>
+				</div>
+			{:else}
+				<!-- Feed list -->
+				<div class="border border-white/[0.06] rounded-xl overflow-hidden">
+					{#each filtered as article, i}
+						<div class="group relative flex gap-4 px-5 py-4 border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
+
+							<!-- Source avatar -->
+							<div class="shrink-0 pt-0.5">
+								<div class="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.07] flex items-center justify-center text-[9px] font-bold text-zinc-500 group-hover:border-white/[0.12] transition-colors">
+									{sourceInitial(article.source)}
 								</div>
-								<div class="flex items-center gap-1.5 text-xs text-zinc-500">
-									<Heart class="w-4 h-4 text-zinc-600" />
-									<span class="font-mono">{article.likes || 0}</span>
-								</div>
-								
-								<button 
-									onclick={() => triggerDeepBrief(article, index)}
-									class="ml-auto inline-flex items-center gap-2 text-xs font-medium group/btn"
-								>
-									{#if article.insight}
-										<span class="text-emerald-500/70 group-hover/btn:text-emerald-400 transition-colors">Has Insight</span>
-										<div class="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover/btn:bg-emerald-500/20 transition-colors">
-											<Bot class="w-3 h-3 text-emerald-500" />
-										</div>
-									{:else}
-										<span class="text-zinc-600 group-hover/btn:text-emerald-500 transition-colors hidden sm:inline-block">Generate Briefing</span>
-										<ArrowRight class="w-4 h-4 text-zinc-700 group-hover/btn:text-emerald-500 transition-colors group-hover/btn:translate-x-1 duration-300" />
-									{/if}
-								</button>
 							</div>
 
-							<!-- Visual indicator for selected article -->
-							{#if selectedIndex === index}
-								<div class="absolute bottom-4 right-4 text-[10px] font-mono text-zinc-600 bg-zinc-950/80 px-2 py-1 rounded">PRESS O TO OPEN</div>
-							{/if}
+							<!-- Content -->
+							<div class="flex-1 min-w-0 flex flex-col gap-1.5">
+
+								<!-- Top meta -->
+								<div class="flex items-center gap-2 flex-wrap">
+									<button
+										onclick={() => { if (activeSource === article.source) activeSource = null; else activeSource = article.source; }}
+										class="text-[11px] font-semibold text-zinc-500 hover:text-zinc-200 transition-colors uppercase tracking-wide"
+									>{article.source}</button>
+									<span class="text-zinc-800">·</span>
+									<button
+										onclick={() => { if (activeCategory === article.category) activeCategory = null; else activeCategory = article.category; }}
+										class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase border transition-colors cursor-pointer {catStyle(article.category)}"
+									>{article.category}</button>
+									{#if article.published_date}
+										<span class="text-zinc-700 text-[11px] ml-0.5">{relativeTime(article.published_date)}</span>
+									{/if}
+									{#if article.insight}
+										<div class="flex items-center gap-1 ml-0.5 text-violet-400/70 text-[10px] font-medium">
+											<div class="w-1 h-1 rounded-full bg-violet-500"></div>
+											AI Brief
+										</div>
+									{/if}
+								</div>
+
+								<!-- Title -->
+								<button
+									onclick={() => { api.trackView(article.id); window.open(article.url, '_blank'); }}
+									class="text-left outline-none group/title"
+								>
+									<h3 class="text-white text-[14px] font-semibold leading-snug group-hover/title:text-zinc-300 transition-colors tracking-tight">
+										{article.title}
+									</h3>
+								</button>
+
+								<!-- Snippet / Insight -->
+								{#if article.insight || article.content_snippet}
+									<p class="text-zinc-500 text-[12px] leading-relaxed line-clamp-2 max-w-3xl">
+										{stripHtml(article.insight || article.content_snippet || '')}
+									</p>
+								{/if}
+
+								<!-- Actions (visible on hover) -->
+								<div class="flex items-center gap-0.5 pt-0.5 opacity-0 group-hover:opacity-100 transition-opacity h-6">
+									<button
+										onclick={() => { api.trackView(article.id); window.open(article.url, '_blank'); }}
+										class="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-zinc-600 hover:text-zinc-200 hover:bg-white/6 transition-all"
+									>
+										<ExternalLink class="w-3 h-3" /> Source
+									</button>
+									<button
+										onclick={(e) => openBrief(article, e)}
+										class="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-violet-400/70 hover:text-violet-300 hover:bg-violet-400/8 transition-all"
+									>
+										<Bot class="w-3 h-3" />
+										{article.insight ? 'Full Brief' : 'AI Brief'}
+										<ChevronRight class="w-3 h-3" />
+									</button>
+								</div>
+							</div>
 						</div>
 					{/each}
-				{/if}
-			</div>
-		</section>
-	</main>
+				</div>
+			{/if}
+		</main>
+	</div>
 </div>
 
-<!-- Modal Component -->
-<DeepBriefModal 
-	open={briefModalOpen}
-	loading={loadingBrief}
-	title={currentBriefTitle}
-	briefData={currentBriefData}
-	onClose={() => briefModalOpen = false}
+<!-- Deep Brief Modal -->
+<DeepBriefModal
+	open={briefOpen}
+	loading={briefLoading}
+	title={briefTitle}
+	briefData={briefData}
+	onClose={() => briefOpen = false}
 />
-
-<style>
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-	
-	/* Slow pulse for selected background accent */
-	@keyframes pulse-slow {
-		0%, 100% { opacity: 0.1; }
-		50% { opacity: 0.2; }
-	}
-	:global(.animate-pulse-slow) {
-		animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-	}
-</style>
