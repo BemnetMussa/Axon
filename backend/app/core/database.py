@@ -2,6 +2,9 @@
 import os
 from sqlmodel import SQLModel, create_engine, Session
 from typing import Generator
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # 1. Configuration
 # We keep your robust env var fetching. Good practice!

@@ -6,3 +6,4 @@ sqlmodel
 groq
 feedparser
 httpx
+readability-lxml

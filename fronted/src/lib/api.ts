@@ -19,6 +19,7 @@ export interface Article {
     views: number;
     likes: number;
     engagement_score: number;
+    insight?: string;
 }
 
 export const api = {
@@ -31,12 +32,15 @@ export const api = {
         const res = await fetch(url);
         return res.json();
     },
-        triggerRefresh: async () => {
-            await fetch(`${BASE_URL}/ingest`, { method: 'POST' });
-            await fetch(`${BASE_URL}/analyze`, { method: 'POST' });
-        },
-        trackView: async (id: number) => {
-            await fetch(`${BASE_URL}/articles/${id}/view`, { method: 'POST' });
-        }
-    };
-    
+    triggerRefresh: async () => {
+        await fetch(`${BASE_URL}/ingest`, { method: 'POST' });
+        await fetch(`${BASE_URL}/analyze`, { method: 'POST' });
+    },
+    trackView: async (id: number) => {
+        await fetch(`${BASE_URL}/articles/${id}/view`, { method: 'POST' });
+    },
+    getBrief: async (id: number): Promise<{ title: string, brief: string }> => {
+        const res = await fetch(`${BASE_URL}/brief/${id}`);
+        return res.json();
+    }
+};
