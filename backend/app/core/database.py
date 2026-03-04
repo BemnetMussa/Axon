@@ -25,7 +25,7 @@ def init_db():
     We don't need a separate 'Base'.
     """
     SQLModel.metadata.create_all(engine)
-    print("✅ Database initialized successfully!")
+    print("Database initialized successfully!")
 
 # 4. Dependency (The FastAPI Way)
 def get_session() -> Generator[Session, None, None]:

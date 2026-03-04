@@ -19,26 +19,29 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 def classify_article(title: str, url: str, source: str) -> str:
     t, u, s = title.lower(), url.lower(), source.lower()
 
-    # Research breakthroughs (ArXiv, academic journals)
-    if any(w in u or w in s for w in ["arxiv", "nature.com", "research"]):
-        return "Signal"
+    # Research breakthroughs (ArXiv, academic journals, labs)
+    signals = {"arxiv", "nature.com", "research", "deepmind", "anthropic", "openai", "mistral", "meta.com"}
+    if any(w in u or w in s for w in signals):
+        # Even if from a big lab, if it's a technical post/paper, it's a Signal
+        if any(x in t for x in ["paper", "research", "introducing", "model", "release", "benchmark"]):
+            return "Signal"
 
     # Rising Projects & Expert Builders → Momentum
-    experts = {"karpathy", "simonw", "lilianweng", "altman", "github", "fast.ai"}
+    experts = {"karpathy", "simonw", "lilianweng", "altman", "github", "fast.ai", "unsloth", "together", "jina"}
     if any(w in s or w in u for w in experts):
         return "Momentum"
-    if "show hn" in t or "yc launch" in t:
+    if "show hn" in t or "yc launch" in t or "vibe check" in t:
         return "Momentum"
 
     # AI labs, model news, infrastructure → AI
-    infra_ai = {"openai", "anthropic", "deepmind", "google", "nvidia", "pinecone", "modal", "cerebras", "groq", "mistral"}
+    infra_ai = {"openai", "anthropic", "deepmind", "google", "nvidia", "pinecone", "modal", "cerebras", "groq", "mistral", "perplexity", "microsoft", "apple"}
     if any(w in s or w in u for w in infra_ai):
         return "AI"
-    if any(w in t for w in ["gpt-", "llama-", "claude", "gemini", "sora", "deepseek", "lpu", "cuda", "h100"]):
+    if any(w in t for w in ["gpt-", "llama-", "claude", "gemini", "sora", "deepseek", "lpu", "cuda", "h100", "b200"]):
         return "AI"
 
     # Community concerns, problems, discourse → Concerns
-    if "ask hn" in t or "reddit" in s or "lobsters" in s:
+    if "ask hn" in t or "reddit" in s or "lobsters" in s or "issue" in t or "broken" in t:
         return "Concerns"
 
     return "AI"  # Default
@@ -72,15 +75,13 @@ def generate_insight(title: str, content: str) -> str:
     
     clean_content = re.sub(r'<[^>]+>', '', content).strip()[:600]
     
-    prompt = f"""You are a senior tech analyst writing for builders and founders who track AI and emerging tech.
-    
-Given this article, write 2-3 concise sentences that:
-1. State clearly what this is or what happened
-2. Explain why it matters for developers/founders
-3. Optionally hint at what opportunity or concern it creates
+    prompt = f"""You are a senior tech analyst (think Ben Thompson meets Andrej Karpathy). 
+Analyze this signal for an audience of expert builders/founders.
 
-Be specific, not vague. No filler phrases like "this is a great development" or "this marks a significant milestone".
-No markdown. No bullet points. Just plain sentences.
+Rules:
+1. Identify the technical 'delta' (what's actually new/different).
+2. Explain the strategic implication (market shift, cost reduction, or capability unlock).
+3. No buzzwords. Be direct, dense, and tactical.
 
 Title: {title}
 Content: {clean_content}"""
@@ -101,18 +102,18 @@ def generate_deep_brief(title: str, content: str) -> str:
     """Generates a structured 3-part deep brief for a specific article."""
     clean_content = re.sub(r'<[^>]+>', '', content).strip()[:2000]
     
-    prompt = f"""You are a Senior Intelligence Analyst briefing a technical founder. Analyze this signal:
+    prompt = f"""You are a Lead Intelligence Analyst. Brief a technical founder on this signal:
 
 Title: {title}
 Content: {clean_content}
 
-Write a structured brief with exactly these 3 parts. Each part should be 2-3 sentences, specific and actionable. No markdown bolding, no bullet points:
+Write a structured brief focusing on hard technical truths and market reality. No bolding. 2-3 sentences per section.
 
-**Technical Primitive:** (What is the exact technical core, mechanism, or shift happening here? Be precise.)
+Technical Primitive: (Describe the exact stack shift, architectural change, or hardware requirement. Be highly specific.)
 
-**Market Impact:** (How does this change the competitive landscape or builder opportunity space right now?)
+Market Impact: (What does this do to incumbents' moats? How does it affect the cost of intelligence or scale?)
 
-**Opportunity:** (What is one specific, concrete thing a founder or developer could build or do as a result?)"""
+Opportunity: (What concrete product or optimization can a small team build today because of this?)"""
 
     try:
         res = client.chat.completions.create(
