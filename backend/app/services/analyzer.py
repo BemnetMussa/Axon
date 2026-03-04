@@ -14,23 +14,34 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # AI        → AI news, model releases, company announcements
 # Signal    → Research breakthroughs (ArXiv, academic)
 # Momentum  → Rising projects, GitHub trending, expert builds
+# Discovery → Usable tools, frameworks, demos, and playgrounds
 # Concerns  → Community problems, tech discourse, HN Ask, Reddit
 
 def classify_article(title: str, url: str, source: str) -> str:
     t, u, s = title.lower(), url.lower(), source.lower()
 
+    # Discovery: Usable tools, frameworks, and demos (The "I want to try this" filter)
+    tools = {
+        "vllm", "mlx", "unsloth", "llama.cpp", "ollama", "pytorch", "tensorflow", 
+        "huggingface.co/spaces", "github.com/trending", "playground", "demo", "usable",
+        "framework", "library", "tool", "sdk", "api", "inference"
+    }
+    if any(w in t or w in u for w in tools):
+        if "research" not in t and "paper" not in t: # Prioritize usability
+            return "Discovery"
+    
+    if "show hn" in t or "vibe check" in t:
+        return "Discovery"
+
     # Research breakthroughs (ArXiv, academic journals, labs)
     signals = {"arxiv", "nature.com", "research", "deepmind", "anthropic", "openai", "mistral", "meta.com"}
     if any(w in u or w in s for w in signals):
-        # Even if from a big lab, if it's a technical post/paper, it's a Signal
         if any(x in t for x in ["paper", "research", "introducing", "model", "release", "benchmark"]):
             return "Signal"
 
-    # Rising Projects & Expert Builders → Momentum
+    # Rising Projects & Expert Builders → Momentum (If not already Discovery)
     experts = {"karpathy", "simonw", "lilianweng", "altman", "github", "fast.ai", "unsloth", "together", "jina"}
     if any(w in s or w in u for w in experts):
-        return "Momentum"
-    if "show hn" in t or "yc launch" in t or "vibe check" in t:
         return "Momentum"
 
     # AI labs, model news, infrastructure → AI
@@ -69,19 +80,20 @@ def update_trends(session: Session, articles: list[Article]):
 
 
 def generate_insight(title: str, content: str) -> str:
-    """Generates a 2-3 sentence insight that explains what this is and why it matters."""
+    """Generates a narrative 2-paragraph insight that explains what this is and why it matters."""
     if not client.api_key:
         return "AI analysis offline."
     
-    clean_content = re.sub(r'<[^>]+>', '', content).strip()[:600]
+    clean_content = re.sub(r'<[^>]+>', '', content).strip()[:1000]
     
-    prompt = f"""You are a senior tech analyst (think Ben Thompson meets Andrej Karpathy). 
-Analyze this signal for an audience of expert builders/founders.
-
+    prompt = f"""You are a Lead Intelligence Analyst. Provide a sharp, technical narrative for a technical founder.
+ 
 Rules:
-1. Identify the technical 'delta' (what's actually new/different).
-2. Explain the strategic implication (market shift, cost reduction, or capability unlock).
-3. No buzzwords. Be direct, dense, and tactical.
+1. Write exactly 2 cohesive paragraphs.
+2. The first paragraph should explain *what* the signal is (the technical reality).
+3. The second paragraph should explain *why* it matters and what is interesting/strategic about it.
+4. Be direct, dense, and tactical. No conversational filler or "In this article...".
+5. No bolding, headers, or lists. Just plain text paragraphs.
 
 Title: {title}
 Content: {clean_content}"""
@@ -90,7 +102,7 @@ Content: {clean_content}"""
         res = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.3-70b-versatile",
-            max_tokens=120,
+            max_tokens=250,
             temperature=0.4
         )
         return res.choices[0].message.content.strip().replace("**", "").replace("*", "")  # type: ignore

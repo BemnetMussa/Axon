@@ -6,8 +6,9 @@
 		Zap, Search, X, SlidersHorizontal, ArrowLeft, 
 		Send, MessageSquare, ExternalLink, RefreshCw,
 		ChevronRight, Sparkles, Home, TrendingUp, Radio,
-		AlertCircle, Command
+		AlertCircle, Command, Boxes
 	} from 'lucide-svelte';
+	import { marked } from 'marked';
 
 	// ── State ────────────────────────────────────────────────
 	let allArticles = $state<Article[]>([]);
@@ -21,6 +22,10 @@
 	// Navigation / View State
 	let selectedArticle = $state<Article | null>(null);
 	
+	// Discovery & Save for Later State
+	let savedArticleIds = $state<number[]>([]);
+	let showSavedOnly = $state(false);
+
 	// Chat State
 	let chatInput = $state('');
 	let chatMessages = $state<{role: 'user' | 'ai', content: string}[]>([]);
@@ -39,15 +44,27 @@
 	const NAVIGATION = [
 		{ id: null, label: 'All Signals', icon: Home },
 		{ id: 'AI', label: 'AI & Research', icon: Sparkles },
+		{ id: 'Discovery', label: 'Cool Tools', icon: Boxes },
 		{ id: 'Signal', label: 'Signals', icon: Radio },
 		{ id: 'Momentum', label: 'Momentum', icon: TrendingUp },
 		{ id: 'Concerns', label: 'Concerns', icon: AlertCircle },
 	];
 
+
 	// ── Derived ──────────────────────────────────────────────
 	let sources = $derived([...new Set(allArticles.map(a => a.source))].sort());
+	let sourceCounts = $derived.by(() => {
+		const counts: Record<string, number> = {};
+		allArticles.forEach(a => {
+			counts[a.source] = (counts[a.source] || 0) + 1;
+		});
+		return counts;
+	});
 	let filtered = $derived.by(() => {
 		let list = allArticles;
+		if (showSavedOnly) {
+			list = list.filter(a => savedArticleIds.includes(a.id));
+		}
 		if (activeSource) list = list.filter(a => a.source === activeSource);
 		if (activeCategory) list = list.filter(a => a.category === activeCategory);
 		if (searchQuery.trim()) {
@@ -99,9 +116,24 @@
 			trends = c.trends;
 			loading = false;
 		}
+
+		// Load Saved Articles
+		const saved = localStorage.getItem('axon_saved_signals');
+		if (saved) {
+			savedArticleIds = JSON.parse(saved);
+		}
 		
 		// Always trigger smart sync on load
 		smartSync();
+	}
+
+	function toggleSave(id: number) {
+		if (savedArticleIds.includes(id)) {
+			savedArticleIds = savedArticleIds.filter(i => i !== id);
+		} else {
+			savedArticleIds = [...savedArticleIds, id];
+		}
+		localStorage.setItem('axon_saved_signals', JSON.stringify(savedArticleIds));
 	}
 
 	async function smartSync() {
@@ -176,20 +208,50 @@
 						activeCategory = item.id;
 						activeSource = null;
 						selectedArticle = null;
+						showSavedOnly = false;
 					}}
-					class="relative flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 {activeCategory === item.id ? 'bg-white/[0.05] text-white' : 'text-zinc-500 hover:bg-white/[0.02] hover:text-zinc-300'}"
+					class="relative flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 {activeCategory === item.id && !showSavedOnly ? 'bg-white/[0.05] text-white' : 'text-zinc-500 hover:bg-white/[0.02] hover:text-zinc-300'}"
 				>
 					<item.icon class="w-5 h-5 shrink-0" />
 					<span class="text-[11px] font-bold uppercase tracking-[2px]">{item.label}</span>
 					
-					{#if activeCategory === item.id}
+					{#if activeCategory === item.id && !showSavedOnly}
 						<div class="absolute -left-[12px] top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
 					{/if}
 				</button>
 			{/each}
+
+			<button 
+				onclick={() => {
+					showSavedOnly = true;
+					activeCategory = null;
+					activeSource = null;
+					selectedArticle = null;
+				}}
+				class="relative flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 {showSavedOnly ? 'bg-white/[0.05] text-white' : 'text-zinc-500 hover:bg-white/[0.02] hover:text-zinc-300'}"
+			>
+				<Zap class="w-5 h-5 shrink-0" />
+				<span class="text-[11px] font-bold uppercase tracking-[2px]">Saved</span>
+				
+				{#if showSavedOnly}
+					<div class="absolute -left-[12px] top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
+				{/if}
+			</button>
 		</div>
 
-		<div class="mt-auto px-6">
+		<div class="mt-auto px-6 mb-8">
+			<span class="text-[9px] font-bold uppercase tracking-[2px] text-zinc-700 px-4 mb-4 block">Sources</span>
+			<div class="flex flex-col gap-1 px-4">
+				{#each Object.entries(sourceCounts) as [source, count]}
+					<div class="flex items-center justify-between text-[10px] font-medium transition-colors hover:text-white group cursor-default">
+						<span class="text-zinc-500 group-hover:text-zinc-300 transition-colors">{source}</span>
+						<span class="text-zinc-700 font-bold group-hover:text-zinc-500 transition-colors uppercase tabular-nums">{count}</span>
+					</div>
+				{/each}
+			</div>
+		</div>
+
+		<div class="px-6">
 			<button class="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-zinc-700 hover:text-white hover:bg-white/[0.02] transition-all">
 				<Command class="w-5 h-5 shrink-0" />
 				<span class="text-[10px] font-bold uppercase tracking-widest">Feedback</span>
@@ -258,16 +320,27 @@
 				<main class="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
 					<div class="px-8 py-12 space-y-0">
 						{#each filtered as article (article.id)}
-							<button 
+							<div 
+								role="button"
+								tabindex="0"
 								onclick={() => openArticle(article)}
-								class="group relative w-full text-left py-10 border-b border-white/[0.04] transition-all hover:bg-white/[0.015] px-4 -mx-4 rounded-xl {selectedArticle?.id === article.id ? 'bg-white/[0.03]' : ''}"
+								onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && openArticle(article)}
+								class="group relative w-full text-left py-10 border-b border-white/[0.04] transition-all hover:bg-white/[0.015] px-4 -mx-4 rounded-xl cursor-pointer {selectedArticle?.id === article.id ? 'bg-white/[0.03]' : ''}"
 							>
 								<div class="absolute left-0 top-10 bottom-10 w-[1.5px] {selectedArticle?.id === article.id ? 'opacity-100' : 'opacity-20 group-hover:opacity-100'} transition-opacity rounded-full" style="background-color: {getBrandColor(article.source)}"></div>
 
 								<div class="flex flex-col gap-2.5">
-									<h3 class="text-[17px] font-semibold text-white leading-snug group-hover:text-zinc-200 transition-colors">
-										{article.title}
-									</h3>
+									<div class="flex items-center justify-between">
+										<h3 class="text-[17px] font-semibold text-white leading-snug group-hover:text-zinc-200 transition-colors">
+											{article.title}
+										</h3>
+										<button 
+											onclick={(e) => { e.stopPropagation(); toggleSave(article.id); }}
+											class="p-2 -mr-2 text-zinc-700 hover:text-white transition-colors"
+										>
+											<Zap class="w-4 h-4 {savedArticleIds.includes(article.id) ? 'fill-white text-white' : ''}" />
+										</button>
+									</div>
 									<p class="text-[13.5px] text-zinc-500 leading-relaxed line-clamp-2 max-w-xl font-medium">
 										{stripHtml(article.insight || article.content_snippet || '')}
 									</p>
@@ -279,7 +352,7 @@
 										</div>
 									</div>
 								</div>
-							</button>
+							</div>
 						{/each}
 					</div>
 				</main>
@@ -300,6 +373,16 @@
 					</button>
 
 					<div class="flex items-center gap-4">
+						<button 
+							onclick={() => toggleSave(selectedArticle!.id)}
+							class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] hover:bg-white/[0.04] transition-colors"
+						>
+							<Zap class="w-3.5 h-3.5 {savedArticleIds.includes(selectedArticle.id) ? 'fill-white text-white' : 'text-zinc-500'}" />
+							<span class="text-[10px] font-bold uppercase tracking-wider {savedArticleIds.includes(selectedArticle.id) ? 'text-white' : 'text-zinc-500'}">
+								{savedArticleIds.includes(selectedArticle.id) ? 'Saved' : 'Save Signal'}
+							</span>
+						</button>
+
 						<div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.02]">
 							<div class="w-1.5 h-1.5 rounded-full" style="background-color: {getBrandColor(selectedArticle.source)}"></div>
 							<span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{selectedArticle.source}</span>
@@ -322,35 +405,27 @@
 						<h2 class="text-[32px] font-bold text-white leading-[1.1] mb-12 tracking-tight">
 							{selectedArticle.title}
 						</h2>
-
-						<div class="space-y-10 text-[15.5px] leading-relaxed text-zinc-400 font-medium">
-							<div class="p-8 rounded-3xl bg-white/[0.02] border border-white/[0.05] relative overflow-hidden">
-								<div class="flex items-center gap-2 mb-6 text-white">
-									<Sparkles class="w-4 h-4 text-violet-400" />
-									<span class="text-[11px] font-bold uppercase tracking-widest">Axon Insight</span>
-								</div>
-								<p class="text-zinc-200 leading-relaxed italic text-[17px]">
-									{stripHtml(selectedArticle.insight || '')}
-								</p>
-							</div>
-
-							<div class="prose prose-invert max-w-none">
-								{stripHtml(selectedArticle.content_snippet || '')}
+                        
+						<div class="space-y-8 text-[15.5px] leading-relaxed text-zinc-400 font-medium">
+							<div class="prose prose-invert prose-sm max-w-none text-zinc-300 space-y-4">
+								{@html marked.parse(selectedArticle.insight || selectedArticle.content_snippet || '')}
 							</div>
 							
 							<!-- Chat Area -->
-							<div bind:this={chatContainer} class="pt-24 space-y-10 border-t border-white/[0.04]">
+							<div bind:this={chatContainer} class="space-y-6">
 								{#each chatMessages as msg}
-									<div class="flex gap-5 {msg.role === 'ai' ? 'items-start' : 'items-center justify-end'}">
+									<div class="flex gap-4 {msg.role === 'ai' ? 'items-start' : 'items-start justify-end'}">
 										{#if msg.role === 'ai'}
-											<div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 mt-1">
-												<Zap class="w-4 h-4 text-black fill-black" />
+											<div class="w-7 h-7 rounded-md bg-white flex items-center justify-center shrink-0 mt-1">
+												<Zap class="w-3.5 h-3.5 text-black fill-black" />
 											</div>
 										{/if}
-										<div class="max-w-[85%] px-6 py-4 rounded-3xl text-[14.5px] leading-relaxed 
-											{msg.role === 'user' ? 'bg-zinc-800/80 text-white' : 'bg-transparent text-zinc-300'}"
+										<div class="max-w-[90%] px-5 py-3.5 rounded-2xl text-[14px] leading-relaxed 
+											{msg.role === 'user' ? 'border border-white/[0.08] text-white' : 'bg-white/[0.03] text-zinc-300'}"
 										>
-											{msg.content}
+											<div class="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50">
+												{@html marked.parse(msg.content)}
+											</div>
 										</div>
 									</div>
 								{/each}
@@ -368,13 +443,13 @@
 					</div>
 				</div>
 
-				<!-- Anchored Chat -->
-				<div class="absolute bottom-0 inset-x-0 bg-[#0a0a0a]/95 backdrop-blur-2xl border-t border-white/[0.06] p-8 z-30 shadow-2xl">
-					<div class="max-w-2xl mx-auto flex flex-col gap-6">
+				<!-- Floating Chat Input -->
+				<div class="absolute bottom-10 inset-x-0 z-30 flex justify-center pointer-events-none px-10">
+					<div class="w-full max-w-2xl px-6 py-4 rounded-3xl bg-white/[0.03] backdrop-blur-3xl border border-white/[0.08] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] pointer-events-auto flex flex-col gap-4">
 						{#if chatMessages.length === 0}
-							<div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+							<div class="flex gap-2 overflow-x-auto no-scrollbar">
 								{#each SUGGESTIONS as tip}
-									<button onclick={() => sendChat(tip)} class="whitespace-nowrap px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-bold uppercase tracking-wider text-zinc-500 hover:bg-white/[0.08] hover:text-white transition-all">
+									<button onclick={() => sendChat(tip)} class="whitespace-nowrap px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] font-bold uppercase tracking-wider text-zinc-500 hover:bg-white/[0.08] hover:text-white transition-all">
 										{tip}
 									</button>
 								{/each}
@@ -382,9 +457,9 @@
 						{/if}
 
 						<div class="relative group">
-							<input type="text" bind:value={chatInput} onkeydown={(e) => e.key === 'Enter' && sendChat()} placeholder="Interrogate this signal..." class="w-full bg-white/[0.04] border border-white/[0.1] rounded-2xl px-6 py-4.5 pr-16 text-[15px] outline-none focus:border-white/20 focus:bg-white/[0.06] transition-all" />
-							<button onclick={() => sendChat()} disabled={!chatInput.trim() || chatLoading} class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center hover:bg-zinc-200 disabled:opacity-20 transition-all focus:scale-95">
-								<Send class="w-4.5 h-4.5" />
+							<input type="text" bind:value={chatInput} onkeydown={(e) => e.key === 'Enter' && sendChat()} placeholder="Interrogate this signal..." class="w-full bg-transparent text-[14px] leading-relaxed outline-none text-white placeholder:text-zinc-600 py-1" />
+							<button onclick={() => sendChat()} disabled={!chatInput.trim() || chatLoading} class="absolute right-0 top-1/2 -translate-y-1/2 text-white hover:text-zinc-300 disabled:opacity-20 transition-all">
+								<Send class="w-4 h-4" />
 							</button>
 						</div>
 					</div>
@@ -406,4 +481,25 @@
 		-ms-overflow-style: none;
 		scrollbar-width: none;
 	}
+	:global(.prose p) {
+		margin-top: 0 !important;
+		margin-bottom: 1.25rem !important;
+	}
+	:global(.prose p:last-child) {
+		margin-bottom: 0 !important;
+	}
+    :global(.prose h1, .prose h2, .prose h3) {
+        color: white !important;
+        font-weight: 700 !important;
+        margin-top: 2rem !important;
+        margin-bottom: 1rem !important;
+    }
+    :global(.prose ul, .prose ol) {
+        margin-bottom: 1.25rem !important;
+        padding-left: 1.25rem !important;
+    }
+    :global(.prose li) {
+        margin-bottom: 0.5rem !important;
+        color: #a1a1aa !important;
+    }
 </style>
