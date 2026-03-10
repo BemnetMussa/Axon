@@ -4,6 +4,8 @@
 
 Instead of checking dozens of sites every day, you open Axon.
 
+**[Live Demo →](https://axon-phi-ruby.vercel.app)**
+
 ---
 
 ## How It Works
@@ -298,7 +300,8 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-## Contact
+## Links
 
-- GitHub Issues: [github.com/bemnetmussa/axon/issues](https://github.com/bemnetmussa/axon/issues)
-- Twitter: [@BemnetMussa](https://x.com/BemnetMussa)
+- **Live Demo:** [axon-phi-ruby.vercel.app](https://axon-phi-ruby.vercel.app)
+- **Issues:** [github.com/bemnetmussa/axon/issues](https://github.com/bemnetmussa/axon/issues)
+- **Twitter:** [@BemnetMussa](https://x.com/BemnetMussa)
