@@ -25,6 +25,7 @@
 	let chatInput = $state('');
 	let chatMessages = $state<ChatMessage[]>([]);
 	let chatLoading = $state(false);
+	let sortBy = $state<'date' | 'engagement' | 'views'>('date');
 
 	const CACHE_KEY = 'axon_premium_cache';
 	const SAVED_KEY = 'axon_saved_signals';
@@ -53,6 +54,11 @@
 					article.source.toLowerCase().includes(query) ||
 					(article.content_snippet || '').toLowerCase().includes(query)
 			);
+		}
+		if (sortBy === 'engagement') {
+			list = [...list].sort((a, b) => (b.likes || 0) - (a.likes || 0));
+		} else if (sortBy === 'views') {
+			list = [...list].sort((a, b) => (b.views || 0) - (a.views || 0));
 		}
 		return list;
 	});
@@ -169,20 +175,22 @@
 		onShowSaved={showSaved}
 	/>
 
-	<div class="relative flex min-w-0 flex-1 overflow-hidden">
-		<div class={`min-w-0 flex-1 ${selectedArticle ? 'hidden' : 'flex'} lg:flex ${selectedArticle ? 'lg:max-w-md xl:max-w-lg' : ''}`}>
+	<div class="relative flex min-w-0 flex-1">
+		<div class={`min-w-0 overflow-hidden ${selectedArticle ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex flex-1'}`}>
 			<FeedPanel
 				title={currentTitle}
 				articles={filtered}
 				{sources}
 				{activeSource}
 				{searchQuery}
+				{sortBy}
 				selectedArticleId={selectedArticle?.id ?? null}
 				{savedArticleIds}
 				{loading}
 				{syncIndicator}
 				onSearchChange={(value) => (searchQuery = value)}
 				onSourceSelect={selectSource}
+				onSortChange={(value) => (sortBy = value)}
 				onArticleOpen={openArticle}
 				onToggleSave={toggleSave}
 				onRefresh={smartSync}
@@ -190,7 +198,7 @@
 		</div>
 
 		{#if selectedArticle}
-			<div class="absolute inset-0 z-30 flex bg-[#0a0a0a] lg:static lg:z-auto lg:min-w-0 lg:flex-1 lg:border-l lg:border-white/[0.04] lg:bg-transparent">
+			<div class="absolute inset-0 z-30 flex overflow-hidden bg-[#0a0a0a] lg:relative lg:z-auto lg:min-w-0 lg:flex-1 lg:border-l lg:border-white/[0.04] lg:bg-[#0a0a0a]">
 				<ReaderPanel
 					article={selectedArticle}
 					isSaved={savedArticleIds.includes(selectedArticle.id)}

@@ -7,11 +7,11 @@ export type NavItem = {
 };
 
 export const SUGGESTIONS = [
-	'Technical primitives?',
-	'Architecture shift?',
-	'Data moat?',
-	'Strategic impact?',
-	'Build opportunity?'
+	'Summarize in 3 bullets',
+	'What can I build with this?',
+	'Who does this affect?',
+	'How does this compare to alternatives?',
+	'Why does this matter now?',
 ];
 
 export const NAVIGATION: NavItem[] = [
