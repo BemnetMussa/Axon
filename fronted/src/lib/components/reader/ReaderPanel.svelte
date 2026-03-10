@@ -100,7 +100,7 @@
 
 	<!-- Scrollable content -->
 	<div bind:this={scrollArea} class="no-scrollbar min-h-0 flex-1 overflow-y-auto scroll-smooth">
-		<div class="mx-auto w-full max-w-2xl px-5 pb-44 pt-6 sm:px-6 sm:pb-48 sm:pt-8 lg:px-8 lg:pb-52 lg:pt-10">
+		<div class="mx-auto w-full max-w-2xl px-4 pb-48 pt-5 sm:px-6 sm:pb-52 sm:pt-8 lg:px-8 lg:pb-52 lg:pt-10">
 			<!-- Article meta -->
 			<div class="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
 				<span>{article.category}</span>
@@ -161,7 +161,7 @@
 	</div>
 
 	<!-- Chat dock -->
-	<div class="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-3 pt-8 sm:px-6" style="background: linear-gradient(to top, #0a0a0a 60%, transparent)">
+	<div class="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-8 sm:px-6" style="background: linear-gradient(to top, #0a0a0a 60%, transparent)">
 		<div class="pointer-events-auto mx-auto w-full max-w-xl">
 			<ChatDock
 				{chatInput}

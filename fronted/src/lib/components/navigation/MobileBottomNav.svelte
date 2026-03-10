@@ -13,23 +13,23 @@
 	let { items, activeCategory, showSavedOnly, onNavigate, onShowSaved }: Props = $props();
 </script>
 
-<nav class="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.06] bg-[#090909]/95 px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.4rem)] pt-1.5 backdrop-blur-xl lg:hidden">
-	<div class="grid grid-cols-4 gap-1">
+<nav class="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.06] bg-[#090909]/95 px-1.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-1 backdrop-blur-xl lg:hidden">
+	<div class="flex items-center justify-around">
 		{#each items as item}
 			<button
 				onclick={() => onNavigate(item.id)}
-				class={`flex flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2 text-[9px] font-bold uppercase tracking-wider transition-all ${activeCategory === item.id && !showSavedOnly ? 'bg-white text-black' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+				class={`flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[8px] font-bold uppercase tracking-wider transition-all ${activeCategory === item.id && !showSavedOnly ? 'bg-white text-black' : 'text-zinc-500 active:bg-white/5'}`}
 			>
-				<item.icon class="h-4 w-4" />
-				<span>{item.label.split(' ')[0]}</span>
+				<item.icon class="h-4 w-4 shrink-0" />
+				<span class="truncate">{item.label.split(' ')[0]}</span>
 			</button>
 		{/each}
 
 		<button
 			onclick={onShowSaved}
-			class={`flex flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2 text-[9px] font-bold uppercase tracking-wider transition-all ${showSavedOnly ? 'bg-white text-black' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+			class={`flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[8px] font-bold uppercase tracking-wider transition-all ${showSavedOnly ? 'bg-white text-black' : 'text-zinc-500 active:bg-white/5'}`}
 		>
-			<Zap class="h-4 w-4" />
+			<Zap class="h-4 w-4 shrink-0" />
 			<span>Saved</span>
 		</button>
 	</div>

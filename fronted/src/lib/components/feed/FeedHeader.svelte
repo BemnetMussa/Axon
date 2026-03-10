@@ -31,21 +31,21 @@
 			</span>
 		</div>
 
-		<div class="ml-auto flex items-center gap-2">
-			<label class="group relative">
+		<div class="ml-auto flex items-center gap-1.5 sm:gap-2">
+			<label class="group relative min-w-0 flex-1 sm:flex-none">
 				<Search class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-600 transition-colors group-focus-within:text-zinc-300" />
 				<input
 					type="text"
 					value={searchQuery}
 					oninput={(event) => onSearchChange((event.currentTarget as HTMLInputElement).value)}
 					placeholder="Search..."
-					class="h-8 w-36 rounded-md border border-white/[0.06] bg-white/[0.03] pl-8 pr-3 text-[12px] text-white outline-none transition-all placeholder:text-zinc-600 focus:w-52 focus:border-white/15 focus:bg-white/[0.05] sm:w-44 sm:focus:w-64"
+					class="h-8 w-full rounded-md border border-white/[0.06] bg-white/[0.03] pl-8 pr-3 text-[12px] text-white outline-none transition-all placeholder:text-zinc-600 focus:border-white/15 focus:bg-white/[0.05] sm:w-40 sm:focus:w-56 lg:w-44 lg:focus:w-64"
 				/>
 			</label>
 
 			<button
 				onclick={onRefresh}
-				class="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.06] bg-white/[0.03] text-zinc-400 transition-all hover:border-white/15 hover:text-white"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/[0.06] bg-white/[0.03] text-zinc-400 transition-all hover:border-white/15 hover:text-white"
 				aria-label="Refresh feed"
 			>
 				<RefreshCw class={`h-3.5 w-3.5 ${syncIndicator ? 'animate-spin' : ''}`} />

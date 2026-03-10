@@ -61,12 +61,12 @@
 		onRefresh={onRefresh}
 	/>
 
-	<div class="border-b border-white/[0.04] px-4 py-2 sm:px-5">
-		<div class="flex items-center gap-3">
-			<div class="no-scrollbar flex flex-1 items-center gap-1.5 overflow-x-auto">
+	<div class="border-b border-white/[0.04] px-3 py-2 sm:px-5">
+		<div class="flex items-center gap-2 sm:gap-3">
+			<div class="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto sm:gap-1.5">
 				<button
 					onclick={() => onSourceSelect(null)}
-					class={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all ${activeSource === null ? 'bg-white text-black' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+					class={`whitespace-nowrap rounded-md px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-all sm:px-2.5 sm:py-1.5 sm:text-[10px] ${activeSource === null ? 'bg-white text-black' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
 				>
 					All
 				</button>
@@ -74,19 +74,19 @@
 				{#each sources as source}
 					<button
 						onclick={() => onSourceSelect(source)}
-						class={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all ${activeSource === source ? 'bg-zinc-200 text-black' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+						class={`whitespace-nowrap rounded-md px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-all sm:px-2.5 sm:py-1.5 sm:text-[10px] ${activeSource === source ? 'bg-zinc-200 text-black' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
 					>
 						{source}
 					</button>
 				{/each}
 			</div>
 
-			<div class="flex shrink-0 items-center gap-1 border-l border-white/[0.04] pl-3">
-				<ArrowDownUp class="h-3 w-3 text-zinc-600" />
+			<div class="flex shrink-0 items-center gap-0.5 border-l border-white/[0.04] pl-2 sm:gap-1 sm:pl-3">
+				<ArrowDownUp class="hidden h-3 w-3 text-zinc-600 sm:block" />
 				{#each sortOptions as opt}
 					<button
 						onclick={() => onSortChange(opt.value)}
-						class={`whitespace-nowrap rounded-md px-2 py-1 text-[10px] font-semibold transition-all ${sortBy === opt.value ? 'bg-white/[0.08] text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}
+						class={`whitespace-nowrap rounded-md px-1.5 py-1 text-[9px] font-semibold transition-all sm:px-2 sm:text-[10px] ${sortBy === opt.value ? 'bg-white/[0.08] text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}
 					>
 						{opt.label}
 					</button>
