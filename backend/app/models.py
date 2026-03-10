@@ -10,14 +10,14 @@ class Article(SQLModel, table=True):
     source: str
     published_date: datetime
     content_snippet: Optional[str] = None
+    full_content: Optional[str] = None
     insight: Optional[str] = None
     category: str = Field(default="General")
     is_processed: bool = Field(default=False)
-    
-    # NEW FIELDS FOR ENGAGEMENT
-    views: int = Field(default=0)           # Track when users view/select
-    likes: int = Field(default=0)           # From source API or internal
-    engagement_score: float = Field(default=0.0)  # Calculated field
+
+    views: int = Field(default=0)
+    likes: int = Field(default=0)
+    engagement_score: float = Field(default=0.0)
     last_viewed: Optional[datetime] = None
     
     

@@ -1,15 +1,57 @@
+import os
+import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import Session, select
-from sqlalchemy import update
+from sqlmodel import Session, select, col
+from sqlalchemy import update, func
 from pydantic import BaseModel
-from app.core.database import init_db, get_session
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+
+from app.core.database import init_db, get_session, get_script_session
 from app.models import Article, Trend
 from app.services.fetcher import ingest_intelligence
 from app.services.analyzer import analyze_articles, generate_deep_brief, chat_about_article
+from app.services.extractor import extract_article_content
 
-app = FastAPI(title="Axon Intelligence Engine")
+scheduler = AsyncIOScheduler()
+
+
+async def scheduled_ingest():
+    """Runs ingestion + analysis on a timer."""
+    session = get_script_session()
+    try:
+        count = await ingest_intelligence(session)
+        if count > 0:
+            analyzed = analyze_articles(session)
+            print(f"AXON SCHEDULER: Ingested {count}, analyzed {analyzed}")
+        else:
+            print("AXON SCHEDULER: No new signals")
+    except Exception as e:
+        print(f"AXON SCHEDULER ERROR: {e}")
+    finally:
+        session.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    interval_hours = int(os.getenv("INGEST_INTERVAL_HOURS", "4"))
+    scheduler.add_job(
+        scheduled_ingest,
+        trigger=IntervalTrigger(hours=interval_hours),
+        id="axon_ingest",
+        replace_existing=True,
+    )
+    scheduler.start()
+    print(f"AXON: Scheduler started (every {interval_hours}h)")
+    yield
+    scheduler.shutdown()
+
+
+app = FastAPI(title="Axon Intelligence Engine", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,44 +60,79 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-def on_startup():
-    init_db()
+
+# ---------------------------------------------------------------------------
+# Ingestion & Analysis (manual triggers still available)
+# ---------------------------------------------------------------------------
 
 @app.post("/ingest")
 async def trigger_ingestion(session: Session = Depends(get_session)):
     count = await ingest_intelligence(session)
     return {"status": "success", "new_articles": count}
 
+
 @app.post("/analyze")
 def trigger_analysis(session: Session = Depends(get_session)):
     count = analyze_articles(session)
     return {"status": "success", "processed": count}
 
+
+# ---------------------------------------------------------------------------
+# Articles — cursor-based pagination
+# ---------------------------------------------------------------------------
+
 @app.get("/articles")
-def read_articles(limit: int = 100, session: Session = Depends(get_session)):
-    statement = select(Article).order_by(Article.published_date.desc()).limit(limit * 2)
-    all_articles = session.exec(statement).all()
-    
-    reddit_limit = int(limit * 0.3)
-    balanced = []
-    reddit_count = 0
-    
-    for a in all_articles:
-        if a.source.lower() == "reddit":
-            if reddit_count < reddit_limit:
-                balanced.append(a)
-                reddit_count += 1
-        else:
-            balanced.append(a)
-        if len(balanced) >= limit: break
-            
-    return balanced
+def read_articles(
+    limit: int = Query(default=40, le=200),
+    cursor: int | None = Query(default=None),
+    session: Session = Depends(get_session),
+):
+    query = select(Article).order_by(col(Article.published_date).desc())
+    if cursor is not None:
+        query = query.where(col(Article.id) < cursor)
+    query = query.limit(limit)
+
+    articles = session.exec(query).all()
+    next_cursor = articles[-1].id if articles else None
+
+    return {
+        "articles": articles,
+        "next_cursor": next_cursor,
+        "has_more": len(articles) == limit,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Article content extraction
+# ---------------------------------------------------------------------------
+
+@app.get("/articles/{article_id}/content")
+async def get_article_content(article_id: int, session: Session = Depends(get_session)):
+    article = session.get(Article, article_id)
+    if not article:
+        return {"error": "Not found"}
+
+    if article.full_content:
+        return {"content": article.full_content}
+
+    content = await extract_article_content(article.url)
+    if content:
+        article.full_content = content
+        session.add(article)
+        session.commit()
+
+    return {"content": content or article.content_snippet or ""}
+
+
+# ---------------------------------------------------------------------------
+# Briefs & Chat
+# ---------------------------------------------------------------------------
 
 @app.get("/brief/{article_id}")
 def get_brief(article_id: int, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
-    if not article: return {"error": "Not found"}
+    if not article:
+        return {"error": "Not found"}
     brief = generate_deep_brief(article.title, article.content_snippet or "")
     return {"title": article.title, "brief": brief}
 
@@ -63,19 +140,25 @@ def get_brief(article_id: int, session: Session = Depends(get_session)):
 class ChatRequest(BaseModel):
     question: str
 
+
 @app.post("/articles/{article_id}/chat")
 def article_chat(article_id: int, req: ChatRequest, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
         return {"error": "Not found"}
+    content = article.full_content or article.content_snippet or ""
     answer = chat_about_article(
         title=article.title,
-        content=article.content_snippet or "",
+        content=content,
         insight=article.insight or "",
-        question=req.question
+        question=req.question,
     )
     return {"answer": answer}
 
+
+# ---------------------------------------------------------------------------
+# Engagement
+# ---------------------------------------------------------------------------
 
 @app.post("/articles/{article_id}/view")
 def track_view(article_id: int, session: Session = Depends(get_session)):
@@ -88,12 +171,21 @@ def track_view(article_id: int, session: Session = Depends(get_session)):
     session.commit()
     return {"status": "success"}
 
+
+# ---------------------------------------------------------------------------
+# Trends
+# ---------------------------------------------------------------------------
+
 @app.get("/trends")
 def read_trends(session: Session = Depends(get_session)):
-    statement = select(Trend).order_by(Trend.count.desc()).limit(10)
+    statement = select(Trend).order_by(col(Trend.count).desc()).limit(10)
     results = session.exec(statement).all()
-    return [{"keyword": t.keyword, "count": t.count, "velocity": "Rising", "is_new": True} for t in results]
+    return [
+        {"keyword": t.keyword, "count": t.count, "velocity": "Rising", "is_new": True}
+        for t in results
+    ]
+
 
 @app.get("/")
 def health():
-    return {"status": "Axon Hunter is Online"}
+    return {"status": "Axon is online", "scheduler": scheduler.running}

@@ -1,10 +1,12 @@
 fastapi
 gunicorn
+uvicorn
 psycopg2-binary
 sqlalchemy
-sqlmodel 
+sqlmodel
 groq
 feedparser
 httpx
 readability-lxml
 python-dotenv
+apscheduler
