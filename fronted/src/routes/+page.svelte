@@ -28,7 +28,7 @@
 
 	const CACHE_KEY = 'axon_premium_cache';
 	const SAVED_KEY = 'axon_saved_signals';
-	const mobileNavItems = [NAVIGATION[0], NAVIGATION[1], NAVIGATION[3]];
+	const mobileNavItems = [NAVIGATION[0], NAVIGATION[1], NAVIGATION[3], NAVIGATION[4]];
 
 	let sources = $derived([...new Set(allArticles.map((article) => article.source))].sort());
 	let sourceCounts = $derived.by(() => {

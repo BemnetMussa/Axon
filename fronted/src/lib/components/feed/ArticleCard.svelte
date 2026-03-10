@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Zap } from 'lucide-svelte';
+	import { ArrowUp, Zap } from 'lucide-svelte';
 	import type { Article } from '$lib/api';
-	import { getBrandColor, relativeTime, stripHtml } from '$lib/ui';
+	import { getBrandColor, formatEngagement, relativeTime, stripHtml } from '$lib/ui';
 
 	type Props = {
 		article: Article;
@@ -34,6 +34,12 @@
 			<span style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
 			<span class="text-zinc-700">/</span>
 			<span>{article.category}</span>
+			{#if formatEngagement(article.likes)}
+				<span class="flex items-center gap-0.5 text-zinc-600">
+					<ArrowUp class="h-2.5 w-2.5" />
+					{formatEngagement(article.likes)}
+				</span>
+			{/if}
 			<span class="ml-auto text-zinc-600">{relativeTime(article.published_date)}</span>
 		</div>
 

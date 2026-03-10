@@ -1,4 +1,4 @@
-import { AlertCircle, Boxes, Home, Sparkles, TrendingUp } from 'lucide-svelte';
+import { AlertCircle, Boxes, Home, Sparkles, TrendingUp, Lightbulb } from 'lucide-svelte';
 
 export type NavItem = {
 	id: string | null;
@@ -16,7 +16,8 @@ export const SUGGESTIONS = [
 
 export const NAVIGATION: NavItem[] = [
 	{ id: null, label: 'All Signals', icon: Home },
-	{ id: 'AI', label: 'AI & Research', icon: Sparkles },
+	{ id: 'AI', label: 'AI & News', icon: Sparkles },
+	{ id: 'Signal', label: 'Research', icon: Lightbulb },
 	{ id: 'Discovery', label: 'Cool Tools', icon: Boxes },
 	{ id: 'Momentum', label: 'Momentum', icon: TrendingUp },
 	{ id: 'Concerns', label: 'Concerns', icon: AlertCircle }
@@ -30,7 +31,20 @@ const BRAND_COLORS: Record<string, string> = {
 	Reddit: '#FF4500',
 	ArXiv: '#B31B1B',
 	DeepMind: '#2D3436',
-	Anthropic: '#D97757'
+	Anthropic: '#D97757',
+	ProductHunt: '#DA552F',
+	Lobsters: '#AC0000',
+	TechCrunch: '#00A562',
+	TheVerge: '#FA002A',
+	ArsTechnica: '#FF4E00',
+	Pinecone: '#1B1F23',
+	Modal: '#7C3AED',
+	Cerebras: '#0066FF',
+	Karpathy: '#4A90D9',
+	SimonW: '#5BA65B',
+	LilianWeng: '#C084FC',
+	'Fast.ai': '#00B4D8',
+	Altman: '#9CA3AF',
 };
 
 export function getBrandColor(source: string) {
@@ -52,4 +66,10 @@ export function relativeTime(dateStr: string): string {
 	if (hours < 1) return `${Math.max(1, Math.floor(diff / 60_000))}m`;
 	if (hours < 24) return `${hours}h`;
 	return `${Math.floor(hours / 24)}d`;
+}
+
+export function formatEngagement(likes: number): string {
+	if (!likes || likes <= 0) return '';
+	if (likes >= 1000) return `${(likes / 1000).toFixed(1)}k`;
+	return String(likes);
 }

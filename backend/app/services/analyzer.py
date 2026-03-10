@@ -10,84 +10,141 @@ load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# ── Category Names (Bemnet's Vision) ─────────────────────
-# AI        → AI news, model releases, company announcements
-# Signal    → Research breakthroughs (ArXiv, academic)
-# Momentum  → Rising projects, GitHub trending, expert builds
-# Discovery → Usable tools, frameworks, demos, and playgrounds
-# Concerns  → Community problems, tech discourse, HN Ask, Reddit
+# ── Categories ──────────────────────────────────────────────
+# AI        → Model releases, lab announcements, infrastructure news
+# Signal    → Research breakthroughs (ArXiv, academic papers)
+# Momentum  → Trending repos, expert builds, rising projects
+# Discovery → Tools, frameworks, demos, apps you can try today
+# Concerns  → Community problems, debates, discourse
+
 
 def classify_article(title: str, url: str, source: str) -> str:
-    t, u, s = title.lower(), url.lower(), source.lower()
+    t = title.lower()
+    u = url.lower()
+    s = source.lower()
 
-    # Discovery: Usable tools, frameworks, and demos (The "I want to try this" filter)
-    tools = {
-        "vllm", "mlx", "unsloth", "llama.cpp", "ollama", "pytorch", "tensorflow", 
-        "huggingface.co/spaces", "github.com/trending", "playground", "demo", "usable",
-        "framework", "library", "tool", "sdk", "api", "inference"
-    }
-    if any(w in t or w in u for w in tools):
-        if "research" not in t and "paper" not in t: # Prioritize usability
-            return "Discovery"
-    
-    if "show hn" in t or "vibe check" in t:
+    # ── Discovery: tools, launches, things you can try ──────
+    if s == "producthunt":
         return "Discovery"
 
-    # Research breakthroughs (ArXiv, academic journals, labs)
-    signals = {"arxiv", "nature.com", "research", "deepmind", "anthropic", "openai", "mistral", "meta.com"}
-    if any(w in u or w in s for w in signals):
-        if any(x in t for x in ["paper", "research", "introducing", "model", "release", "benchmark"]):
-            return "Signal"
+    if "show hn" in t:
+        return "Discovery"
 
-    # Rising Projects & Expert Builders → Momentum (If not already Discovery)
-    experts = {"karpathy", "simonw", "lilianweng", "altman", "github", "fast.ai", "unsloth", "together", "jina"}
-    if any(w in s or w in u for w in experts):
+    tool_signals = {
+        "playground", "demo", "app", "try", "launch", "released",
+        "cli", "extension", "plugin", "dashboard", "interface",
+        "open source", "self-hosted", "self hosted",
+    }
+    tool_names = {
+        "vllm", "mlx", "unsloth", "llama.cpp", "ollama", "ollama",
+        "pytorch", "tensorflow", "langchain", "llamaindex", "gradio",
+        "streamlit", "cursor", "v0", "bolt", "replit",
+    }
+    if any(w in t for w in tool_signals) and "research" not in t and "paper" not in t:
+        return "Discovery"
+    if any(w in t or w in u for w in tool_names):
+        return "Discovery"
+
+    # GitHub repos that look like usable tools
+    if s == "github" and any(w in t for w in ["cli", "app", "tool", "sdk", "framework"]):
+        return "Discovery"
+
+    # ── Signal: research papers and breakthroughs ───────────
+    if s == "arxiv":
+        return "Signal"
+
+    research_domains = {"arxiv.org", "nature.com", "science.org", "ieee.org"}
+    if any(d in u for d in research_domains):
+        return "Signal"
+
+    research_words = {"paper", "study", "findings", "experiment", "benchmark", "evaluation"}
+    if any(w in t for w in research_words) and ("arxiv" in u or "research" in t):
+        return "Signal"
+
+    # ── Momentum: trending projects, expert voices ──────────
+    if s == "github":
         return "Momentum"
 
-    # AI labs, model news, infrastructure → AI
-    infra_ai = {"openai", "anthropic", "deepmind", "google", "nvidia", "pinecone", "modal", "cerebras", "groq", "mistral", "perplexity", "microsoft", "apple"}
-    if any(w in s or w in u for w in infra_ai):
-        return "AI"
-    if any(w in t for w in ["gpt-", "llama-", "claude", "gemini", "sora", "deepseek", "lpu", "cuda", "h100", "b200"]):
+    expert_sources = {"karpathy", "simonw", "lilianweng", "altman", "fast.ai"}
+    if s in expert_sources:
+        return "Momentum"
+
+    if any(w in t for w in ["trending", "rising", "fastest growing", "stars"]):
+        return "Momentum"
+
+    # ── AI: lab news, model releases, infrastructure ────────
+    ai_labs = {
+        "openai", "anthropic", "deepmind", "google", "nvidia",
+        "pinecone", "modal", "cerebras", "groq", "mistral",
+        "perplexity", "microsoft", "apple", "meta",
+    }
+    if s in ai_labs or any(lab in u for lab in ai_labs):
         return "AI"
 
-    # Community concerns, problems, discourse → Concerns
-    if "ask hn" in t or "reddit" in s or "lobsters" in s or "issue" in t or "broken" in t:
+    ai_keywords = {
+        "gpt", "llama", "claude", "gemini", "sora", "deepseek",
+        "lpu", "cuda", "h100", "b200", "inference", "training",
+        "fine-tune", "finetune", "rlhf", "transformer",
+    }
+    if any(w in t for w in ai_keywords):
+        return "AI"
+
+    tech_news = {"techcrunch", "theverge", "arstechnica"}
+    if s in tech_news:
+        return "AI"
+
+    # ── Concerns: community problems, discourse ─────────────
+    if "ask hn" in t:
         return "Concerns"
 
-    return "AI"  # Default
+    if s in {"reddit", "lobsters"}:
+        return "Concerns"
+
+    concern_words = {"issue", "broken", "problem", "concern", "risk", "debate", "controversy"}
+    if any(w in t for w in concern_words):
+        return "Concerns"
+
+    return "AI"
 
 
 def update_trends(session: Session, articles: list[Article]):
-    stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'if', 'then', 'else', 'for', 'with', 'about',
-                  'this', 'that', 'how', 'why', 'what', 'to', 'in', 'on', 'at', 'is', 'are', 'was', 'were',
-                  'new', 'ai', 'engine', 'tool', 'library', 'project', 'using', 'from', 'can', 'has', 'have',
-                  'its', 'not', 'more', 'into', 'via', 'part', 'adds', 'update', 'via', 'make', 'will', 'get'}
-    all_text = " ".join([f"{a.title} {a.content_snippet or ''}" for a in articles]).lower()
-    words = re.findall(r'\b[a-z]{4,}\b', all_text)
+    stop_words = {
+        "the", "a", "an", "and", "or", "but", "if", "then", "else", "for",
+        "with", "about", "this", "that", "how", "why", "what", "to", "in",
+        "on", "at", "is", "are", "was", "were", "new", "engine", "tool",
+        "library", "project", "using", "from", "can", "has", "have", "its",
+        "not", "more", "into", "via", "part", "adds", "update", "make",
+        "will", "get", "been", "also", "just", "like", "when", "which",
+        "than", "them", "they", "does", "each", "over", "only", "such",
+        "some", "very", "would", "could", "should", "there", "their",
+        "your", "based", "first", "most", "other", "after", "before",
+    }
+    all_text = " ".join(
+        f"{a.title} {a.content_snippet or ''}" for a in articles
+    ).lower()
+    words = re.findall(r"\b[a-z]{4,}\b", all_text)
     keywords = [w for w in words if w not in stop_words]
     counts = Counter(keywords)
-    for word, count in counts.most_common(10):
-        statement = select(Trend).where(Trend.keyword == word)
-        existing = session.exec(statement).first()
+
+    for word, count in counts.most_common(15):
+        existing = session.exec(select(Trend).where(Trend.keyword == word)).first()
         if existing:
             existing.count += count
             session.add(existing)
         else:
-            new_trend = Trend(keyword=word, count=count)
-            session.add(new_trend)
+            session.add(Trend(keyword=word, count=count))
     session.commit()
 
 
 def generate_insight(title: str, content: str) -> str:
-    """Generates a narrative 2-paragraph insight that explains what this is and why it matters."""
+    """Two-paragraph insight: what this is and why it matters."""
     if not client.api_key:
         return "AI analysis offline."
-    
-    clean_content = re.sub(r'<[^>]+>', '', content).strip()[:1000]
-    
+
+    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:1000]
+
     prompt = f"""You are a Lead Intelligence Analyst. Provide a sharp, technical narrative for a technical founder.
- 
+
 Rules:
 1. Write exactly 2 cohesive paragraphs.
 2. The first paragraph should explain *what* the signal is (the technical reality).
@@ -103,17 +160,17 @@ Content: {clean_content}"""
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.3-70b-versatile",
             max_tokens=250,
-            temperature=0.4
+            temperature=0.4,
         )
         return res.choices[0].message.content.strip().replace("**", "").replace("*", "")  # type: ignore
-    except:
+    except Exception:
         return "Insight generation failed."
 
 
 def generate_deep_brief(title: str, content: str) -> str:
-    """Generates a structured 3-part deep brief for a specific article."""
-    clean_content = re.sub(r'<[^>]+>', '', content).strip()[:2000]
-    
+    """Structured 3-part deep brief."""
+    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:2000]
+
     prompt = f"""You are a Lead Intelligence Analyst. Brief a technical founder on this signal:
 
 Title: {title}
@@ -132,34 +189,40 @@ Opportunity: (What concrete product or optimization can a small team build today
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.3-70b-versatile",
             max_tokens=400,
-            temperature=0.5
+            temperature=0.5,
         )
         return res.choices[0].message.content.strip().replace("**", "")  # type: ignore
-    except:
+    except Exception:
         return "Intelligence gathering failed."
 
 
 def analyze_articles(session: Session):
-    articles = session.exec(select(Article).where(Article.is_processed == False)).all()
+    articles = session.exec(
+        select(Article).where(Article.is_processed == False)  # noqa: E712
+    ).all()
     if not articles:
         return 0
+
     for article in articles:
         article.category = classify_article(article.title, article.url, article.source)
         article.insight = generate_insight(article.title, article.content_snippet or "")
         article.is_processed = True
         session.add(article)
+
     update_trends(session, articles)
     session.commit()
     return len(articles)
+
+
 def chat_about_article(title: str, content: str, insight: str, question: str) -> str:
     """Answers a user question about a specific article using its context."""
     if not client.api_key:
         return "AI chat offline."
-    
-    clean_content = re.sub(r'<[^>]+>', '', content).strip()[:1500]
-    
+
+    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:1500]
+
     prompt = f"""You are Axon, an AI tech intelligence assistant. You are helping a builder/founder understand a specific signal.
-    
+
 Article Title: {title}
 Context Snippet: {clean_content}
 AI Insight: {insight}
@@ -173,7 +236,7 @@ Provide a concise, expert answer based on the context above. If the context does
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.3-70b-versatile",
             max_tokens=300,
-            temperature=0.6
+            temperature=0.6,
         )
         return res.choices[0].message.content.strip()  # type: ignore
     except Exception as e:
