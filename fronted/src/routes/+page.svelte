@@ -159,7 +159,7 @@
 	<title>AXON — Intelligence Platform</title>
 </svelte:head>
 
-<div class="relative flex h-screen overflow-hidden bg-[#0b0b0b] text-[#e4e4e7] selection:bg-white selection:text-black lg:px-8 xl:px-14">
+<div class="relative flex h-screen overflow-hidden bg-[#0b0b0b] text-[#e4e4e7]">
 	<DesktopSidebar
 		navigation={NAVIGATION}
 		{activeCategory}
@@ -170,7 +170,7 @@
 	/>
 
 	<div class="relative flex min-w-0 flex-1 overflow-hidden">
-		<div class={`min-w-0 flex-1 ${selectedArticle ? 'hidden' : 'flex'} lg:relative lg:flex lg:flex-[0_0_42rem] lg:transition-all lg:duration-700 lg:ease-[cubic-bezier(0.2,0,0,1)] ${selectedArticle ? 'lg:left-0 lg:-translate-x-12' : 'lg:left-1/2 lg:-translate-x-1/2'}`}>
+		<div class={`min-w-0 flex-1 ${selectedArticle ? 'hidden' : 'flex'} lg:flex ${selectedArticle ? 'lg:max-w-md xl:max-w-lg' : ''}`}>
 			<FeedPanel
 				title={currentTitle}
 				articles={filtered}
@@ -190,7 +190,7 @@
 		</div>
 
 		{#if selectedArticle}
-			<div class="absolute inset-0 z-30 flex bg-[#0a0a0a] lg:static lg:z-auto lg:min-w-0 lg:flex-1 lg:bg-transparent lg:pl-8">
+			<div class="absolute inset-0 z-30 flex bg-[#0a0a0a] lg:static lg:z-auto lg:min-w-0 lg:flex-1 lg:border-l lg:border-white/[0.04] lg:bg-transparent">
 				<ReaderPanel
 					article={selectedArticle}
 					isSaved={savedArticleIds.includes(selectedArticle.id)}
@@ -236,7 +236,7 @@
 	}
 	:global(.prose p) {
 		margin-top: 0 !important;
-		margin-bottom: 1.25rem !important;
+		margin-bottom: 1rem !important;
 	}
 	:global(.prose p:last-child) {
 		margin-bottom: 0 !important;
@@ -244,15 +244,15 @@
 	:global(.prose h1, .prose h2, .prose h3) {
 		color: white !important;
 		font-weight: 700 !important;
-		margin-top: 2rem !important;
-		margin-bottom: 1rem !important;
+		margin-top: 1.5rem !important;
+		margin-bottom: 0.75rem !important;
 	}
 	:global(.prose ul, .prose ol) {
-		margin-bottom: 1.25rem !important;
+		margin-bottom: 1rem !important;
 		padding-left: 1.25rem !important;
 	}
 	:global(.prose li) {
-		margin-bottom: 0.5rem !important;
+		margin-bottom: 0.35rem !important;
 		color: #a1a1aa !important;
 	}
 	:global(.prose a) {

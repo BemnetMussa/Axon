@@ -1,500 +1,271 @@
-# 🧠 AXON Intelligence Platform
+# Axon
 
-> **Track the world's emerging technologies, breakthroughs, and unsolved problems in real-time through a tactical terminal interface.**
+**An open-source intelligence feed for builders.** Axon continuously scans technical sources — ArXiv, Hacker News, GitHub, Reddit, expert blogs, and AI lab announcements — filters out noise, and presents what matters through a clean web interface with AI-powered analysis.
 
-Axon continuously scans global data sources, analyzes signals with AI, and presents actionable intelligence through a high-contrast command-line dashboard. Instead of browsing 50+ websites daily, open Axon and see the future forming.
-
----
-
-## 📸 Screenshot
-
-
-
-```
-┌─ SCIENCE ──────────────────────────────┬─ CODE ─────────────────────────────┐
-│ 01  OPENAI   Scaling social science   │ 11  GITHUB  Bolt-Inference Rust    │
-│ 02  ARXIV    In-Context Autonomous    │ 12  GITHUB  Open-Source MCP        │
-│ 03  ARXIV    Verified Semantic Cache  │ 13  NPM     NPMX Modern Registry   │
-├─ AI ───────────────────────────────────┼─ PROBLEMS ─────────────────────────┤
-│ 21  OPENAI   Introducing GPT-5.3      │ 31  REDDIT  Junior Dev Talent Gap  │
-│ 22  MIT      Moltbook Social Graph    │ 32  REDDIT  Cloud Logging Costs    │
-│ 23  ANTHR    Claude Computer Use v2   │ 33  HN      Vector DB Consistency  │
-└─────────────────────────────────────────┴────────────────────────────────────┘
-┌─ BRIEF ─────────────────────────────────────────────────────────────────────┐
-│ INSIGHT: Shift from passive inference to active OS-level agency.           │
-│ Opportunity for specialized 'Air-gap' agent containers.                    │
-└─────────────────────────────────────────────────────────────────────────────┘
-CMD: 1-40=Select | O=Open | X=Deep | S=Sync | Q=Quit
-AXON>
-
-```
+Instead of checking dozens of sites every day, you open Axon.
 
 ---
 
-## 🎯 What This Does
+## How It Works
 
-### The Problem
-The future is being built across:
-- Research papers (ArXiv, academic journals)
-- Developer activity (GitHub, tech forums)
-- AI breakthroughs (company announcements)
-- Community discussions (Hacker News, Reddit)
+```
+Sources (HN, ArXiv, GitHub, Reddit, Lobsters, AI labs, expert blogs)
+    │
+    ▼
+Ingestion ── fetcher.py pulls from APIs/RSS, deduplicates, filters noise
+    │
+    ▼
+Analysis ── analyzer.py classifies into categories, generates AI insights via Groq
+    │
+    ▼
+PostgreSQL ── articles + trends tables
+    │
+    ▼
+FastAPI ── REST API serving articles, trends, briefs, and chat
+    │
+    ▼
+SvelteKit Web UI ── feed / reader / AI chat
+```
 
-But it's **fragmented, noisy, and overwhelming**.
-
-### The Solution
-Axon is your **intelligence layer** that:
-
-1. **Ingests** data from multiple sources every 6 hours
-2. **Processes** and categorizes signals automatically
-3. **Synthesizes** insights using AI (Groq LLM)
-4. **Presents** everything in a clean, scannable terminal UI
-5. **Tracks** trends and momentum over time
+Axon fetches signals, classifies them into five categories (**AI**, **Signal**, **Momentum**, **Discovery**, **Concerns**), generates a two-paragraph AI insight for each, and serves them through a responsive web dashboard where you can read, save, search, and chat with any article.
 
 ---
 
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    DATA SOURCES                             │
-├─────────────────────────────────────────────────────────────┤
-│  • Hacker News     → Technologies, Problems                 │
-│  • ArXiv           → Research Papers, Breakthroughs         │
-│  • GitHub Trending → Open Source Projects                   │
-│  • Reddit          → Community Problems & Discussions       │
-└─────────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────────┐
-│         DATA INGESTION SERVICE (Python Scrapers)            │
-├─────────────────────────────────────────────────────────────┤
-│  1. Fetch raw data from APIs and web pages                  │
-│  2. Extract clean text (bypass paywalls, ads)              │
-│  3. Categorize by type: Science, Code, AI, Problems        │
-│  4. Calculate importance scores                             │
-│  5. Store structured data                                   │
-└─────────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────────┐
-│                DATABASE (PostgreSQL)                        │
-├─────────────────────────────────────────────────────────────┤
-│  articles                                                   │
-│  ├─ id, title, url, content                                │
-│  ├─ source, category                                       │
-│  ├─ view_count, created_at                                 │
-│  └─ insight (AI-generated summary)                         │
-│                                                             │
-│  trends                                                     │
-│  └─ keyword, count, momentum, date                         │
-└─────────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────────┐
-│              BACKEND API (FastAPI)                          │
-├─────────────────────────────────────────────────────────────┤
-│  GET  /articles?limit=60&category=AI                        │
-│  POST /ingest          → Trigger all scrapers               │
-│  POST /analyze         → Generate AI insights               │
-│  GET  /brief/{id}      → Deep analysis via Groq             │
-│  GET  /trends          → Keyword momentum tracking          │
-└─────────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────────┐
-│           FRONTEND (Rich Terminal Interface)                │
-├─────────────────────────────────────────────────────────────┤
-│  • 4-quadrant layout (Science, Code, AI, Problems)         │
-│  • Live selection with keyboard navigation                  │
-│  • AI-powered briefings on demand                          │
-│  • One-command sync and analysis                           │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - Python 3.11+
-- PostgreSQL (Docker recommended)
-- Groq API key (for AI insights)
+- Node.js 18+ and npm
+- PostgreSQL 15 (Docker recommended)
+- [Groq API key](https://console.groq.com) (free tier — 14,400 req/day)
+- GitHub personal access token (optional, improves GitHub API rate limits)
 
-### 1. Clone the Repository
+### 1. Clone
 
 ```bash
-git clone https://github.com/yourusername/axon-intelligence.git
-cd axon-intelligence
+git clone https://github.com/bemnetmussa/axon.git
+cd axon
 ```
 
-### 2. Set Up PostgreSQL
+### 2. Start PostgreSQL
 
-**Option A: Docker (Recommended)**
+**Docker (recommended):**
+
 ```bash
-docker run -d \
-  --name axon-postgres \
-  -e POSTGRES_USER=axon \
-  -e POSTGRES_PASSWORD=axon123 \
-  -e POSTGRES_DB=axon_db \
-  -p 5432:5432 \
-  postgres:15-alpine
+cd backend
+docker compose up db -d
 ```
 
-**Option B: Local Installation**
+This starts Postgres on port `5433` (host) mapped to `5432` (container) with user `axon`, password `axon123`, database `axon_db`.
+
+**Or manually:**
+
 ```bash
-# Mac
-brew install postgresql
 createdb axon_db
-
-# Ubuntu
-sudo apt install postgresql
-sudo -u postgres createdb axon_db
 ```
 
-### 3. Install Dependencies
+### 3. Backend Setup
 
 ```bash
-# Create virtual environment
+cd backend
+
+# Create and activate a virtual environment
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate   # Windows: venv\Scripts\activate
 
-# Install packages
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### 4. Configure Environment
-
-```bash
-# Copy example env file
+# Configure environment
 cp .env.example .env
+# Edit .env — add your GROQ_API_KEY (required) and GITHUB_TOKEN (optional)
 
-# Edit .env and add:
-DATABASE_URL=postgresql://axon:axon123@localhost:5432/axon_db
-GROQ_API_KEY=your_groq_api_key_here
+# Start the API server
+uvicorn app.main:app --reload --port 8000
 ```
 
-Get a free Groq API key: https://console.groq.com
+The API is now running at `http://127.0.0.1:8000`. On first startup it creates the database tables automatically.
 
-### 5. Initialize Database
+### 4. Seed Data
 
-```bash
-# Run migrations
-python -c "from database.connection import init_db; init_db()"
-```
-
-### 6. Run First Data Sync
+In a separate terminal, trigger ingestion and analysis:
 
 ```bash
-# Start the backend API
-python backend/main.py
-
-# In another terminal, trigger data ingestion
 curl -X POST http://127.0.0.1:8000/ingest
 curl -X POST http://127.0.0.1:8000/analyze
 ```
 
-This will:
-- Scrape Hacker News, ArXiv, GitHub
-- Store articles in database
-- Generate AI insights
-
-### 7. Launch Terminal Interface
+### 5. Frontend Setup
 
 ```bash
-python terminal/axon_terminal.py
+cd fronted
+
+npm install
+npm run dev
 ```
+
+Open `http://localhost:5173` in your browser.
 
 ---
 
-## 🎮 Usage
-
-### Terminal Commands
-
-| Command | Action |
-|---------|--------|
-| `1-40` | Select an article by number |
-| `O` | Open selected article in browser |
-| `X` | Generate deep AI analysis (3-point breakdown) |
-| `S` | Sync - fetch new data from all sources |
-| `Q` | Quit |
-
-### Workflow Example
-
-```bash
-AXON> 11              # Select article #11
-AXON> X               # Get deep AI analysis
-AXON> O               # Open in browser to read full article
-AXON> S               # Sync to get latest data
-```
-
----
-
-## 📂 Project Structure
+## Project Structure
 
 ```
-axon-intelligence/
+axon/
 ├── backend/
-│   ├── main.py                  # FastAPI server
-│   ├── scrapers/
-│   │   ├── hackernews.py        # Hacker News scraper
-│   │   ├── arxiv.py             # ArXiv research papers
-│   │   ├── github.py            # GitHub trending repos
-│   │   └── reddit.py            # Reddit discussions
-│   ├── models/
-│   │   └── models.py            # Database models (SQLAlchemy)
-│   ├── database/
-│   │   └── connection.py        # PostgreSQL connection
-│   └── ai/
-│       └── groq_client.py       # AI insight generation
-├── terminal/
-│   └── axon_terminal.py         # Rich-based TUI
-├── requirements.txt             # Python dependencies
-├── .env.example                 # Environment template
-└── README.md                    # This file
+│   ├── app/
+│   │   ├── main.py              # FastAPI app, routes, CORS
+│   │   ├── models.py            # SQLModel schemas (Article, Trend)
+│   │   ├── core/
+│   │   │   └── database.py      # Engine, session management
+│   │   └── services/
+│   │       ├── fetcher.py       # Ingestion from all sources
+│   │       └── analyzer.py      # Classification, insights, chat (Groq)
+│   ├── requirements.txt
+│   ├── compose.yaml             # Docker Compose (web + db)
+│   ├── Dockerfile
+│   └── .env.example
+├── fronted/                     # SvelteKit web UI
+│   ├── src/
+│   │   ├── lib/
+│   │   │   ├── api.ts           # API client
+│   │   │   ├── ui.ts            # Navigation, helpers
+│   │   │   └── components/
+│   │   │       ├── feed/        # ArticleCard, FeedHeader, FeedPanel
+│   │   │       ├── navigation/  # DesktopSidebar, MobileBottomNav
+│   │   │       └── reader/      # ReaderPanel, ChatDock
+│   │   └── routes/
+│   │       ├── +layout.svelte
+│   │       └── +page.svelte     # App shell — all state lives here
+│   └── package.json
+└── Axon_cli/
+    └── axon.py                  # Rich-based terminal interface (legacy)
 ```
 
 ---
 
-## 🗃️ Data Sources
+## API Endpoints
 
-### 1. **Hacker News** (Category: Science, AI, Problems)
-- **What**: Tech news, startup discussions, Show HN projects
-- **API**: Official HN API (https://github.com/HackerNews/API)
-- **Update Frequency**: Every 6 hours
-- **Signal Quality**: High - community-filtered content
-
-### 2. **ArXiv** (Category: Science)
-- **What**: Research papers in CS, AI, Physics, Math
-- **API**: ArXiv API (https://arxiv.org/help/api)
-- **Update Frequency**: Daily
-- **Signal Quality**: Very High - peer-reviewed research
-
-### 3. **GitHub Trending** (Category: Code)
-- **What**: Trending repositories, new frameworks, dev tools
-- **Method**: Web scraping (https://github.com/trending)
-- **Update Frequency**: Every 6 hours
-- **Signal Quality**: High - developer activity indicator
-
-### 4. **Reddit** (Category: Problems)
-- **What**: Community discussions from r/programming, r/MachineLearning
-- **API**: Reddit API (requires OAuth)
-- **Update Frequency**: Every 12 hours
-- **Signal Quality**: Medium - user-generated content
+| Method | Endpoint                      | Description                                  |
+| ------ | ----------------------------- | -------------------------------------------- |
+| GET    | `/`                           | Health check                                 |
+| GET    | `/articles?limit=100`         | List articles (Reddit capped at ~30%)        |
+| GET    | `/trends`                     | Top 10 trending keywords                     |
+| GET    | `/brief/{article_id}`         | Generate a structured deep brief             |
+| POST   | `/ingest`                     | Trigger ingestion from all sources           |
+| POST   | `/analyze`                    | Classify + generate insights for new articles|
+| POST   | `/articles/{article_id}/chat` | Chat about an article `{ "question": "..." }`|
+| POST   | `/articles/{article_id}/view` | Track a view                                 |
 
 ---
 
-## 🤖 AI Integration (Groq)
+## Data Sources
 
-Axon uses **Groq's LLaMA models** to:
+| Source         | What it pulls                          | Category default |
+| -------------- | -------------------------------------- | ---------------- |
+| Hacker News    | Ask HN, Show HN with 10+ comments     | Problem / Project|
+| ArXiv          | cs.AI and cs.LG papers                | Breakthrough     |
+| GitHub         | Repos created in last 30 days, 20+ stars | Project       |
+| Reddit         | (via RSS/API)                          | Problem          |
+| Lobsters       | Top technical discussions              | Problem          |
+| OpenAI / Anthropic / DeepMind | Blog RSS feeds          | AI               |
+| NVIDIA / Pinecone / Modal / Cerebras | Infrastructure blogs | AI           |
+| Karpathy / Simon Willison / Lilian Weng / Fast.ai / Altman | Expert blogs | Project |
 
-1. **Generate Quick Insights** (automatic on ingestion)
-   - One-sentence strategic summary
-   - "Why does this matter?"
-   
-2. **Deep Briefings** (on-demand via `X` command)
-   - Technical Primitive: What is the core innovation?
-   - Market Impact: How does this change the game?
-   - Opportunity: What can be built with this?
-
-3. **Cross-Signal Synthesis** (coming soon)
-   - Connect two signals: "How could [Science Paper #3] solve [Problem #17]?"
-
-### Why Groq?
-- **Fast**: Sub-second inference (perfect for terminal UX)
-- **Free tier**: 14,400 requests/day
-- **Quality**: LLaMA 3.1 70B performs well on technical analysis
+Articles are filtered through a quality gate (`is_gold`) that removes fluff (career advice, tutorials, listicles) and blacklisted domains while promoting viral signals that cross engagement thresholds.
 
 ---
 
-## 🔧 Configuration
+## AI Layer
 
-### Environment Variables
+Axon uses **Groq** (LLaMA 3.3 70B) for three things:
+
+1. **Insights** — auto-generated on ingestion. Two dense paragraphs: what this is, and why it matters.
+2. **Deep Briefs** — on-demand. Three sections: Technical Primitive, Market Impact, Opportunity.
+3. **Article Chat** — conversational Q&A scoped to a specific article's context.
+
+---
+
+## Categories
+
+Articles are classified by `analyzer.py` into:
+
+| Category      | Meaning                                        |
+| ------------- | ---------------------------------------------- |
+| **AI**        | Model releases, lab announcements, infra news  |
+| **Signal**    | Research breakthroughs (ArXiv, academic)        |
+| **Momentum**  | Rising projects, expert builds, GitHub trending |
+| **Discovery** | Usable tools, frameworks, demos, playgrounds   |
+| **Concerns**  | Community problems, discourse, debates          |
+
+---
+
+## Environment Variables
+
+Create `backend/.env` from the example:
 
 ```bash
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/axon_db
-
-# AI
-GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxx
-
-# Scraping
-SCRAPE_INTERVAL_HOURS=6
-USER_AGENT=AxonBot/1.0
-
-# API
-API_HOST=0.0.0.0
-API_PORT=8000
+DATABASE_URL=postgresql://axon:axon123@127.0.0.1:5432/axon_db
+GROQ_API_KEY=gsk_your_key_here
+GITHUB_TOKEN=ghp_your_token_here  # optional, avoids GitHub rate limits
 ```
 
-### Customization
-
-**Add New Data Sources:**
-1. Create scraper in `backend/scrapers/your_source.py`
-2. Inherit from `BaseScraper` class
-3. Register in `backend/main.py`
-
-**Change Categories:**
-Edit `CATEGORY_KEYWORDS` in `backend/scrapers/categorizer.py`
-
-**Adjust Terminal Colors:**
-Modify `COLORS` dict in `terminal/axon_terminal.py`
+The frontend reads `VITE_API_BASE_URL` (defaults to `http://127.0.0.1:8000`).
 
 ---
 
-## 📊 Database Schema
+## Docker
 
-### `articles` table
-```sql
-CREATE TABLE articles (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(500) NOT NULL,
-    url VARCHAR(1000),
-    content TEXT,
-    source VARCHAR(100),        -- 'hackernews', 'arxiv', 'github'
-    category VARCHAR(100),      -- 'Breakthrough', 'Project', 'AI', 'Problem'
-    insight TEXT,               -- AI-generated summary
-    view_count INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### `trends` table
-```sql
-CREATE TABLE trends (
-    id SERIAL PRIMARY KEY,
-    keyword VARCHAR(200) UNIQUE,
-    count INTEGER DEFAULT 1,
-    trend_date DATE DEFAULT NOW()
-);
-```
-
----
-
-## 🛠️ Development
-
-### Running in Dev Mode
+To run the full backend stack:
 
 ```bash
-# Backend with auto-reload
-uvicorn backend.main:app --reload --port 8000
-
-# Terminal in debug mode
-python terminal/axon_terminal.py --debug
+cd backend
+docker compose up --build
 ```
 
-### Adding a New Scraper
-
-```python
-# backend/scrapers/your_source.py
-from .base import BaseScraper
-
-class YourSourceScraper(BaseScraper):
-    def fetch(self):
-        # Fetch data from API/website
-        pass
-    
-    def parse(self, data):
-        # Extract articles
-        pass
-    
-    def categorize(self, article):
-        # Assign category
-        return "AI"  # or "Science", "Code", "Problem"
-```
-
-Register in `backend/main.py`:
-```python
-from scrapers.your_source import YourSourceScraper
-
-@app.post("/ingest")
-async def ingest():
-    scrapers = [
-        HackerNewsScraper(),
-        ArxivScraper(),
-        YourSourceScraper(),  # Add here
-    ]
-    # ...
-```
+This starts both FastAPI and PostgreSQL. The API will be available at `http://localhost:8000`.
 
 ---
 
-## 🚢 Deployment
+## Contributing
 
-### Deploy Backend (Render.com)
+Contributions are welcome. Here's the flow:
 
-```yaml
-# render.yaml
-services:
-  - type: web
-    name: axon-backend
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: axon-postgres
-          property: connectionString
-      - key: GROQ_API_KEY
-        sync: false
-```
+1. Fork the repo
+2. Create a branch: `git checkout -b feature/your-feature`
+3. Make your changes
+4. Submit a pull request
 
-Push to GitHub, connect to Render, and deploy!
+**Areas where help is needed:**
 
-### Use Terminal Anywhere
-
-The terminal connects to your deployed backend:
-```bash
-# Update terminal/axon_terminal.py
-BASE_URL = "https://your-axon-backend.onrender.com"
-```
+- New data sources (Product Hunt, TechCrunch RSS, Hacker News front page)
+- Smarter classification logic in `analyzer.py`
+- Frontend polish — animations, accessibility, mobile UX
+- Scheduled ingestion (cron / background worker)
+- User accounts and persistent saved articles
+- Deployment guides (Vercel, Railway, Fly.io)
 
 ---
 
-## 🤝 Contributing
+## Tech Stack
 
-We welcome contributions! Here's how:
-
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/new-scraper`
-3. **Make your changes**
-4. **Test thoroughly**: `pytest tests/`
-5. **Submit a pull request**
-
-### Contribution Ideas
-- [ ] Add new data sources (Product Hunt, TechCrunch RSS)
-- [ ] Improve AI prompts for better insights
-- [ ] Add search/filter functionality
-- [ ] Create web dashboard (Next.js)
-- [ ] Add bookmarking system
-- [ ] Trend prediction algorithm
-- [ ] Multi-language support
+| Layer    | Technology                                        |
+| -------- | ------------------------------------------------- |
+| Backend  | Python, FastAPI, SQLModel, PostgreSQL, Groq       |
+| Frontend | Svelte 5, SvelteKit 2, Tailwind CSS v4, TypeScript|
+| AI       | Groq Cloud (LLaMA 3.3 70B)                       |
+| Sources  | httpx, feedparser, readability-lxml               |
 
 ---
 
-## 📜 License
+## License
 
-MIT License - See [LICENSE](LICENSE) file
-
----
-
-## 🙏 Credits
-
-Built with:
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
-- [Rich](https://rich.readthedocs.io/) - Terminal UI framework
-- [SQLAlchemy](https://www.sqlalchemy.org/) - Database ORM
-- [Groq](https://groq.com/) - Fast AI inference
-- [PostgreSQL](https://www.postgresql.org/) - Database
-
-Inspired by the need to stay ahead in a rapidly evolving tech landscape.
+MIT — see [LICENSE](LICENSE).
 
 ---
 
-## 📧 Contact
+## Contact
 
-Questions? Open an issue or reach out:
-- GitHub Issues: https://github.com/bemnetmussa/axon/issues
-- Twitter: @https://x.com/BemnetMussa
-
----
-
-**Built for curious builders who want to see the future forming. 🚀**
+- GitHub Issues: [github.com/bemnetmussa/axon/issues](https://github.com/bemnetmussa/axon/issues)
+- Twitter: [@BemnetMussa](https://x.com/BemnetMussa)

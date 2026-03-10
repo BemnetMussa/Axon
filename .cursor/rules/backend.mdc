@@ -1,0 +1,77 @@
+---
+description: Backend conventions for FastAPI + SQLModel + Groq
+globs: "backend/**/*"
+---
+
+# Backend Rules
+
+## Stack
+
+- Python 3.11+, FastAPI, SQLModel (SQLAlchemy + Pydantic), PostgreSQL
+- Groq Cloud for AI (LLaMA 3.3 70B)
+- httpx + feedparser for data ingestion
+- readability-lxml for content extraction
+
+## Project Structure
+
+```
+backend/
+├── app/
+│   ├── main.py           # FastAPI app, all routes
+│   ├── models.py          # SQLModel table definitions
+│   ├── core/
+│   │   └── database.py    # Engine, init_db, get_session
+│   └── services/
+│       ├── fetcher.py     # Ingestion from all sources
+│       └── analyzer.py    # Classification, insights, chat
+├── requirements.txt
+├── compose.yaml
+└── Dockerfile
+```
+
+## Conventions
+
+- Routes live in `main.py`. Keep them thin — delegate to services.
+- Database sessions come from `get_session()` via FastAPI dependency injection.
+- For scripts outside the web context, use `get_script_session()`.
+- Models use SQLModel (which merges SQLAlchemy and Pydantic). Define tables with `table=True`.
+- Environment variables loaded via `python-dotenv`. Required: `DATABASE_URL`, `GROQ_API_KEY`. Optional: `GITHUB_TOKEN`.
+
+## Ingestion Pipeline
+
+`fetcher.py` runs multiple async "hunters" in parallel via `asyncio.gather`:
+- `hunt_alpha_github` — GitHub API search for new repos with 20+ stars
+- `hunt_discourse_hn` — Hacker News Algolia API (Ask/Show HN, 10+ comments)
+- `hunt_pulse_rss` — OpenAI, Anthropic, DeepMind blog RSS
+- `hunt_research_arxiv` — ArXiv cs.AI + cs.LG
+- `hunt_infrastructure` — NVIDIA, Pinecone, Modal, Cerebras blogs
+- `hunt_expert_blogs` — Karpathy, Simon Willison, Lilian Weng, Fast.ai, Altman
+- `hunt_lobsters` — Lobsters RSS
+
+Quality gate: `is_gold()` filters out blacklisted domains and fluff content, while promoting viral signals above engagement thresholds.
+
+Per-source cap: max 10 articles per source per ingestion run.
+
+## Analysis Pipeline
+
+`analyzer.py` does three things:
+1. **classify_article()** — rule-based classification into AI / Signal / Momentum / Discovery / Concerns
+2. **generate_insight()** — Groq call producing 2 paragraphs (what + why)
+3. **update_trends()** — keyword extraction from titles and snippets
+
+On-demand:
+- **generate_deep_brief()** — 3-section analysis (Technical Primitive / Market Impact / Opportunity)
+- **chat_about_article()** — conversational Q&A scoped to article context
+
+## Groq Usage
+
+- Model: `llama-3.3-70b-versatile`
+- Insights: 250 max tokens, temp 0.4
+- Briefs: 400 max tokens, temp 0.5
+- Chat: 300 max tokens, temp 0.6
+
+## Docker
+
+`compose.yaml` defines two services:
+- `web` — FastAPI via gunicorn + uvicorn worker on port 8000
+- `db` — PostgreSQL 15 on port 5433 (host) → 5432 (container)

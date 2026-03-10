@@ -1,0 +1,55 @@
+---
+description: Frontend conventions for Svelte 5 + SvelteKit + Tailwind
+globs: "fronted/**/*"
+---
+
+# Frontend Rules
+
+## Framework
+
+- Svelte 5 with SvelteKit 2
+- Tailwind CSS v4 (utility-first, no component CSS files)
+- TypeScript strict mode
+- Icons from `lucide-svelte`
+- Markdown rendering with `marked`
+
+## Svelte 5 Runes
+
+Always use runes, never legacy Svelte syntax:
+- `$state` for reactive variables
+- `$derived` / `$derived.by` for computed values
+- `$props()` for component props (typed)
+- `$effect` for side effects
+- `$bindable()` for two-way bindable props
+
+## Component Conventions
+
+- Props are typed inline with `$props()`:
+  ```svelte
+  let { article, onOpen, onToggleSave }: Props = $props();
+  ```
+- Callbacks use `on*` naming: `onOpen`, `onBack`, `onToggleSave`, `onSendChat`
+- Components never manage global state — state flows down via props, events flow up via callbacks
+
+## State Management
+
+- All app state lives in `+page.svelte` using `$state`
+- No Svelte stores — keep it simple and co-located
+- `localStorage` for caching (`axon_premium_cache`) and saved articles (`axon_saved_signals`)
+
+## Styling
+
+- Dark theme: backgrounds `#0b0b0b` / `#0a0a0a`, text `#e4e4e7`
+- Fonts: Inter (body), JetBrains Mono (code)
+- Use Tailwind classes exclusively — no inline styles, no `<style>` blocks (except global overrides in `+page.svelte`)
+- Responsive: desktop = sidebar + feed + reader side-by-side; mobile = bottom nav + feed, reader overlays full-screen
+
+## File Organization
+
+- Components grouped by feature: `feed/`, `navigation/`, `reader/`
+- Shared logic in `lib/api.ts` (API client) and `lib/ui.ts` (navigation, helpers)
+- One route: `+page.svelte` is the entire app
+
+## API Client
+
+All backend calls go through `$lib/api.ts`. Never call `fetch()` directly in components — always use the `api` object.
