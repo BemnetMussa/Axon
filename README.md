@@ -54,7 +54,7 @@ Axon fetches signals, classifies them into five categories (**AI**, **Signal**, 
 
 - Python 3.11+
 - Node.js 18+ and npm
-- PostgreSQL 15 (Docker recommended)
+- PostgreSQL 15 ([Supabase](https://supabase.com) free tier, or Docker for local dev)
 - [Groq API key](https://console.groq.com) (free tier — 14,400 req/day)
 - GitHub personal access token (optional, improves GitHub API rate limits)
 
@@ -65,9 +65,15 @@ git clone https://github.com/bemnetmussa/axon.git
 cd axon
 ```
 
-### 2. Start PostgreSQL
+### 2. Set Up PostgreSQL
 
-**Docker (recommended):**
+**Option A: Supabase (recommended — free, hosted, no setup)**
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to **Project Settings → Database → Connection string → URI**
+3. Copy the connection string and paste it in your `.env` as `DATABASE_URL`
+
+**Option B: Local Docker**
 
 ```bash
 cd backend
@@ -75,12 +81,6 @@ docker compose up db -d
 ```
 
 This starts Postgres on port `5433` (host) mapped to `5432` (container) with user `axon`, password `axon123`, database `axon_db`.
-
-**Or manually:**
-
-```bash
-createdb axon_db
-```
 
 ### 3. Backend Setup
 
@@ -236,10 +236,16 @@ Articles are classified by `analyzer.py` into:
 Create `backend/.env` from the example:
 
 ```bash
-DATABASE_URL=postgresql://axon:axon123@127.0.0.1:5432/axon_db
+# Supabase (or any PostgreSQL)
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.xxxxx.supabase.co:5432/postgres
+
+# Required
 GROQ_API_KEY=gsk_your_key_here
-GITHUB_TOKEN=ghp_your_token_here       # optional, avoids GitHub rate limits
-INGEST_INTERVAL_HOURS=4                # optional, default 4 hours
+
+# Optional
+GITHUB_TOKEN=ghp_your_token_here       # avoids GitHub rate limits
+INGEST_INTERVAL_HOURS=4                # default 4 hours
+DB_ECHO=false                          # set to "true" to log SQL queries
 ```
 
 The frontend reads `VITE_API_BASE_URL` (defaults to `http://127.0.0.1:8000`).
