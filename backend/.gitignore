@@ -1,28 +1,3 @@
-# Python virtual environment
-.venv/
-venv/
-
-Axon_cli/venv/
-
-# Python bytecode
-__pycache__/
-*.pyc
-*.pyo
-
-# Environment variables
-.env
-
-# IDE-specific files (common examples)
-.vscode/
-.idea/
-
-# Logs and temporary files
-*.log
-*.tmp
-temp/
-tmp/
-
-# Docker-related (if any dynamically generated files outside of .dockerignore)
-# builder-*-*-*.tar
-# Dockerfile.*
-# *.bak
+# Covered by root .gitignore — this file adds backend-specific ignores
+*.db
+*.sqlite3

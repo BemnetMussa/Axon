@@ -1,28 +1,56 @@
-# Python virtual environment
+# === Python ===
 .venv/
 venv/
-
-Axon_cli/venv/
-
-# Python bytecode
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+dist/
+build/
 
-# Environment variables
+# === Node ===
+node_modules/
+.output/
+.vercel/
+.netlify/
+
+# === Environment / Secrets ===
 .env
+.env.*
+!.env.example
 
-# IDE-specific files (common examples)
+# === IDE / Editor ===
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
-# Logs and temporary files
+# === Cursor (AI assistant rules — local dev only) ===
+.cursor/
+
+# === OS junk ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === Logs / Temp ===
 *.log
 *.tmp
 temp/
 tmp/
 
-# Docker-related (if any dynamically generated files outside of .dockerignore)
-# builder-*-*-*.tar
-# Dockerfile.*
-# *.bak
+# === Yarn PnP / cache ===
+.pnp.*
+.yarn/
+**/install-state.gz
+
+# === SvelteKit build ===
+.svelte-kit/
+
+# === Vite ===
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# === Docker ===
+*.tar
