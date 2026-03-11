@@ -61,11 +61,24 @@ export function stripHtml(content: string): string {
 
 export function relativeTime(dateStr: string): string {
 	if (!dateStr) return '';
-	const diff = Date.now() - new Date(dateStr).getTime();
+	let d = dateStr;
+	if (!d.endsWith('Z') && !d.includes('+') && !d.includes('-', 10)) {
+		d += 'Z';
+	}
+	const date = new Date(d);
+	const diff = Date.now() - date.getTime();
+	if (diff < 0) return 'Just now';
+	const mins = Math.floor(diff / 60_000);
+	if (mins < 1) return 'Just now';
+	if (mins < 60) return `${mins} min`;
 	const hours = Math.floor(diff / 3_600_000);
-	if (hours < 1) return `${Math.max(1, Math.floor(diff / 60_000))}m`;
-	if (hours < 24) return `${hours}h`;
-	return `${Math.floor(hours / 24)}d`;
+	if (hours < 24) return `${hours}h ago`;
+	const days = Math.floor(hours / 24);
+	if (days === 1) return 'Yesterday';
+	if (days < 7) return `${days}d ago`;
+	if (days < 30) return `${Math.floor(days / 7)}w ago`;
+	const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+	return `${months[date.getMonth()]} ${date.getDate()}`;
 }
 
 export function formatEngagement(likes: number): string {

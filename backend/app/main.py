@@ -89,7 +89,7 @@ def trigger_retry_insights(session: Session = Depends(get_session)):
 
 @app.get("/articles")
 def read_articles(
-    limit: int = Query(default=40, le=200),
+    limit: int = Query(default=10, le=100),
     cursor: int | None = Query(default=None),
     session: Session = Depends(get_session),
 ):
@@ -106,6 +106,21 @@ def read_articles(
         "next_cursor": next_cursor,
         "has_more": len(articles) == limit,
     }
+
+
+# ---------------------------------------------------------------------------
+# Check for new articles (lightweight, no data transfer)
+# ---------------------------------------------------------------------------
+
+@app.get("/articles/count-since")
+def count_since(
+    since_id: int = Query(...),
+    session: Session = Depends(get_session),
+):
+    count = session.exec(
+        select(func.count()).select_from(Article).where(col(Article.id) > since_id)
+    ).one()
+    return {"new_count": count}
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,8 @@ import asyncio
 import feedparser
 import re
 import html
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from time import mktime
 from sqlmodel import Session, select
 from app.models import Article
 from dotenv import load_dotenv
@@ -37,6 +38,22 @@ TITLE_FLUFF = {
 
 MAX_PER_SOURCE = 8
 MAX_TOTAL_PER_RUN = 60
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _parse_feed_date(entry) -> datetime:
+    """Extract publication date from a feedparser entry."""
+    for attr in ("published_parsed", "updated_parsed"):
+        parsed = getattr(entry, attr, None)
+        if parsed:
+            try:
+                return datetime.fromtimestamp(mktime(parsed), tz=timezone.utc)
+            except Exception:
+                pass
+    return _now()
 
 
 def is_gold(url: str, title: str, engagement: int = 0, source: str = "") -> bool:
@@ -76,6 +93,7 @@ async def hunt_hn_top(client: httpx.AsyncClient):
                 if not item or item.get("type") != "story":
                     return None
                 url = item.get("url") or f"https://news.ycombinator.com/item?id={sid}"
+                pub = datetime.fromtimestamp(item.get("time", 0), tz=timezone.utc) if item.get("time") else _now()
                 return {
                     "title": item.get("title", ""),
                     "url": url,
@@ -83,6 +101,7 @@ async def hunt_hn_top(client: httpx.AsyncClient):
                     "source": "HackerNews",
                     "category": "General",
                     "likes": item.get("score", 0),
+                    "published": pub,
                 }
             except Exception:
                 return None
@@ -99,17 +118,24 @@ async def hunt_hn_discussions(client: httpx.AsyncClient):
     try:
         res = await client.get(url, timeout=10.0)
         hits = res.json().get("hits", [])
-        return [
-            {
+        results = []
+        for h in hits:
+            pub = _now()
+            if h.get("created_at"):
+                try:
+                    pub = datetime.fromisoformat(h["created_at"].replace("Z", "+00:00"))
+                except Exception:
+                    pass
+            results.append({
                 "title": h["title"],
                 "url": f"https://news.ycombinator.com/item?id={h['objectID']}",
                 "snippet": (h.get("story_text") or "")[:300] or h["title"],
                 "source": "HackerNews",
                 "category": "Discovery" if "show hn" in h["title"].lower() else "Concerns",
                 "likes": h.get("points", 0),
-            }
-            for h in hits
-        ]
+                "published": pub,
+            })
+        return results
     except Exception:
         return []
 
@@ -130,8 +156,17 @@ async def hunt_github_trending(client: httpx.AsyncClient):
             if res.status_code != 200:
                 return []
             items = res.json().get("items", [])
-            return [
-                {
+            results = []
+            for i in items:
+                if not is_gold(i["html_url"], i["name"], i["stargazers_count"], "github"):
+                    continue
+                pub = _now()
+                if i.get("created_at"):
+                    try:
+                        pub = datetime.fromisoformat(i["created_at"].replace("Z", "+00:00"))
+                    except Exception:
+                        pass
+                results.append({
                     "title": f"{i['name']}: {i['description'] or 'No description'}",
                     "url": i["html_url"],
                     "snippet": (
@@ -142,10 +177,9 @@ async def hunt_github_trending(client: httpx.AsyncClient):
                     "source": "GitHub",
                     "category": label,
                     "likes": i["stargazers_count"],
-                }
-                for i in items
-                if is_gold(i["html_url"], i["name"], i["stargazers_count"], "github")
-            ]
+                    "published": pub,
+                })
+            return results
         except Exception:
             return []
 
@@ -195,6 +229,7 @@ async def hunt_product_launches(client: httpx.AsyncClient):
                     "source": name,
                     "category": "Discovery",
                     "likes": 0,
+                    "published": _parse_feed_date(e),
                 })
         except Exception:
             continue
@@ -225,6 +260,7 @@ async def hunt_ai_labs(client: httpx.AsyncClient):
                     "source": name,
                     "category": "AI",
                     "likes": 0,
+                    "published": _parse_feed_date(e),
                 })
         except Exception:
             continue
@@ -256,6 +292,7 @@ async def hunt_infrastructure(client: httpx.AsyncClient):
                     "source": name,
                     "category": "AI",
                     "likes": 0,
+                    "published": _parse_feed_date(e),
                 })
         except Exception:
             continue
@@ -288,6 +325,7 @@ async def hunt_expert_blogs(client: httpx.AsyncClient):
                     "source": name,
                     "category": "Momentum",
                     "likes": 0,
+                    "published": _parse_feed_date(e),
                 })
         except Exception:
             continue
@@ -303,17 +341,24 @@ async def hunt_lobsters(client: httpx.AsyncClient):
     try:
         res = await client.get("https://lobste.rs/hottest.json", timeout=10.0)
         items = res.json()[:12]
-        return [
-            {
+        results = []
+        for i in items:
+            pub = _now()
+            if i.get("created_at"):
+                try:
+                    pub = datetime.fromisoformat(i["created_at"].replace("Z", "+00:00"))
+                except Exception:
+                    pass
+            results.append({
                 "title": i["title"],
                 "url": i.get("url") or i["short_id_url"],
                 "snippet": (i.get("description") or i["title"])[:300],
                 "source": "Lobsters",
                 "category": "Concerns",
                 "likes": i.get("score", 0),
-            }
-            for i in items
-        ]
+                "published": pub,
+            })
+        return results
     except Exception:
         try:
             res = await client.get("https://lobste.rs/rss", timeout=10.0)
@@ -326,6 +371,7 @@ async def hunt_lobsters(client: httpx.AsyncClient):
                     "source": "Lobsters",
                     "category": "Concerns",
                     "likes": 0,
+                    "published": _parse_feed_date(e),
                 }
                 for e in feed.entries[:15]
             ]
@@ -354,6 +400,7 @@ async def hunt_arxiv(client: httpx.AsyncClient):
                 "source": "ArXiv",
                 "category": "Signal",
                 "likes": 0,
+                "published": _parse_feed_date(e),
             }
             for e in feed.entries
         ]
@@ -385,6 +432,7 @@ async def hunt_tech_news(client: httpx.AsyncClient):
                     "source": name,
                     "category": "AI",
                     "likes": 0,
+                    "published": _parse_feed_date(e),
                 })
         except Exception:
             continue
@@ -446,7 +494,7 @@ async def ingest_intelligence(session: Session):
                 title=sig["title"],
                 url=sig["url"],
                 source=sig["source"],
-                published_date=datetime.utcnow(),
+                published_date=sig.get("published", _now()),
                 content_snippet=sig.get("snippet", ""),
                 category=sig.get("category", "General"),
                 likes=sig.get("likes", 0),

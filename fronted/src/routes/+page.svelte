@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { api, type Article, type Trend } from '$lib/api';
+	import { onMount, onDestroy } from 'svelte';
+	import { api, feedCache, type Article, type Trend } from '$lib/api';
 	import FeedPanel from '$lib/components/feed/FeedPanel.svelte';
 	import DesktopSidebar from '$lib/components/navigation/DesktopSidebar.svelte';
 	import MobileBottomNav from '$lib/components/navigation/MobileBottomNav.svelte';
@@ -26,16 +26,24 @@
 	let chatMessages = $state<ChatMessage[]>([]);
 	let chatLoading = $state(false);
 	let sortBy = $state<'date' | 'engagement' | 'views'>('date');
+	let timeFilter = $state<'all' | 'today' | 'week' | 'month'>('all');
 	let theme = $state<'dark' | 'light'>('dark');
 
 	let nextCursor = $state<number | null>(null);
 	let hasMore = $state(false);
 	let loadingMore = $state(false);
+	let newArticleIds = $state<Set<number>>(new Set());
+	let readArticleIds = $state<Set<number>>(new Set());
+	let feedScrollArea = $state<HTMLDivElement | undefined>();
 
-	const CACHE_KEY = 'axon_premium_cache';
 	const SAVED_KEY = 'axon_saved_signals';
+	const SEEN_KEY = 'axon_seen_articles';
+	const READ_KEY = 'axon_read_articles';
 	const THEME_KEY = 'axon_theme';
+	const POLL_INTERVAL_MS = 60_000;
 	const mobileNavItems = [NAVIGATION[0], NAVIGATION[1], NAVIGATION[3], NAVIGATION[4]];
+
+	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 	let sources = $derived([...new Set(allArticles.map((a) => a.source))].sort());
 	let sourceCounts = $derived.by(() => {
@@ -45,11 +53,24 @@
 		});
 		return counts;
 	});
+	function parseDate(dateStr: string): number {
+		let d = dateStr;
+		if (!d.endsWith('Z') && !d.includes('+') && !d.includes('-', 10)) d += 'Z';
+		return new Date(d).getTime();
+	}
+
 	let filtered = $derived.by(() => {
 		let list = allArticles;
 		if (showSavedOnly) list = list.filter((a) => savedArticleIds.includes(a.id));
 		if (activeSource) list = list.filter((a) => a.source === activeSource);
 		if (activeCategory) list = list.filter((a) => a.category === activeCategory);
+		if (timeFilter !== 'all') {
+			const now = Date.now();
+			const cutoff = timeFilter === 'today' ? now - 86_400_000
+				: timeFilter === 'week' ? now - 7 * 86_400_000
+				: now - 30 * 86_400_000;
+			list = list.filter((a) => parseDate(a.published_date) >= cutoff);
+		}
 		if (searchQuery.trim()) {
 			const q = searchQuery.toLowerCase();
 			list = list.filter(
@@ -75,26 +96,154 @@
 		applyTheme(theme === 'dark' ? 'light' : 'dark');
 	}
 
+	// -----------------------------------------------------------------------
+	// Boot: cache-first, then background revalidate
+	// -----------------------------------------------------------------------
+
 	async function load() {
 		const savedTheme = localStorage.getItem(THEME_KEY) as 'dark' | 'light' | null;
 		if (savedTheme) applyTheme(savedTheme);
 
-		const raw = localStorage.getItem(CACHE_KEY);
-		if (raw) {
-			try {
-				const cached = JSON.parse(raw);
-				allArticles = cached.articles ?? [];
-				trends = cached.trends ?? [];
-				nextCursor = cached.nextCursor ?? null;
-				hasMore = cached.hasMore ?? false;
-				loading = false;
-			} catch { /* ignore corrupt cache */ }
-		}
-
 		const saved = localStorage.getItem(SAVED_KEY);
 		if (saved) savedArticleIds = JSON.parse(saved);
 
-		await smartSync();
+		readArticleIds = loadReadIds();
+
+		const cached = feedCache.get();
+
+		if (cached && feedCache.isUsable()) {
+			allArticles = cached.articles;
+			trends = cached.trends;
+			nextCursor = cached.nextCursor;
+			hasMore = cached.hasMore;
+			loading = false;
+
+			if (!feedCache.isFresh()) {
+				backgroundRevalidate();
+			}
+		} else {
+			await fetchFirstPage();
+		}
+
+		startPolling();
+	}
+
+	async function fetchFirstPage() {
+		loading = allArticles.length === 0;
+		syncIndicator = true;
+		try {
+			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
+			allArticles = articleRes.articles;
+			nextCursor = articleRes.next_cursor;
+			hasMore = articleRes.has_more;
+			trends = trendData;
+			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+		} catch (error) {
+			console.error('Fetch failed', error);
+		} finally {
+			loading = false;
+			syncIndicator = false;
+		}
+	}
+
+	async function backgroundRevalidate() {
+		syncIndicator = true;
+		try {
+			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
+
+			const existingIds = new Set(allArticles.map((a) => a.id));
+			const freshArticles = articleRes.articles.filter((a) => !existingIds.has(a.id));
+
+			if (freshArticles.length > 0) {
+				const seen = loadSeenIds();
+				const brandNew = freshArticles.filter((a) => !seen.has(a.id));
+				if (brandNew.length > 0) {
+					newArticleIds = new Set([...newArticleIds, ...brandNew.map((a) => a.id)]);
+				}
+			}
+
+			const freshIds = new Set(articleRes.articles.map((a) => a.id));
+			const kept = allArticles.filter((a) => !freshIds.has(a.id));
+			allArticles = [...articleRes.articles, ...kept];
+
+			nextCursor = articleRes.next_cursor;
+			hasMore = articleRes.has_more;
+			trends = trendData;
+			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+
+			if (freshArticles.length > 0) {
+				scrollFeedToTop();
+			}
+		} catch {
+			// silent — user still has cached data
+		} finally {
+			syncIndicator = false;
+		}
+	}
+
+	// -----------------------------------------------------------------------
+	// Poll for new signals every 60s — auto-fetch when found
+	// -----------------------------------------------------------------------
+
+	function startPolling() {
+		pollTimer = setInterval(async () => {
+			const latestId = feedCache.latestId();
+			if (!latestId) return;
+			try {
+				const count = await api.countNewSince(latestId);
+				if (count > 0) await backgroundRevalidate();
+			} catch { /* silent */ }
+		}, POLL_INTERVAL_MS);
+	}
+
+	function scrollFeedToTop() {
+		feedScrollArea?.scrollTo({ top: 0, behavior: 'smooth' });
+	}
+
+	async function checkForNew(): Promise<boolean> {
+		const latestId = feedCache.latestId();
+		if (!latestId) return false;
+		try {
+			const count = await api.countNewSince(latestId);
+			if (count > 0) {
+				await backgroundRevalidate();
+				return true;
+			}
+			return false;
+		} catch {
+			return false;
+		}
+	}
+
+	function loadSeenIds(): Set<number> {
+		try {
+			const raw = localStorage.getItem(SEEN_KEY);
+			return raw ? new Set(JSON.parse(raw)) : new Set();
+		} catch { return new Set(); }
+	}
+
+	function markSeen(id: number) {
+		newArticleIds.delete(id);
+		newArticleIds = new Set(newArticleIds);
+		const seen = loadSeenIds();
+		seen.add(id);
+		const kept = [...seen].slice(-500);
+		localStorage.setItem(SEEN_KEY, JSON.stringify(kept));
+	}
+
+	function loadReadIds(): Set<number> {
+		try {
+			const raw = localStorage.getItem(READ_KEY);
+			return raw ? new Set(JSON.parse(raw)) : new Set();
+		} catch { return new Set(); }
+	}
+
+	function markRead(id: number) {
+		if (readArticleIds.has(id)) return;
+		readArticleIds.add(id);
+		readArticleIds = new Set(readArticleIds);
+		const kept = [...readArticleIds].slice(-1000);
+		localStorage.setItem(READ_KEY, JSON.stringify(kept));
 	}
 
 	function persistSaved() {
@@ -126,23 +275,13 @@
 		persistSaved();
 	}
 
-	async function smartSync() {
+	async function manualRefresh() {
 		syncIndicator = true;
 		try {
 			await api.triggerRefresh();
-			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
-			allArticles = articleRes.articles;
-			nextCursor = articleRes.next_cursor;
-			hasMore = articleRes.has_more;
-			trends = trendData;
-			localStorage.setItem(CACHE_KEY, JSON.stringify({
-				articles: allArticles, trends: trendData,
-				nextCursor, hasMore
-			}));
+			await fetchFirstPage();
 		} catch (error) {
-			console.error('Sync failed', error);
-		} finally {
-			loading = false;
+			console.error('Refresh failed', error);
 			syncIndicator = false;
 		}
 	}
@@ -152,9 +291,12 @@
 		loadingMore = true;
 		try {
 			const res = await api.getArticles(nextCursor);
-			allArticles = [...allArticles, ...res.articles];
+			const existingIds = new Set(allArticles.map((a) => a.id));
+			const newOnes = res.articles.filter((a) => !existingIds.has(a.id));
+			allArticles = [...allArticles, ...newOnes];
 			nextCursor = res.next_cursor;
 			hasMore = res.has_more;
+			feedCache.appendPage(newOnes, res.next_cursor, res.has_more);
 		} catch (error) {
 			console.error('Load more failed', error);
 		} finally {
@@ -166,6 +308,8 @@
 		selectedArticle = article;
 		chatMessages = [];
 		chatInput = '';
+		markSeen(article.id);
+		markRead(article.id);
 		api.trackView(article.id);
 	}
 
@@ -193,6 +337,7 @@
 	}
 
 	onMount(load);
+	onDestroy(() => { if (pollTimer) clearInterval(pollTimer); });
 </script>
 
 <svelte:head>
@@ -221,20 +366,26 @@
 				{activeSource}
 				{searchQuery}
 				{sortBy}
+				{timeFilter}
 				{theme}
 				{hasMore}
 				{loadingMore}
 				selectedArticleId={selectedArticle?.id ?? null}
 				{savedArticleIds}
+				{readArticleIds}
 				{loading}
 				{syncIndicator}
+				{newArticleIds}
 				onSearchChange={(value) => (searchQuery = value)}
 				onSourceSelect={selectSource}
 				onSortChange={(value) => (sortBy = value)}
+				onTimeFilterChange={(value) => (timeFilter = value)}
 				onArticleOpen={openArticle}
 				onToggleSave={toggleSave}
-				onRefresh={smartSync}
+				onRefresh={manualRefresh}
 				onLoadMore={loadMore}
+				onCheckNew={checkForNew}
+				bind:scrollArea={feedScrollArea}
 			/>
 		</div>
 
