@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from app.models import Article, Trend
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
@@ -217,7 +217,7 @@ def analyze_articles(session: Session):
 def chat_about_article(title: str, content: str, insight: str, question: str) -> str:
     """Answers a user question about a specific article using its context."""
     if not client.api_key:
-        return "AI chat offline."
+        return "AI chat is offline — no API key configured."
 
     clean_content = re.sub(r"<[^>]+>", "", content).strip()[:1500]
 
@@ -240,5 +240,5 @@ Provide a concise, expert answer based on the context above. If the context does
         )
         return res.choices[0].message.content.strip()  # type: ignore
     except Exception as e:
-        print(f"Chat error: {e}")
-        return "Sorry, I couldn't process that question right now."
+        print(f"AXON CHAT ERROR: {type(e).__name__}: {e}")
+        return f"Chat error: {type(e).__name__}. Check server logs."
