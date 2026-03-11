@@ -13,7 +13,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.core.database import init_db, get_session, get_script_session
 from app.models import Article, Trend
 from app.services.fetcher import ingest_intelligence
-from app.services.analyzer import analyze_articles, generate_deep_brief, chat_about_article
+from app.services.analyzer import analyze_articles, retry_failed_insights, generate_deep_brief, chat_about_article
 from app.services.extractor import extract_article_content
 
 scheduler = AsyncIOScheduler()
@@ -75,6 +75,12 @@ async def trigger_ingestion(session: Session = Depends(get_session)):
 def trigger_analysis(session: Session = Depends(get_session)):
     count = analyze_articles(session)
     return {"status": "success", "processed": count}
+
+
+@app.post("/retry-insights")
+def trigger_retry_insights(session: Session = Depends(get_session)):
+    count = retry_failed_insights(session)
+    return {"status": "success", "retried": count}
 
 
 # ---------------------------------------------------------------------------

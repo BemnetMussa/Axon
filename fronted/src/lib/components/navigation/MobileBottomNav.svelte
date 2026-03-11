@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Zap } from 'lucide-svelte';
 	import type { NavItem } from '$lib/ui';
 
 	type Props = {
@@ -30,10 +31,18 @@
 	{#each items as item}
 		<button
 			onclick={() => onNavigate(item.id)}
-			class={`flex flex-col items-center gap-0.5 px-1 py-1.5 transition-colors ${itemColor(activeCategory === item.id && !showSavedOnly)}`}
+			class={`flex flex-col items-center gap-0.5 px-1 py-2 transition-colors ${itemColor(activeCategory === item.id && !showSavedOnly)}`}
 		>
 			<item.icon class="h-4 w-4" />
 			<span class="truncate text-[8px] font-semibold">{item.label}</span>
 		</button>
 	{/each}
+
+	<button
+		onclick={onShowSaved}
+		class={`flex flex-col items-center gap-0.5 px-1 py-2 transition-colors ${itemColor(showSavedOnly)}`}
+	>
+		<Zap class={`h-4 w-4 ${showSavedOnly ? (dark ? 'fill-white' : 'fill-black') : ''}`} />
+		<span class="truncate text-[8px] font-semibold">Saved</span>
+	</button>
 </nav>

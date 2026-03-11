@@ -93,7 +93,7 @@
 		</div>
 	</div>
 
-	<div class="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-28 lg:pb-0" onscroll={handleScroll}>
+	<div class="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-20 lg:pb-0" onscroll={handleScroll}>
 		{#if loading && articles.length === 0}
 			<div class="flex h-full items-center justify-center px-6 text-center">
 				<div>

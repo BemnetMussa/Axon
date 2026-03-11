@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from collections import Counter
 from groq import Groq
 from sqlmodel import Session, select
@@ -9,6 +10,9 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+BATCH_SIZE = 8
+BATCH_DELAY = 12
 
 # ── Categories ──────────────────────────────────────────────
 # AI        → Model releases, lab announcements, infrastructure news
@@ -136,8 +140,8 @@ def update_trends(session: Session, articles: list[Article]):
     session.commit()
 
 
-def generate_insight(title: str, content: str) -> str:
-    """Two-paragraph insight: what this is and why it matters."""
+def generate_insight(title: str, content: str, retries: int = 2) -> str:
+    """Two-paragraph insight with retry on rate limit."""
     if not client.api_key:
         return "AI analysis offline."
 
@@ -155,16 +159,23 @@ Rules:
 Title: {title}
 Content: {clean_content}"""
 
-    try:
-        res = client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
-            max_tokens=250,
-            temperature=0.4,
-        )
-        return res.choices[0].message.content.strip().replace("**", "").replace("*", "")  # type: ignore
-    except Exception:
-        return "Insight generation failed."
+    for attempt in range(retries + 1):
+        try:
+            res = client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama-3.3-70b-versatile",
+                max_tokens=250,
+                temperature=0.4,
+            )
+            return res.choices[0].message.content.strip().replace("**", "").replace("*", "")  # type: ignore
+        except Exception as e:
+            if attempt < retries and "rate" in str(e).lower():
+                print(f"AXON: Rate limited, waiting {BATCH_DELAY}s (attempt {attempt + 1})")
+                time.sleep(BATCH_DELAY)
+            else:
+                print(f"AXON INSIGHT ERROR: {e}")
+                return ""
+    return ""
 
 
 def generate_deep_brief(title: str, content: str) -> str:
@@ -203,15 +214,59 @@ def analyze_articles(session: Session):
     if not articles:
         return 0
 
-    for article in articles:
-        article.category = classify_article(article.title, article.url, article.source)
-        article.insight = generate_insight(article.title, article.content_snippet or "")
-        article.is_processed = True
-        session.add(article)
+    total = len(articles)
+    print(f"AXON: Analyzing {total} articles in batches of {BATCH_SIZE}...")
+
+    for i in range(0, total, BATCH_SIZE):
+        batch = articles[i:i + BATCH_SIZE]
+        for article in batch:
+            article.category = classify_article(article.title, article.url, article.source)
+            article.insight = generate_insight(article.title, article.content_snippet or "")
+            article.is_processed = True
+            session.add(article)
+
+        session.commit()
+        processed = min(i + BATCH_SIZE, total)
+        print(f"AXON: Processed {processed}/{total}")
+
+        if i + BATCH_SIZE < total:
+            time.sleep(BATCH_DELAY)
 
     update_trends(session, articles)
     session.commit()
-    return len(articles)
+    return total
+
+
+def retry_failed_insights(session: Session):
+    """Re-generate insights for articles that failed on the first pass."""
+    failed = session.exec(
+        select(Article).where(
+            Article.is_processed == True,  # noqa: E712
+            (Article.insight == None) | (Article.insight == "") | (Article.insight == "Insight generation failed."),  # noqa: E711
+        )
+    ).all()
+    if not failed:
+        return 0
+
+    total = len(failed)
+    print(f"AXON: Retrying insights for {total} articles...")
+    fixed = 0
+
+    for i in range(0, total, BATCH_SIZE):
+        batch = failed[i:i + BATCH_SIZE]
+        for article in batch:
+            result = generate_insight(article.title, article.content_snippet or "")
+            if result:
+                article.insight = result
+                fixed += 1
+                session.add(article)
+
+        session.commit()
+        if i + BATCH_SIZE < total:
+            time.sleep(BATCH_DELAY)
+
+    print(f"AXON: Fixed {fixed}/{total} insights")
+    return fixed
 
 
 def chat_about_article(title: str, content: str, insight: str, question: str) -> str:

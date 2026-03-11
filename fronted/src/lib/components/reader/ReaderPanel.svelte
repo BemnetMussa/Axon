@@ -78,29 +78,30 @@
 	class={`relative flex h-full min-h-0 flex-1 flex-col ${dark ? 'bg-[#0a0a0a]' : 'bg-white'}`}
 	transition:fly={{ x: 60, duration: 300, opacity: 0 }}
 >
-	<header class={`flex items-center justify-between gap-3 border-b px-4 py-2.5 sm:px-5 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}>
+	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2 sm:gap-3 sm:px-5 sm:py-2.5 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}>
 		<button
 			onclick={onBack}
-			class={`flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors ${dark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-black'}`}
+			class={`flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 transition-colors sm:gap-2 sm:px-2 ${dark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-black'}`}
 		>
 			<ArrowLeft class="h-4 w-4" />
-			<span class="text-[11px] font-semibold">Back</span>
+			<span class="text-[11px] font-semibold hidden sm:inline">Back</span>
 		</button>
 
-		<div class="flex items-center gap-2">
+		<div class="flex items-center gap-1.5 sm:gap-2">
 			<button
 				onclick={() => onToggleSave(article.id)}
-				class={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 transition-colors ${dark ? 'border-white/[0.06] hover:bg-white/5' : 'border-zinc-200 hover:bg-zinc-50'}`}
+				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors sm:w-auto sm:gap-1.5 sm:px-2.5 ${dark ? 'border-white/[0.06] hover:bg-white/5' : 'border-zinc-200 hover:bg-zinc-50'}`}
+				aria-label={isSaved ? 'Unsave' : 'Save'}
 			>
 				<Zap class={`h-3 w-3 ${savedStyle()}`} />
-				<span class={`text-[10px] font-semibold ${savedLabel()}`}>
+				<span class={`hidden text-[10px] font-semibold sm:inline ${savedLabel()}`}>
 					{isSaved ? 'Saved' : 'Save'}
 				</span>
 			</button>
 
 			<button
 				onclick={shareArticle}
-				class={`flex h-8 w-8 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] text-zinc-400 hover:bg-white hover:text-black' : 'border-zinc-200 text-zinc-500 hover:bg-black hover:text-white'}`}
+				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] text-zinc-400 hover:bg-white hover:text-black' : 'border-zinc-200 text-zinc-500 hover:bg-black hover:text-white'}`}
 				aria-label="Share article"
 			>
 				{#if shareSuccess}
@@ -124,7 +125,7 @@
 
 			<button
 				onclick={() => onOpenExternal(article.url)}
-				class={`flex h-8 w-8 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] text-zinc-400 hover:bg-white hover:text-black' : 'border-zinc-200 text-zinc-500 hover:bg-black hover:text-white'}`}
+				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] text-zinc-400 hover:bg-white hover:text-black' : 'border-zinc-200 text-zinc-500 hover:bg-black hover:text-white'}`}
 				aria-label="Open original article"
 			>
 				<ExternalLink class="h-3.5 w-3.5" />
@@ -133,7 +134,7 @@
 	</header>
 
 	<div bind:this={scrollArea} class="no-scrollbar min-h-0 flex-1 overflow-y-auto scroll-smooth">
-		<div class="mx-auto w-full max-w-2xl px-4 pb-48 pt-5 sm:px-6 sm:pb-52 sm:pt-8 lg:px-8 lg:pb-52 lg:pt-10">
+		<div class="mx-auto w-full max-w-2xl px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-8 lg:px-8 lg:pt-10">
 			<div class={`mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
 				<span>{article.category}</span>
 				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
@@ -198,10 +199,9 @@
 	</div>
 
 	<div
-		class="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-8 sm:px-6"
-		style={dark ? 'background: linear-gradient(to top, #0a0a0a 60%, transparent)' : 'background: linear-gradient(to top, #ffffff 60%, transparent)'}
+		class={`shrink-0 border-t px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}
 	>
-		<div class="pointer-events-auto mx-auto w-full max-w-xl">
+		<div class="mx-auto w-full max-w-xl">
 			<ChatDock
 				{chatInput}
 				{chatLoading}

@@ -35,7 +35,8 @@ TITLE_FLUFF = {
     "roadmap", "job", "tutorial", "resume", "leetcode",
 }
 
-MAX_PER_SOURCE = 15
+MAX_PER_SOURCE = 8
+MAX_TOTAL_PER_RUN = 60
 
 
 def is_gold(url: str, title: str, engagement: int = 0, source: str = "") -> bool:
@@ -63,7 +64,7 @@ async def hunt_hn_top(client: httpx.AsyncClient):
         res = await client.get(
             "https://hacker-news.firebaseio.com/v0/topstories.json", timeout=10.0
         )
-        story_ids = res.json()[:35]
+        story_ids = res.json()[:20]
 
         async def fetch_story(sid: int):
             try:
@@ -94,7 +95,7 @@ async def hunt_hn_top(client: httpx.AsyncClient):
 
 async def hunt_hn_discussions(client: httpx.AsyncClient):
     """Ask HN / Show HN — community discussions and launches."""
-    url = "https://hn.algolia.com/api/v1/search?tags=(ask_hn,show_hn)&numericFilters=num_comments>5&hitsPerPage=30"
+    url = "https://hn.algolia.com/api/v1/search?tags=(ask_hn,show_hn)&numericFilters=num_comments>5&hitsPerPage=15"
     try:
         res = await client.get(url, timeout=10.0)
         hits = res.json().get("hits", [])
@@ -123,7 +124,7 @@ async def hunt_github_trending(client: httpx.AsyncClient):
     signals: list[dict] = []
 
     async def search_github(query: str, label: str):
-        url = f"https://api.github.com/search/repositories?q={query}&sort=stars&order=desc&per_page=20"
+        url = f"https://api.github.com/search/repositories?q={query}&sort=stars&order=desc&per_page=10"
         try:
             res = await client.get(url, headers=gh_headers, timeout=15.0)
             if res.status_code != 200:
@@ -152,11 +153,10 @@ async def hunt_github_trending(client: httpx.AsyncClient):
     month_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
     queries = [
-        (f"created:>{week_ago} stars:>50", "Momentum"),
-        (f"created:>{month_ago} stars:>200 topic:ai", "AI"),
-        (f"created:>{month_ago} stars:>200 topic:machine-learning", "AI"),
-        (f"created:>{month_ago} stars:>100 (cli OR tool OR app OR framework OR sdk)", "Discovery"),
-        (f"pushed:>{week_ago} stars:>1000 topic:llm", "AI"),
+        (f"created:>{week_ago} stars:>100", "Momentum"),
+        (f"created:>{month_ago} stars:>300 topic:ai", "AI"),
+        (f"created:>{month_ago} stars:>200 (cli OR tool OR framework OR sdk)", "Discovery"),
+        (f"pushed:>{week_ago} stars:>2000 topic:llm", "AI"),
     ]
 
     results = await asyncio.gather(*[search_github(q, cat) for q, cat in queries])
@@ -302,7 +302,7 @@ async def hunt_lobsters(client: httpx.AsyncClient):
     """Lobste.rs top technical discussions."""
     try:
         res = await client.get("https://lobste.rs/hottest.json", timeout=10.0)
-        items = res.json()[:20]
+        items = res.json()[:12]
         return [
             {
                 "title": i["title"],
@@ -341,7 +341,7 @@ async def hunt_arxiv(client: httpx.AsyncClient):
     """Latest cs.AI and cs.LG papers from ArXiv."""
     url = (
         "https://export.arxiv.org/api/query?"
-        "search_query=cat:cs.AI+OR+cat:cs.LG&sortBy=submittedDate&max_results=30"
+        "search_query=cat:cs.AI+OR+cat:cs.LG&sortBy=submittedDate&max_results=12"
     )
     try:
         res = await client.get(url, timeout=15.0)
@@ -432,12 +432,15 @@ async def ingest_intelligence(session: Session):
             source_counts[source] = source_counts.get(source, 0) + 1
             if source_counts[source] > MAX_PER_SOURCE:
                 continue
+            if len(final) >= MAX_TOTAL_PER_RUN:
+                break
             final.append(sig)
             seen.add(url)
 
         if not final:
             return 0
 
+        added = 0
         for sig in final:
             article = Article(
                 title=sig["title"],
@@ -448,8 +451,13 @@ async def ingest_intelligence(session: Session):
                 category=sig.get("category", "General"),
                 likes=sig.get("likes", 0),
             )
-            session.add(article)
+            try:
+                session.add(article)
+                session.flush()
+                added += 1
+            except Exception:
+                session.rollback()
 
         session.commit()
-        print(f"AXON: Ingested {len(final)} signals from {len(source_counts)} sources")
-        return len(final)
+        print(f"AXON: Ingested {added} signals from {len(source_counts)} sources")
+        return added
