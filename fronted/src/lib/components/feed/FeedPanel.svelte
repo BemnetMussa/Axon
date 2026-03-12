@@ -35,6 +35,7 @@
 		onRefresh: () => void;
 		onLoadMore: () => void;
 		onCheckNew?: () => Promise<boolean>;
+		onToggleTheme?: () => void;
 	};
 
 	let {
@@ -42,7 +43,7 @@
 		hasMore, loadingMore, selectedArticleId, savedArticleIds, readArticleIds, loading,
 		syncIndicator, newArticleIds = new Set(), scrollArea = $bindable(),
 		onSearchChange, onSourceSelect, onSortChange, onTimeFilterChange,
-		onArticleOpen, onToggleSave, onRefresh, onLoadMore, onCheckNew
+		onArticleOpen, onToggleSave, onRefresh, onLoadMore, onCheckNew, onToggleTheme
 	}: Props = $props();
 
 	const sortOptions: { value: SortOption; label: string }[] = [
@@ -121,7 +122,7 @@
 </script>
 
 <section class={`relative flex h-full min-h-0 flex-1 flex-col ${dark ? 'bg-[#0b0b0b]' : 'bg-white'}`}>
-	<FeedHeader {title} articleCount={articles.length} {searchQuery} {syncIndicator} {theme} onSearchChange={onSearchChange} onRefresh={onRefresh} />
+	<FeedHeader {title} articleCount={articles.length} {searchQuery} {syncIndicator} {theme} onSearchChange={onSearchChange} onRefresh={onRefresh} {onToggleTheme} />
 
 	<div class={`border-b px-3 py-1.5 sm:px-5 sm:py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
 		<div class="no-scrollbar flex items-center gap-1 overflow-x-auto sm:gap-1.5">

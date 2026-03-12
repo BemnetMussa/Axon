@@ -75,7 +75,7 @@
 </script>
 
 <section
-	class={`relative flex h-full min-h-0 flex-1 flex-col ${dark ? 'bg-[#0a0a0a]' : 'bg-white'}`}
+	class={`relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${dark ? 'bg-[#0a0a0a]' : 'bg-white'}`}
 	transition:fly={{ x: 60, duration: 300, opacity: 0 }}
 >
 	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2 sm:gap-3 sm:px-5 sm:py-2.5 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}>
@@ -133,8 +133,8 @@
 		</div>
 	</header>
 
-	<div bind:this={scrollArea} class="no-scrollbar min-h-0 flex-1 overflow-y-auto scroll-smooth">
-		<div class="mx-auto w-full max-w-2xl px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-8 lg:px-8 lg:pt-10">
+	<div bind:this={scrollArea} class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scroll-smooth">
+		<div class="mx-auto w-full max-w-2xl px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-8 lg:px-8 lg:pt-10" style="overflow-wrap: anywhere;">
 			<div class={`mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
 				<span>{article.category}</span>
 				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
@@ -163,7 +163,7 @@
 						{#each chatMessages as msg}
 							{#if msg.role === 'user'}
 								<div class="flex justify-end">
-									<div class={`max-w-[80%] rounded-lg rounded-br-sm px-4 py-2.5 ${dark ? 'bg-white/[0.07]' : 'bg-zinc-100'}`}>
+									<div class={`max-w-[80%] rounded-lg rounded-br-sm px-4 py-2.5 ${dark ? 'bg-white/[0.07]' : 'bg-zinc-100'}`} style="overflow-wrap: anywhere;">
 										<p class={`text-[13px] leading-relaxed ${dark ? 'text-zinc-200' : 'text-zinc-800'}`}>{msg.content}</p>
 									</div>
 								</div>
@@ -201,7 +201,7 @@
 	<div
 		class={`shrink-0 border-t px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 sm:px-6 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}
 	>
-		<div class="mx-auto w-full max-w-xl">
+		<div class="mx-auto w-full min-w-0 max-w-xl">
 			<ChatDock
 				{chatInput}
 				{chatLoading}

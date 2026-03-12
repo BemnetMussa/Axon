@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { RefreshCw, Search, Zap } from 'lucide-svelte';
+	import { RefreshCw, Search, Zap, Sun, Moon } from 'lucide-svelte';
 
 	type Props = {
 		title: string;
@@ -9,9 +9,10 @@
 		theme: 'dark' | 'light';
 		onSearchChange: (value: string) => void;
 		onRefresh: () => void;
+		onToggleTheme?: () => void;
 	};
 
-	let { title, articleCount, searchQuery, syncIndicator, theme, onSearchChange, onRefresh }: Props = $props();
+	let { title, articleCount, searchQuery, syncIndicator, theme, onSearchChange, onRefresh, onToggleTheme }: Props = $props();
 	let dark = $derived(theme === 'dark');
 </script>
 
@@ -40,6 +41,19 @@
 					class={`h-8 w-full rounded-md border pl-8 pr-3 text-[12px] outline-none transition-all sm:w-40 sm:focus:w-56 lg:w-44 lg:focus:w-64 ${dark ? 'border-white/[0.06] bg-white/[0.03] text-white placeholder:text-zinc-600 focus:border-white/15' : 'border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400'}`}
 				/>
 			</label>
+			{#if onToggleTheme}
+				<button
+					onclick={onToggleTheme}
+					class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] bg-white/[0.03] text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900'}`}
+					aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+				>
+					{#if dark}
+						<Sun class="h-3.5 w-3.5" />
+					{:else}
+						<Moon class="h-3.5 w-3.5" />
+					{/if}
+				</button>
+			{/if}
 			<button
 				onclick={onRefresh}
 				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] bg-white/[0.03] text-zinc-400' : 'border-zinc-200 bg-zinc-50 text-zinc-500'}`}

@@ -357,8 +357,8 @@
 		onToggleTheme={toggleTheme}
 	/>
 
-	<div class="relative flex min-w-0 flex-1">
-		<div class={`min-w-0 overflow-hidden ${selectedArticle ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex flex-1'}`}>
+	<div class="relative flex min-w-0 flex-1 overflow-hidden">
+		<div class={`min-w-0 ${selectedArticle ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex flex-1'}`}>
 			<FeedPanel
 				title={currentTitle}
 				articles={filtered}
@@ -385,12 +385,13 @@
 				onRefresh={manualRefresh}
 				onLoadMore={loadMore}
 				onCheckNew={checkForNew}
+				onToggleTheme={toggleTheme}
 				bind:scrollArea={feedScrollArea}
 			/>
 		</div>
 
 		{#if selectedArticle}
-			<div class={`absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:min-w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a] lg:border-white/[0.04]' : 'bg-white lg:border-zinc-200'}`}>
+			<div class={`absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a] lg:border-white/[0.04]' : 'bg-white lg:border-zinc-200'}`}>
 				<ReaderPanel
 					article={selectedArticle}
 					isSaved={savedArticleIds.includes(selectedArticle.id)}
