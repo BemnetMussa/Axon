@@ -197,7 +197,7 @@
 				</div>
 			</div>
 		{:else}
-			<div class="flex min-w-0 flex-col gap-0.5 overflow-hidden px-2 py-2 sm:px-3 sm:py-3">
+			<div class="flex w-full min-w-0 max-w-full flex-col gap-0.5 overflow-hidden px-2 py-2 sm:px-3 sm:py-3">
 				{#each articles as article (article.id)}
 					<ArticleCard
 						{article}

@@ -358,7 +358,7 @@
 	/>
 
 	<div class="relative flex min-w-0 flex-1 overflow-hidden">
-		<div class={`min-w-0 ${selectedArticle ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex flex-1'}`}>
+		<div class={`min-w-0 overflow-hidden ${selectedArticle ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
 			<FeedPanel
 				title={currentTitle}
 				articles={filtered}

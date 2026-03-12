@@ -134,7 +134,7 @@
 	</header>
 
 	<div bind:this={scrollArea} class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scroll-smooth">
-		<div class="mx-auto w-full max-w-2xl px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-8 lg:px-8 lg:pt-10" style="overflow-wrap: anywhere;">
+		<div class="mx-auto w-full min-w-0 max-w-2xl px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-8 lg:px-8 lg:pt-10" style="overflow-wrap: anywhere;">
 			<div class={`mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
 				<span>{article.category}</span>
 				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
@@ -159,22 +159,22 @@
 				<p class={`mb-4 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Ask Axon</p>
 
 				{#if chatMessages.length > 0}
-					<div class="space-y-4">
+					<div class="min-w-0 max-w-full space-y-4">
 						{#each chatMessages as msg}
 							{#if msg.role === 'user'}
-								<div class="flex justify-end">
-									<div class={`max-w-[80%] rounded-lg rounded-br-sm px-4 py-2.5 ${dark ? 'bg-white/[0.07]' : 'bg-zinc-100'}`} style="overflow-wrap: anywhere;">
-										<p class={`text-[13px] leading-relaxed ${dark ? 'text-zinc-200' : 'text-zinc-800'}`}>{msg.content}</p>
+								<div class="flex min-w-0 justify-end">
+									<div class={`min-w-0 max-w-[85%] rounded-lg rounded-br-sm px-4 py-2.5 ${dark ? 'bg-white/[0.07]' : 'bg-zinc-100'}`} style="overflow-wrap: anywhere;">
+										<p class={`break-words text-[13px] leading-relaxed ${dark ? 'text-zinc-200' : 'text-zinc-800'}`}>{msg.content}</p>
 									</div>
 								</div>
 							{:else}
-								<div class={`rounded-lg rounded-bl-sm border px-4 py-3 ${dark ? 'border-white/[0.04] bg-white/[0.02]' : 'border-zinc-100 bg-zinc-50'}`}>
+								<div class={`min-w-0 max-w-full overflow-hidden rounded-lg rounded-bl-sm border px-4 py-3 ${dark ? 'border-white/[0.04] bg-white/[0.02]' : 'border-zinc-100 bg-zinc-50'}`}>
 									{#if dark}
-										<div class="prose prose-invert prose-sm max-w-none text-[13.5px] leading-7 text-zinc-300">
+										<div class="prose prose-invert prose-sm max-w-full overflow-hidden break-words text-[13.5px] leading-7 text-zinc-300 prose-p:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-li:break-words">
 											{@html marked.parse(msg.content)}
 										</div>
 									{:else}
-										<div class="prose prose-sm max-w-none text-[13.5px] leading-7 text-zinc-700">
+										<div class="prose prose-sm max-w-full overflow-hidden break-words text-[13.5px] leading-7 text-zinc-700 prose-p:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-li:break-words">
 											{@html marked.parse(msg.content)}
 										</div>
 									{/if}

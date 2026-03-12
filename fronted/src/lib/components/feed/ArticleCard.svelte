@@ -28,7 +28,7 @@
 	}
 </script>
 
-<article class={`group relative min-w-0 overflow-hidden rounded-lg border px-3 py-3 transition-all sm:px-4 sm:py-3.5 ${cardClass()}`}>
+<article class={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-lg border px-3 py-3 transition-all sm:px-4 sm:py-3.5 ${cardClass()}`}>
 	<button type="button" onclick={() => onOpen(article)} class="absolute inset-0 rounded-lg" aria-label={`Open ${article.title}`}></button>
 
 	<div class="flex min-w-0 items-center justify-between gap-2">
@@ -48,7 +48,7 @@
 		<span class={`shrink-0 text-[10px] font-semibold ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{relativeTime(article.published_date)}</span>
 	</div>
 
-	<h3 class={`mt-1.5 mb-1.5 line-clamp-2 min-w-0 text-[14px] font-semibold leading-snug transition-colors sm:text-[15px] ${dark ? 'text-zinc-100' : 'text-zinc-800'}`}>{article.title}</h3>
+	<h3 class={`mt-1.5 mb-1.5 line-clamp-2 min-w-0 break-words text-[14px] font-semibold leading-snug transition-colors sm:text-[15px] ${dark ? 'text-zinc-100' : 'text-zinc-800'}`} style="overflow-wrap: anywhere;">{article.title}</h3>
 
 	<div class="flex min-w-0 items-end gap-2">
 		<p class={`line-clamp-2 min-w-0 flex-1 overflow-hidden text-[12.5px] leading-relaxed sm:text-[13px] ${dark ? 'text-zinc-500' : 'text-zinc-500'}`} style="overflow-wrap: anywhere;">{stripHtml(article.insight || article.content_snippet || '')}</p>
