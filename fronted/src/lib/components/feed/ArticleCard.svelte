@@ -28,19 +28,19 @@
 	}
 </script>
 
-<article class={`group relative rounded-lg border px-3 py-3 transition-all sm:px-4 sm:py-3.5 ${cardClass()}`}>
+<article class={`group relative min-w-0 overflow-hidden rounded-lg border px-3 py-3 transition-all sm:px-4 sm:py-3.5 ${cardClass()}`}>
 	<button type="button" onclick={() => onOpen(article)} class="absolute inset-0 rounded-lg" aria-label={`Open ${article.title}`}></button>
 
-	<div class="flex items-center justify-between gap-2">
-		<div class={`flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+	<div class="flex min-w-0 items-center justify-between gap-2">
+		<div class={`flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
 			{#if isNew}
-				<span class={`rounded px-1.5 py-0.5 text-[8px] font-bold tracking-widest ${dark ? 'bg-white/10 text-zinc-300' : 'bg-zinc-200 text-zinc-600'}`}>NEW</span>
+				<span class={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-bold tracking-widest ${dark ? 'bg-white/10 text-zinc-300' : 'bg-zinc-200 text-zinc-600'}`}>NEW</span>
 			{/if}
-			<span style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
-			<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
-			<span>{article.category}</span>
+			<span class="shrink-0 truncate" style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
+			<span class={`shrink-0 ${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>/</span>
+			<span class="min-w-0 truncate">{article.category}</span>
 			{#if formatEngagement(article.likes)}
-				<span class={`flex items-center gap-0.5 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>
+				<span class={`flex shrink-0 items-center gap-0.5 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>
 					<ArrowUp class="h-2.5 w-2.5" />{formatEngagement(article.likes)}
 				</span>
 			{/if}
@@ -48,10 +48,10 @@
 		<span class={`shrink-0 text-[10px] font-semibold ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{relativeTime(article.published_date)}</span>
 	</div>
 
-	<h3 class={`mt-1.5 mb-1.5 text-[14px] font-semibold leading-snug transition-colors sm:text-[15px] ${dark ? 'text-zinc-100' : 'text-zinc-800'}`}>{article.title}</h3>
+	<h3 class={`mt-1.5 mb-1.5 line-clamp-2 min-w-0 text-[14px] font-semibold leading-snug transition-colors sm:text-[15px] ${dark ? 'text-zinc-100' : 'text-zinc-800'}`}>{article.title}</h3>
 
-	<div class="flex items-end gap-2">
-		<p class={`line-clamp-2 min-w-0 flex-1 text-[12.5px] leading-relaxed sm:text-[13px] ${dark ? 'text-zinc-500' : 'text-zinc-500'}`}>{stripHtml(article.insight || article.content_snippet || '')}</p>
+	<div class="flex min-w-0 items-end gap-2">
+		<p class={`line-clamp-2 min-w-0 flex-1 overflow-hidden text-[12.5px] leading-relaxed sm:text-[13px] ${dark ? 'text-zinc-500' : 'text-zinc-500'}`} style="overflow-wrap: anywhere;">{stripHtml(article.insight || article.content_snippet || '')}</p>
 		<button
 			type="button"
 			onclick={(event) => { event.stopPropagation(); onToggleSave(article.id); }}

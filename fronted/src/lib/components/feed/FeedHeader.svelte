@@ -16,8 +16,8 @@
 	let dark = $derived(theme === 'dark');
 </script>
 
-<header class={`sticky top-0 z-20 border-b backdrop-blur-xl ${dark ? 'border-white/[0.04] bg-[#0b0b0b]/90' : 'border-zinc-100 bg-white/90'}`}>
-	<div class="flex items-center gap-3 px-4 py-3 sm:px-5">
+<header class={`sticky top-0 z-20 min-w-0 overflow-hidden border-b backdrop-blur-xl ${dark ? 'border-white/[0.04] bg-[#0b0b0b]/90' : 'border-zinc-100 bg-white/90'}`}>
+	<div class="flex min-w-0 items-center gap-3 px-4 py-3 sm:px-5">
 		<div class="flex items-center gap-2.5 lg:hidden">
 			<div class={`flex h-7 w-7 items-center justify-center rounded-md ${dark ? 'bg-white' : 'bg-black'}`}>
 				<Zap class={`h-3.5 w-3.5 ${dark ? 'fill-black text-black' : 'fill-white text-white'}`} />
@@ -30,7 +30,7 @@
 			<span class={`text-[10px] font-medium tabular-nums ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{articleCount}</span>
 		</div>
 
-		<div class="ml-auto flex items-center gap-1.5 sm:gap-2">
+		<div class="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
 			<label class="group relative min-w-0 flex-1 sm:flex-none">
 				<Search class={`pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transition-colors ${dark ? 'text-zinc-600' : 'text-zinc-400'}`} />
 				<input
@@ -64,8 +64,8 @@
 		</div>
 	</div>
 
-	<div class="flex items-baseline gap-2.5 px-4 pb-2.5 sm:px-5 lg:hidden">
-		<h2 class={`text-[14px] font-bold ${dark ? 'text-white' : 'text-zinc-900'}`}>{title}</h2>
+	<div class="flex min-w-0 items-baseline gap-2.5 overflow-hidden px-4 pb-2.5 sm:px-5 lg:hidden">
+		<h2 class={`min-w-0 truncate text-[14px] font-bold ${dark ? 'text-white' : 'text-zinc-900'}`}>{title}</h2>
 		<span class={`text-[10px] font-medium tabular-nums ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{articleCount}</span>
 	</div>
 </header>

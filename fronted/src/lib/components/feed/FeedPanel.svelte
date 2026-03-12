@@ -121,7 +121,7 @@
 	}
 </script>
 
-<section class={`relative flex h-full min-h-0 flex-1 flex-col ${dark ? 'bg-[#0b0b0b]' : 'bg-white'}`}>
+<section class={`relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${dark ? 'bg-[#0b0b0b]' : 'bg-white'}`}>
 	<FeedHeader {title} articleCount={articles.length} {searchQuery} {syncIndicator} {theme} onSearchChange={onSearchChange} onRefresh={onRefresh} {onToggleTheme} />
 
 	<div class={`border-b px-3 py-1.5 sm:px-5 sm:py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
@@ -175,7 +175,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={scrollArea}
-		class="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-20 lg:pb-0"
+		class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pb-20 lg:pb-0"
 		onscroll={handleScroll}
 		ontouchstart={handleTouchStart}
 		ontouchmove={handleTouchMove}
@@ -197,7 +197,7 @@
 				</div>
 			</div>
 		{:else}
-			<div class="flex flex-col gap-0.5 px-2 py-2 sm:px-3 sm:py-3">
+			<div class="flex min-w-0 flex-col gap-0.5 overflow-hidden px-2 py-2 sm:px-3 sm:py-3">
 				{#each articles as article (article.id)}
 					<ArticleCard
 						{article}
