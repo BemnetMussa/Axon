@@ -75,6 +75,17 @@ export const api = {
     getBrief: async (id: number): Promise<{ title: string; brief: string }> => {
         const res = await fetch(`${BASE_URL}/brief/${id}`);
         return res.json();
+    },
+
+    searchSemantic: async (query: string): Promise<{ articles: Article[] }> => {
+        const params = new URLSearchParams({ query });
+        const res = await fetch(`${BASE_URL}/search/semantic?${params}`);
+        return res.json();
+    },
+
+    getLatestDigest: async (): Promise<{ content: string; created_at: string }> => {
+        const res = await fetch(`${BASE_URL}/digests/latest`);
+        return res.json();
     }
 };
 

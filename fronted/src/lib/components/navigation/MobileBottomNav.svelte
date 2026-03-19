@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Zap } from 'lucide-svelte';
+	import { Zap, Sparkles } from 'lucide-svelte';
 	import type { NavItem } from '$lib/ui';
 
 	type Props = {
@@ -9,9 +9,10 @@
 		theme: 'dark' | 'light';
 		onNavigate: (id: string | null) => void;
 		onShowSaved: () => void;
+		onShowDigest: () => void;
 	};
 
-	let { items, activeCategory, showSavedOnly, theme, onNavigate, onShowSaved }: Props = $props();
+	let { items, activeCategory, showSavedOnly, theme, onNavigate, onShowSaved, onShowDigest }: Props = $props();
 	let dark = $derived(theme === 'dark');
 
 	function navBg() {
@@ -44,5 +45,13 @@
 	>
 		<Zap class={`h-4 w-4 ${showSavedOnly ? (dark ? 'fill-white' : 'fill-black') : ''}`} />
 		<span class="truncate text-[8px] font-semibold">Saved</span>
+	</button>
+
+	<button
+		onclick={onShowDigest}
+		class={`flex flex-col items-center gap-0.5 px-1 py-2 transition-colors ${itemColor(false)}`}
+	>
+		<Sparkles class="h-4 w-4" />
+		<span class="truncate text-[8px] font-semibold">Digest</span>
 	</button>
 </nav>

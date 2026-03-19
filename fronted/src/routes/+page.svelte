@@ -20,6 +20,8 @@
 	let activeSource = $state<string | null>(null);
 	let activeCategory = $state<string | null>(null);
 	let selectedArticle = $state<Article | null>(null);
+	let showDigestView = $state(false);
+	let digestContent = $state<{content: string, created_at: string} | null>(null);
 	let savedArticleIds = $state<number[]>([]);
 	let showSavedOnly = $state(false);
 	let chatInput = $state('');
@@ -59,7 +61,33 @@
 		return new Date(d).getTime();
 	}
 
+	let semanticSearchResults = $state<Article[] | null>(null);
+	let searchingSemantic = $state(false);
+	let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+	
+	$effect(() => {
+		if (searchQuery.trim().length > 2) {
+			searchingSemantic = true;
+			if (searchTimeout) clearTimeout(searchTimeout);
+			searchTimeout = setTimeout(async () => {
+				try {
+					const res = await api.searchSemantic(searchQuery);
+					semanticSearchResults = res.articles;
+				} catch {
+					semanticSearchResults = null;
+				} finally {
+					searchingSemantic = false;
+				}
+			}, 600);
+		} else {
+			semanticSearchResults = null;
+			searchingSemantic = false;
+		}
+	});
+
 	let filtered = $derived.by(() => {
+		if (semanticSearchResults && searchQuery.trim().length > 2) return semanticSearchResults;
+		
 		let list = allArticles;
 		if (showSavedOnly) list = list.filter((a) => savedArticleIds.includes(a.id));
 		if (activeSource) list = list.filter((a) => a.source === activeSource);
@@ -258,6 +286,7 @@
 		activeSource = null;
 		selectedArticle = null;
 		showSavedOnly = false;
+		showDigestView = false;
 	}
 
 	function showSavedView() {
@@ -265,10 +294,26 @@
 		activeCategory = null;
 		activeSource = null;
 		selectedArticle = null;
+		showDigestView = false;
 	}
 
 	function selectSource(source: string | null) {
 		activeSource = source;
+	}
+
+	async function showDigest() {
+		showDigestView = true;
+		activeCategory = null;
+		activeSource = null;
+		selectedArticle = null;
+		showSavedOnly = false;
+		if (!digestContent) {
+			try {
+				digestContent = await api.getLatestDigest();
+			} catch (e) {
+				console.error(e);
+			}
+		}
 	}
 
 	function toggleSave(id: number) {
@@ -309,6 +354,7 @@
 
 	function openArticle(article: Article) {
 		selectedArticle = article;
+		showDigestView = false;
 		chatMessages = [];
 		chatInput = '';
 		markSeen(article.id);
@@ -357,11 +403,12 @@
 		{theme}
 		onNavigate={selectCategory}
 		onShowSaved={showSavedView}
+		onShowDigest={showDigest}
 		onToggleTheme={toggleTheme}
 	/>
 
 	<div class="relative flex min-w-0 flex-1 overflow-hidden">
-		<div class={`min-w-0 overflow-hidden ${selectedArticle ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
+		<div class={`min-w-0 overflow-hidden ${selectedArticle || showDigestView ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
 			<FeedPanel
 				title={currentTitle}
 				articles={filtered}
@@ -393,27 +440,45 @@
 			/>
 		</div>
 
-		{#if selectedArticle}
+		{/if}
+
+		{#if selectedArticle || showDigestView}
 			<div class={`absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a] lg:border-white/[0.04]' : 'bg-white lg:border-zinc-200'}`}>
-				<ReaderPanel
-					article={selectedArticle}
-					isSaved={savedArticleIds.includes(selectedArticle.id)}
-					{chatMessages}
-					{chatInput}
-					{chatLoading}
-					{theme}
-					suggestions={SUGGESTIONS}
-					onBack={closeReader}
-					onToggleSave={toggleSave}
-					onOpenExternal={(url) => window.open(url, '_blank', 'noopener,noreferrer')}
-					onChatInputChange={(value) => (chatInput = value)}
-					onSendChat={sendChat}
-				/>
+				{#if showDigestView && digestContent}
+					<div class="flex h-full w-full flex-col overflow-y-auto px-6 py-8 sm:px-12 sm:py-12">
+						<div class="mx-auto w-full max-w-3xl">
+							<button onclick={() => showDigestView = false} class="mb-8 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-300">
+								&larr; Back to feed
+							</button>
+							<h1 class={`mb-4 text-3xl font-bold md:text-5xl ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Weekly Synthesis</h1>
+							<p class={`mb-12 text-sm ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Synthesized roughly {digestContent.created_at ? new Date(digestContent.created_at).toLocaleDateString() : 'recently'}</p>
+							
+							<div class={`prose max-w-none text-[15px] leading-[1.8] sm:text-[17px] ${theme === 'dark' ? 'prose-invert prose-p:text-[#d4d4d8] prose-headings:text-white' : 'prose-p:text-zinc-700 prose-headings:text-black'}`}>
+								{digestContent.content}
+							</div>
+						</div>
+					</div>
+				{:else if selectedArticle}
+					<ReaderPanel
+						article={selectedArticle}
+						isSaved={savedArticleIds.includes(selectedArticle.id)}
+						{chatMessages}
+						{chatInput}
+						{chatLoading}
+						{theme}
+						suggestions={SUGGESTIONS}
+						onBack={closeReader}
+						onToggleSave={toggleSave}
+						onOpenExternal={(url) => window.open(url, '_blank', 'noopener,noreferrer')}
+						onChatInputChange={(value) => (chatInput = value)}
+						onSendChat={sendChat}
+					/>
+				{/if}
 			</div>
 		{/if}
 	</div>
 
-	{#if !selectedArticle}
+	{#if !selectedArticle && !showDigestView}
 		<MobileBottomNav
 			items={mobileNavItems}
 			{activeCategory}
@@ -421,6 +486,7 @@
 			{theme}
 			onNavigate={selectCategory}
 			onShowSaved={showSavedView}
+			onShowDigest={showDigest}
 		/>
 	{/if}
 </div>

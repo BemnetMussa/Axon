@@ -2,6 +2,8 @@
 from datetime import datetime, date
 from typing import Optional
 from sqlmodel import Field, SQLModel
+from sqlalchemy import Column
+from pgvector.sqlalchemy import Vector
 
 class Article(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -19,7 +21,12 @@ class Article(SQLModel, table=True):
     likes: int = Field(default=0)
     engagement_score: float = Field(default=0.0)
     last_viewed: Optional[datetime] = None
+    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(384)))
     
+class Digest(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow) # type: ignore
+    content: str
     
 class Trend(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

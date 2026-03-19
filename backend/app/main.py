@@ -2,7 +2,7 @@ import os
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select, col
 from sqlalchemy import update, func
@@ -11,9 +11,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.core.database import init_db, get_session, get_script_session
-from app.models import Article, Trend
+from app.models import Article, Trend, Digest
 from app.services.fetcher import ingest_intelligence
-from app.services.analyzer import analyze_articles, retry_failed_insights, generate_deep_brief, chat_about_article
+from app.services.analyzer import analyze_articles, retry_failed_insights, generate_deep_brief, chat_about_article, embed_model, generate_weekly_digest
 from app.services.extractor import extract_article_content
 
 scheduler = AsyncIOScheduler()
@@ -146,6 +146,24 @@ async def get_article_content(article_id: int, session: Session = Depends(get_se
 
 
 # ---------------------------------------------------------------------------
+# Semantic Search
+# ---------------------------------------------------------------------------
+
+@app.get("/search/semantic")
+def search_semantic(query: str, session: Session = Depends(get_session)):
+    query_embed = list(embed_model.embed([query]))[0].tolist()
+    
+    results = session.exec(
+        select(Article)
+        .where(Article.embedding != None) # type: ignore
+        .order_by(Article.embedding.cosine_distance(query_embed))
+        .limit(15)
+    ).all()
+    
+    return {"articles": results}
+
+
+# ---------------------------------------------------------------------------
 # Briefs & Chat
 # ---------------------------------------------------------------------------
 
@@ -194,6 +212,23 @@ def track_view(article_id: int, session: Session = Depends(get_session)):
 
 
 # ---------------------------------------------------------------------------
+# Weekly Digest
+# ---------------------------------------------------------------------------
+
+@app.get("/digests/latest")
+def get_latest_digest(session: Session = Depends(get_session)):
+    digest = session.exec(select(Digest).order_by(col(Digest.created_at).desc()).limit(1)).first()
+    if not digest:
+        return {"content": "No weekly digest available yet."}
+    return {"content": digest.content, "created_at": digest.created_at}
+
+@app.post("/digests/generate")
+def trigger_digest(session: Session = Depends(get_session)):
+    content = generate_weekly_digest(session)
+    return {"status": "success", "digest": content}
+
+
+# ---------------------------------------------------------------------------
 # Trends
 # ---------------------------------------------------------------------------
 
@@ -206,6 +241,29 @@ def read_trends(session: Session = Depends(get_session)):
         for t in results
     ]
 
+# ---------------------------------------------------------------------------
+# RSS
+# ---------------------------------------------------------------------------
+
+@app.get("/rss")
+def get_rss_feed(session: Session = Depends(get_session)):
+    articles = session.exec(select(Article).order_by(col(Article.published_date).desc()).limit(20)).all()
+    
+    xml = ['<?xml version="1.0" encoding="UTF-8" ?>', '<rss version="2.0">', '<channel>']
+    xml.append('<title>Axon Intelligence Feed</title>')
+    xml.append('<link>https://axon.example.com</link>')
+    xml.append('<description>Top AI and Tech signals</description>')
+    
+    for a in articles:
+        xml.append('<item>')
+        xml.append(f'<title><![CDATA[{a.title}]]></title>')
+        xml.append(f'<link>{a.url}</link>')
+        xml.append(f'<description><![CDATA[{a.insight or a.content_snippet or ""}]]></description>')
+        xml.append('</item>')
+        
+    xml.append('</channel></rss>')
+    
+    return Response(content="\n".join(xml), media_type="application/rss+xml")
 
 @app.get("/")
 def health():

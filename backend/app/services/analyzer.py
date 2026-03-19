@@ -3,13 +3,15 @@ import re
 import time
 from collections import Counter
 from groq import Groq
-from sqlmodel import Session, select
-from app.models import Article, Trend
+from sqlmodel import Session, select, col
+from app.models import Article, Trend, Digest
 from dotenv import load_dotenv
+from fastembed import TextEmbedding
 
 load_dotenv(override=True)
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+embed_model = TextEmbedding()
 
 BATCH_SIZE = 8
 BATCH_DELAY = 12
@@ -244,6 +246,14 @@ def analyze_articles(session: Session):
             article.category = classify_article(article.title, article.url, article.source)
             article.insight = generate_insight(article.title, article.content_snippet or "")
             article.is_processed = True
+            
+            # Generate semantic embedding for the vector search
+            if article.insight:
+                embed_text = f"{article.title} {article.insight}"
+                embeddings = list(embed_model.embed([embed_text]))
+                if embeddings:
+                    article.embedding = embeddings[0].tolist()
+                    
             session.add(article)
 
         session.commit()
@@ -316,3 +326,37 @@ Provide a concise, expert answer based on the context above. If the context does
     except Exception as e:
         print(f"AXON CHAT ERROR: {type(e).__name__}: {e}")
         return f"Chat error: {type(e).__name__}. Check server logs."
+
+def generate_weekly_digest(session: Session) -> str | None:
+    from datetime import datetime, timedelta
+    
+    one_week_ago = datetime.utcnow() - timedelta(days=7)
+    top_articles = session.exec(
+        select(Article)
+        .where(col(Article.published_date) >= one_week_ago)
+        .order_by(col(Article.views).desc())
+        .limit(10)
+    ).all()
+    
+    if not top_articles:
+        return None
+        
+    context = "\n".join([f"Title: {a.title}\nInsight: {a.insight}\nSource: {a.source}\n---" for a in top_articles])
+        
+    prompt = f"""You are the Lead Intelligence Editor for Axon. Write the "Weekly Synthesis", a comprehensive 3-paragraph summary of the week's most important technical developments based on these top signals:
+    
+{context}
+
+Focus on macro trends, major releases, and shifts in the landscape. Provide a highly dense, professional, and tactical synthesis for founders and senior engineers. Do not say "Here is a summary". Just write the paragraphs."""
+
+    try:
+        content_res = _call_groq_with_fallback(messages=[{"role": "user", "content": prompt}], max_tokens=600, temperature=0.4)
+        digest_content = content_res.replace("**", "")
+        # Save to database
+        digest = Digest(content=digest_content)
+        session.add(digest)
+        session.commit()
+        return digest_content
+    except Exception as e:
+        print(f"Failed to generate weekly digest: {e}")
+        return None

@@ -43,7 +43,15 @@ def _build_engine():
 engine = _build_engine()
 
 
+from sqlalchemy import text
+
 def init_db():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            conn.commit()
+    except Exception as e:
+        print(f"Failed to create vector extension: {e}")
     SQLModel.metadata.create_all(engine)
     print("Database initialized successfully!")
 

@@ -10,10 +10,11 @@
 		theme: 'dark' | 'light';
 		onNavigate: (id: string | null) => void;
 		onShowSaved: () => void;
+		onShowDigest: () => void;
 		onToggleTheme: () => void;
 	};
 
-	let { navigation, activeCategory, showSavedOnly, sourceCounts, theme, onNavigate, onShowSaved, onToggleTheme }: Props = $props();
+	let { navigation, activeCategory, showSavedOnly, sourceCounts, theme, onNavigate, onShowSaved, onShowDigest, onToggleTheme }: Props = $props();
 
 	let showFeedbackForm = $state(false);
 	let feedbackText = $state('');
@@ -84,6 +85,14 @@
 	</div>
 
 	<div class="mt-auto px-5 pb-3">
+		<button
+			onclick={onShowDigest}
+			class={`mb-4 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[11px] font-bold transition-all ${dark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}
+		>
+			<Sparkles class="h-4 w-4" />
+			Weekly Synthesis
+		</button>
+		
 		<p class={`mb-2 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-400'}`}>Sources</p>
 		<div class="flex flex-col gap-0.5">
 			{#each Object.entries(sourceCounts) as [source, count]}
