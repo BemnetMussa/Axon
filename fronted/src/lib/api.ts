@@ -54,8 +54,12 @@ export const api = {
         return res.json();
     },
 
-    triggerRefresh: async () => {
-        await fetch(`${BASE_URL}/ingest`, { method: 'POST' });
+    triggerRefresh: async (contextId?: string | null) => {
+        let url = `${BASE_URL}/ingest`;
+        if (contextId) {
+            url += `?context_id=${encodeURIComponent(contextId === 'GitHub' ? 'GitHub' : contextId)}`;
+        }
+        await fetch(url, { method: 'POST' });
         await fetch(`${BASE_URL}/analyze`, { method: 'POST' });
     },
 

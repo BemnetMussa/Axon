@@ -309,10 +309,27 @@
 		showSavedOnly = false;
 		if (!digestContent) {
 			try {
-				digestContent = await api.getLatestDigest();
+				digestContent = await api.getLatestDigest() || { content: 'No weekly digest available yet.', created_at: new Date().toISOString() };
 			} catch (e) {
 				console.error(e);
+				digestContent = { content: 'No weekly digest available yet.', created_at: new Date().toISOString() };
 			}
+		}
+	}
+
+	async function generateDigest() {
+		if (!digestContent) return;
+		digestContent = { ...digestContent, content: 'Generating new Weekly Synthesis. Please wait roughly 10 seconds...' };
+		try {
+			const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/digests/generate`, { method: 'POST' });
+			const data = await res.json();
+			if (data.status === 'success') {
+				const fresh = await api.getLatestDigest();
+				if (fresh) digestContent = fresh;
+			}
+		} catch (e) {
+			console.error(e);
+			digestContent = { ...digestContent, content: 'Failed to generate. Please check server logs.' };
 		}
 	}
 
@@ -326,7 +343,8 @@
 	async function manualRefresh() {
 		syncIndicator = true;
 		try {
-			await api.triggerRefresh();
+			await api.triggerRefresh(activeCategory);
+			if (activeCategory === 'GitHub') activeSource = 'GitHub';
 			await fetchFirstPage();
 		} catch (error) {
 			console.error('Refresh failed', error);
@@ -454,6 +472,11 @@
 							<div class={`prose max-w-none text-[15px] leading-[1.8] sm:text-[17px] ${theme === 'dark' ? 'prose-invert prose-p:text-[#d4d4d8] prose-headings:text-white' : 'prose-p:text-zinc-700 prose-headings:text-black'}`}>
 								{digestContent.content}
 							</div>
+							{#if digestContent.content.includes('No weekly digest available')}
+								<button onclick={generateDigest} class={`mt-8 rounded-lg px-6 py-3 text-[13px] font-bold shadow-lg transition-all ${theme === 'dark' ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}>
+									Generate First Digest ✨
+								</button>
+							{/if}
 						</div>
 					</div>
 				{:else if selectedArticle}

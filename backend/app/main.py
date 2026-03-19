@@ -66,8 +66,8 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 @app.post("/ingest")
-async def trigger_ingestion(session: Session = Depends(get_session)):
-    count = await ingest_intelligence(session)
+async def trigger_ingestion(context_id: str | None = Query(default=None), session: Session = Depends(get_session)):
+    count = await ingest_intelligence(session, context_id)
     return {"status": "success", "new_articles": count}
 
 

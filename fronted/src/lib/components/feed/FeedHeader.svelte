@@ -44,7 +44,7 @@
 			{#if onToggleTheme}
 				<button
 					onclick={onToggleTheme}
-					class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] bg-white/[0.03] text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900'}`}
+					class={`hidden lg:flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] bg-white/[0.03] text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900'}`}
 					aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
 				>
 					{#if dark}

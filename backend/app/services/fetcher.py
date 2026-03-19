@@ -448,21 +448,30 @@ async def hunt_tech_news(client: httpx.AsyncClient):
 # MAIN INGESTION
 # ===========================================================================
 
-async def ingest_intelligence(session: Session):
-    print("AXON: Scanning all sources...")
+async def ingest_intelligence(session: Session, context_id: str | None = None):
+    print(f"AXON: Scanning sources (Context: {context_id or 'ALL'})...")
     async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True) as client:
-        tasks = [
-            hunt_hn_top(client),
-            hunt_hn_discussions(client),
-            hunt_github_trending(client),
-            hunt_product_launches(client),
-            hunt_ai_labs(client),
-            hunt_infrastructure(client),
-            hunt_expert_blogs(client),
-            hunt_lobsters(client),
-            hunt_arxiv(client),
-            hunt_tech_news(client),
-        ]
+        if context_id == "GitHub":
+            tasks = [hunt_github_trending(client)]
+        elif context_id == "AI":
+            tasks = [hunt_ai_labs(client), hunt_tech_news(client), hunt_infrastructure(client)]
+        elif context_id == "Discovery":
+            tasks = [hunt_product_launches(client), hunt_hn_discussions(client)]
+        elif context_id == "Signal":
+            tasks = [hunt_arxiv(client)]
+        else:
+            tasks = [
+                hunt_hn_top(client),
+                hunt_hn_discussions(client),
+                hunt_github_trending(client),
+                hunt_product_launches(client),
+                hunt_ai_labs(client),
+                hunt_infrastructure(client),
+                hunt_expert_blogs(client),
+                hunt_lobsters(client),
+                hunt_arxiv(client),
+                hunt_tech_news(client),
+            ]
         results = await asyncio.gather(*tasks)
 
         raw_signals: list[dict] = []
