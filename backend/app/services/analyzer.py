@@ -14,6 +14,29 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 BATCH_SIZE = 8
 BATCH_DELAY = 12
 
+def _call_groq_with_fallback(messages: list, max_tokens: int, temperature: float) -> str:
+    """Helper to call Groq with a fallback to a smaller, more generous model on rate limit."""
+    try:
+        res = client.chat.completions.create(
+            messages=messages,
+            model="llama-3.3-70b-versatile",
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return res.choices[0].message.content.strip() # type: ignore
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "rate limit" in error_msg or "too many requests" in error_msg or "429" in error_msg:
+            print(f"AXON: Primary model rate limited, falling back to 8B model. Error: {e}")
+            fallback_res = client.chat.completions.create(
+                messages=messages,
+                model="llama3-8b-8192",
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            return fallback_res.choices[0].message.content.strip() # type: ignore
+        raise e
+
 # ── Categories ──────────────────────────────────────────────
 # AI        → Model releases, lab announcements, infrastructure news
 # Signal    → Research breakthroughs (ArXiv, academic papers)
@@ -161,16 +184,15 @@ Content: {clean_content}"""
 
     for attempt in range(retries + 1):
         try:
-            res = client.chat.completions.create(
+            content_res = _call_groq_with_fallback(
                 messages=[{"role": "user", "content": prompt}],
-                model="llama-3.3-70b-versatile",
                 max_tokens=250,
                 temperature=0.4,
             )
-            return res.choices[0].message.content.strip().replace("**", "").replace("*", "")  # type: ignore
+            return content_res.replace("**", "").replace("*", "")
         except Exception as e:
             if attempt < retries and "rate" in str(e).lower():
-                print(f"AXON: Rate limited, waiting {BATCH_DELAY}s (attempt {attempt + 1})")
+                print(f"AXON: Rate limited on all models, waiting {BATCH_DELAY}s (attempt {attempt + 1})")
                 time.sleep(BATCH_DELAY)
             else:
                 print(f"AXON INSIGHT ERROR: {e}")
@@ -196,13 +218,12 @@ Market Impact: (What does this do to incumbents' moats? How does it affect the c
 Opportunity: (What concrete product or optimization can a small team build today because of this?)"""
 
     try:
-        res = client.chat.completions.create(
+        content_res = _call_groq_with_fallback(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
             max_tokens=400,
             temperature=0.5,
         )
-        return res.choices[0].message.content.strip().replace("**", "")  # type: ignore
+        return content_res.replace("**", "")
     except Exception:
         return "Intelligence gathering failed."
 
@@ -287,13 +308,11 @@ User Question: {question}
 Provide a concise, expert answer based on the context above. If the context doesn't have enough info, use your general knowledge but stay focused on the implications for the user (founder/developer). Be direct and tactical. No conversational filler."""
 
     try:
-        res = client.chat.completions.create(
+        return _call_groq_with_fallback(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
             max_tokens=300,
             temperature=0.6,
         )
-        return res.choices[0].message.content.strip()  # type: ignore
     except Exception as e:
         print(f"AXON CHAT ERROR: {type(e).__name__}: {e}")
         return f"Chat error: {type(e).__name__}. Check server logs."

@@ -188,6 +188,7 @@ async def hunt_github_trending(client: httpx.AsyncClient):
 
     queries = [
         (f"created:>{week_ago} stars:>100", "Momentum"),
+        (f"pushed:>{week_ago} stars:>500", "Momentum"),
         (f"created:>{month_ago} stars:>300 topic:ai", "AI"),
         (f"created:>{month_ago} stars:>200 (cli OR tool OR framework OR sdk)", "Discovery"),
         (f"pushed:>{week_ago} stars:>2000 topic:llm", "AI"),

@@ -1,4 +1,4 @@
-import { AlertCircle, Boxes, Home, Sparkles, TrendingUp, Lightbulb } from 'lucide-svelte';
+import { Boxes, Home, Sparkles, Lightbulb, Github } from 'lucide-svelte';
 
 export type NavItem = {
 	id: string | null;
@@ -15,12 +15,11 @@ export const SUGGESTIONS = [
 ];
 
 export const NAVIGATION: NavItem[] = [
-	{ id: null, label: 'All Signals', icon: Home },
+	{ id: null, label: 'Frontier', icon: Home },
+	{ id: 'GitHub', label: 'GitHub', icon: Github },
 	{ id: 'AI', label: 'AI & News', icon: Sparkles },
-	{ id: 'Signal', label: 'Research', icon: Lightbulb },
 	{ id: 'Discovery', label: 'Cool Tools', icon: Boxes },
-	{ id: 'Momentum', label: 'Momentum', icon: TrendingUp },
-	{ id: 'Concerns', label: 'Concerns', icon: AlertCircle }
+	{ id: 'Signal', label: 'Research', icon: Lightbulb }
 ];
 
 const BRAND_COLORS: Record<string, string> = {

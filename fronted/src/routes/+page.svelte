@@ -41,7 +41,7 @@
 	const READ_KEY = 'axon_read_articles';
 	const THEME_KEY = 'axon_theme';
 	const POLL_INTERVAL_MS = 60_000;
-	const mobileNavItems = [NAVIGATION[0], NAVIGATION[1], NAVIGATION[3], NAVIGATION[4]];
+	const mobileNavItems = NAVIGATION.slice(0, 4);
 
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -63,7 +63,10 @@
 		let list = allArticles;
 		if (showSavedOnly) list = list.filter((a) => savedArticleIds.includes(a.id));
 		if (activeSource) list = list.filter((a) => a.source === activeSource);
-		if (activeCategory) list = list.filter((a) => a.category === activeCategory);
+		if (activeCategory) {
+			if (activeCategory === 'GitHub') list = list.filter((a) => a.source === 'GitHub');
+			else list = list.filter((a) => a.category === activeCategory);
+		}
 		if (timeFilter !== 'all') {
 			const now = Date.now();
 			const cutoff = timeFilter === 'today' ? now - 86_400_000
