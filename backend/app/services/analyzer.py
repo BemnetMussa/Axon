@@ -6,12 +6,23 @@ from groq import Groq
 from sqlmodel import Session, select, col
 from app.models import Article, Trend, Digest
 from dotenv import load_dotenv
-from fastembed import TextEmbedding
 
 load_dotenv(override=True)
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-embed_model = TextEmbedding()
+
+_embed_model_instance = None
+
+def get_embed_model():
+    global _embed_model_instance
+    if _embed_model_instance is None:
+        import os
+        from fastembed import TextEmbedding
+        # Vercel requires writing to /tmp
+        cache_dir = os.path.join("/tmp", "fastembed_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        _embed_model_instance = TextEmbedding(cache_dir=cache_dir)
+    return _embed_model_instance
 
 BATCH_SIZE = 8
 BATCH_DELAY = 12
@@ -249,8 +260,9 @@ def analyze_articles(session: Session):
             
             # Generate semantic embedding for the vector search
             if article.insight:
+                model = get_embed_model()
                 embed_text = f"{article.title} {article.insight}"
-                embeddings = list(embed_model.embed([embed_text]))
+                embeddings = list(model.embed([embed_text]))
                 if embeddings:
                     article.embedding = embeddings[0].tolist()
                     

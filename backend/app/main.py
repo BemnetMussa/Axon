@@ -13,7 +13,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.core.database import init_db, get_session, get_script_session
 from app.models import Article, Trend, Digest
 from app.services.fetcher import ingest_intelligence
-from app.services.analyzer import analyze_articles, retry_failed_insights, generate_deep_brief, chat_about_article, embed_model, generate_weekly_digest
+from app.services.analyzer import analyze_articles, retry_failed_insights, generate_deep_brief, chat_about_article, get_embed_model, generate_weekly_digest
 from app.services.extractor import extract_article_content
 
 scheduler = AsyncIOScheduler()
@@ -151,7 +151,8 @@ async def get_article_content(article_id: int, session: Session = Depends(get_se
 
 @app.get("/search/semantic")
 def search_semantic(query: str, session: Session = Depends(get_session)):
-    query_embed = list(embed_model.embed([query]))[0].tolist()
+    model = get_embed_model()
+    query_embed = list(model.embed([query]))[0].tolist()
     
     results = session.exec(
         select(Article)
