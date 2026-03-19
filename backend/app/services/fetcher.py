@@ -4,6 +4,7 @@ import asyncio
 import feedparser
 import re
 import html
+import random
 from datetime import datetime, timedelta, timezone
 from time import mktime
 from sqlmodel import Session, select
@@ -37,7 +38,7 @@ TITLE_FLUFF = {
 }
 
 MAX_PER_SOURCE = 8
-MAX_TOTAL_PER_RUN = 60
+MAX_TOTAL_PER_RUN = 100
 
 
 def _now() -> datetime:
@@ -187,14 +188,17 @@ async def hunt_github_trending(client: httpx.AsyncClient):
     month_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
     queries = [
-        (f"created:>{week_ago} stars:>100", "Momentum"),
         (f"pushed:>{week_ago} stars:>500", "Momentum"),
-        (f"created:>{month_ago} stars:>300 topic:ai", "AI"),
-        (f"created:>{month_ago} stars:>200 (cli OR tool OR framework OR sdk)", "Discovery"),
-        (f"pushed:>{week_ago} stars:>2000 topic:llm", "AI"),
+        (f"created:>{month_ago} stars:>500 topic:ai", "AI"),
     ]
 
-    results = await asyncio.gather(*[search_github(q, cat) for q, cat in queries])
+    results = []
+    # Execute sequentially to avoid concurrent rate limit bans from GitHub
+    for q, cat in queries:
+        res = await search_github(q, cat)
+        results.append(res)
+        await asyncio.sleep(1.0)
+        
     seen_urls: set[str] = set()
     for batch in results:
         for item in batch:
@@ -464,6 +468,9 @@ async def ingest_intelligence(session: Session):
         raw_signals: list[dict] = []
         for batch in results:
             raw_signals.extend(batch)
+
+        # Shuffle broadly prevents the earlier sources from dominating the max limits every run
+        random.shuffle(raw_signals)
 
         all_existing_urls = set(session.exec(select(Article.url)).all())
         final: list[dict] = []
