@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MessageSquare, Moon, Sun, Zap } from 'lucide-svelte';
+	import { MessageSquare, Moon, Sun, Zap, Sparkles } from 'lucide-svelte';
 	import type { NavItem } from '$lib/ui';
 
 	type Props = {

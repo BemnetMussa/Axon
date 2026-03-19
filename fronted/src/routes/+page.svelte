@@ -440,8 +440,6 @@
 			/>
 		</div>
 
-		{/if}
-
 		{#if selectedArticle || showDigestView}
 			<div class={`absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a] lg:border-white/[0.04]' : 'bg-white lg:border-zinc-200'}`}>
 				{#if showDigestView && digestContent}
