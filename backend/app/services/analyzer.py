@@ -355,15 +355,32 @@ def generate_weekly_digest(session: Session) -> str | None:
         
     context = "\n".join([f"Title: {a.title}\nInsight: {a.insight}\nSource: {a.source}\n---" for a in top_articles])
         
-    prompt = f"""You are the Lead Intelligence Editor for Axon. Write the "Weekly Synthesis", a comprehensive 3-paragraph summary of the week's most important technical developments based on these top signals:
+    prompt = f"""You are the Lead Intelligence Editor for Axon. Write the "Weekly Synthesis" utilizing the following {len(top_articles)} top technical signals:
     
 {context}
 
-Focus on macro trends, major releases, and shifts in the landscape. Provide a highly dense, professional, and tactical synthesis for founders and senior engineers. Do not say "Here is a summary". Just write the paragraphs."""
+Your exact output structure MUST be:
+
+## The Big Picture
+(1 conclusive, hard-hitting paragraph summarizing the absolute most critical shift or macro trend of the week)
+
+## Core Breakthroughs
+* **[Name of Release/Paper]:** (Concise, technical explanation of why it matters)
+* **[Name of Release/Paper]:** (Concise, technical explanation of why it matters)
+* (list 2 to 4 of the highest-signal items)
+
+## Developer Ecosystem
+* (Bullet points linking directly back to the top tools, repos, or frameworks making waves)
+* (Highlight specific repositories or libraries mentioned in the signals)
+
+## Key Takeaways
+(2 bullet points on what developers should actually care about, learn, or execute on based on this week's intelligence)
+
+Rules: Keep it heavily formatted in pristine Markdown. Never say "Here is the summary". Produce ONLY the final synthesis content block."""
 
     try:
-        content_res = _call_groq_with_fallback(messages=[{"role": "user", "content": prompt}], max_tokens=600, temperature=0.4)
-        digest_content = content_res.replace("**", "")
+        content_res = _call_groq_with_fallback(messages=[{"role": "user", "content": prompt}], max_tokens=1000, temperature=0.3)
+        digest_content = content_res.strip()
         # Save to database
         digest = Digest(content=digest_content)
         session.add(digest)

@@ -287,6 +287,12 @@
 		selectedArticle = null;
 		showSavedOnly = false;
 		showDigestView = false;
+		
+		setTimeout(() => {
+			if (filtered.length === 0) {
+				manualRefresh();
+			}
+		}, 10);
 	}
 
 	function showSavedView() {
@@ -474,7 +480,7 @@
 							</div>
 							{#if digestContent.content.includes('No weekly digest available')}
 								<button onclick={generateDigest} class={`mt-8 rounded-lg px-6 py-3 text-[13px] font-bold shadow-lg transition-all ${theme === 'dark' ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}>
-									Generate First Digest ✨
+									Generate First Digest
 								</button>
 							{/if}
 						</div>
