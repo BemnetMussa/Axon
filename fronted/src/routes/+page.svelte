@@ -478,13 +478,14 @@
 
 	{#if !selectedArticle && !showDigestView}
 		<MobileBottomNav
-			items={mobileNavItems}
+			items={NAVIGATION}
 			{activeCategory}
 			{showSavedOnly}
 			{theme}
 			onNavigate={selectCategory}
 			onShowSaved={showSavedView}
 			onShowDigest={showDigest}
+			onToggleTheme={toggleTheme}
 		/>
 	{/if}
 </div>
