@@ -13,7 +13,7 @@ services:
       - DATABASE_URL=postgresql://axon:axon123@db:5432/axon_db
 
   db:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     container_name: axon_db
     restart: always
     environment:

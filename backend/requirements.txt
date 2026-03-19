@@ -10,3 +10,5 @@ httpx
 readability-lxml
 python-dotenv
 apscheduler
+pgvector
+fastembed
