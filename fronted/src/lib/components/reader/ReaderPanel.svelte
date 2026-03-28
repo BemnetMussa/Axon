@@ -29,7 +29,7 @@
 	};
 
 	let {
-		article, isSaved, chatMessages, chatInput, chatLoading, theme, suggestions,
+		article, isSaved, chatMessages, chatInput, chatLoading, suggestionsLoading = false, theme, suggestions,
 		onBack, onToggleSave, onOpenExternal, onChatInputChange, onSendChat
 	}: Props = $props();
 

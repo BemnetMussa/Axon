@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI, Depends, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 from sqlmodel import Session, select, col
 from sqlalchemy import update, func
 from pydantic import BaseModel
@@ -67,6 +69,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+INTERNAL_SECRET = os.getenv("AXON_INTERNAL_SECRET")
+
+
+@app.middleware("http")
+async def require_internal_auth(request: Request, call_next):
+    """When AXON_INTERNAL_SECRET is set, require SvelteKit proxy headers (see fronted /api/backend)."""
+    if not INTERNAL_SECRET:
+        return await call_next(request)
+    path = request.url.path
+    if path in ("/docs", "/openapi.json", "/redoc") or path.startswith("/docs"):
+        return await call_next(request)
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    if request.headers.get("X-Axon-Internal-Secret") != INTERNAL_SECRET:
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    if not request.headers.get("X-Axon-User-Id"):
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    return await call_next(request)
 
 
 # ---------------------------------------------------------------------------

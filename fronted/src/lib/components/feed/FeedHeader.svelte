@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { RefreshCw, Search, Zap, Sun, Moon } from 'lucide-svelte';
+	import { RefreshCw, Search, Zap, Sun, Moon, LogOut } from 'lucide-svelte';
+	import { authClient } from '$lib/auth-client';
 
 	type Props = {
 		title: string;
@@ -54,6 +55,14 @@
 					{/if}
 				</button>
 			{/if}
+			<button
+				type="button"
+				onclick={() => authClient.signOut()}
+				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all lg:hidden ${dark ? 'border-white/[0.06] text-zinc-500 hover:text-red-400' : 'border-zinc-200 text-zinc-500 hover:text-red-600'}`}
+				aria-label="Sign out"
+			>
+				<LogOut class="h-3.5 w-3.5" />
+			</button>
 			<button
 				onclick={onRefresh}
 				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] bg-white/[0.03] text-zinc-400' : 'border-zinc-200 bg-zinc-50 text-zinc-500'}`}

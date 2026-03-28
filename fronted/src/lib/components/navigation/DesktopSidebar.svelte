@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { MessageSquare, Moon, Sun, Zap, Sparkles } from 'lucide-svelte';
+	import { MessageSquare, Moon, Sun, Zap, Sparkles, LogOut } from 'lucide-svelte';
+	import { authClient } from '$lib/auth-client';
 	import type { NavItem } from '$lib/ui';
 
 	type Props = {
@@ -105,6 +106,15 @@
 	</div>
 
 	<div class={`flex flex-col gap-0.5 border-t px-2.5 py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-200'}`}>
+		<button
+			type="button"
+			onclick={() => authClient.signOut()}
+			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-zinc-600 hover:text-red-400' : 'text-zinc-400 hover:text-red-600'}`}
+		>
+			<LogOut class="h-4 w-4 shrink-0" />
+			<span class="text-[10px] font-semibold">Sign out</span>
+		</button>
+
 		<button
 			onclick={onToggleTheme}
 			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-zinc-600 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`}
