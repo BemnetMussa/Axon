@@ -16,10 +16,20 @@
 		loading = true;
 		try {
 			const redirectTo = page.url.searchParams.get('redirectTo') || '/';
-			await authClient.signIn.social({
+			// disableRedirect: social sign-in otherwise returns 302; @better-fetch treats non-2xx as
+			// error so the client's redirect plugin never runs. 200 + JSON + manual navigation fixes Vercel.
+			const { data, error } = await authClient.signIn.social({
 				provider: 'google',
 				callbackURL: redirectTo,
+				disableRedirect: true,
 			});
+			if (error) {
+				console.error(error);
+				return;
+			}
+			if (data?.url && browser) {
+				window.location.href = data.url;
+			}
 		} finally {
 			loading = false;
 		}
