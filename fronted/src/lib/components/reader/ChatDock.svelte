@@ -1,18 +1,19 @@
 <script lang="ts">
-	import { Send, Mic, MicOff } from 'lucide-svelte';
+	import { Send, Mic, MicOff, Loader2 } from 'lucide-svelte';
 	import { onDestroy } from 'svelte';
 
 	type Props = {
 		chatInput: string;
 		chatLoading: boolean;
 		suggestions: string[];
+		suggestionsLoading?: boolean;
 		showSuggestions: boolean;
 		theme: 'dark' | 'light';
 		onInputChange: (value: string) => void;
 		onSend: (message?: string) => void;
 	};
 
-	let { chatInput, chatLoading, suggestions, showSuggestions, theme, onInputChange, onSend }: Props = $props();
+	let { chatInput, chatLoading, suggestions, suggestionsLoading = false, showSuggestions, theme, onInputChange, onSend }: Props = $props();
 	let dark = $derived(theme === 'dark');
 
 	let isListening = $state(false);
@@ -59,14 +60,18 @@
 
 <div class={`min-w-0 rounded-xl border shadow-lg backdrop-blur-2xl ${dark ? 'border-white/[0.08] bg-[#111]/90 shadow-[0_8px_32px_rgba(0,0,0,0.5)]' : 'border-zinc-200 bg-white/95 shadow-[0_4px_24px_rgba(0,0,0,0.08)]'}`}>
 	{#if showSuggestions}
-		<div class={`no-scrollbar flex gap-1.5 overflow-x-auto border-b px-3 py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
+		<div class={`no-scrollbar flex min-h-[2.75rem] items-center gap-1.5 overflow-x-auto border-b px-3 py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
 			{#each suggestions as tip}
 				<button
 					type="button"
 					onclick={() => onSend(tip)}
-					class={`whitespace-nowrap rounded-md border px-2.5 py-1.5 text-[10.5px] transition-colors ${dark ? 'border-white/[0.06] text-zinc-400 hover:border-white/15 hover:text-zinc-200' : 'border-zinc-200 text-zinc-500 hover:border-zinc-300 hover:text-zinc-700'}`}
+					disabled={suggestionsLoading}
+					class={`whitespace-nowrap rounded-md border px-2.5 py-1.5 text-[10.5px] transition-colors disabled:opacity-50 ${dark ? 'border-white/[0.06] text-zinc-400 hover:border-white/15 hover:text-zinc-200' : 'border-zinc-200 text-zinc-500 hover:border-zinc-300 hover:text-zinc-700'}`}
 				>{tip}</button>
 			{/each}
+			{#if suggestionsLoading}
+				<Loader2 class={`h-3.5 w-3.5 shrink-0 animate-spin ${dark ? 'text-zinc-500' : 'text-zinc-400'}`} />
+			{/if}
 		</div>
 	{/if}
 

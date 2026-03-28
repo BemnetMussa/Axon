@@ -27,6 +27,8 @@
 	let chatInput = $state('');
 	let chatMessages = $state<ChatMessage[]>([]);
 	let chatLoading = $state(false);
+	let chatSuggestions = $state<string[]>([...SUGGESTIONS]);
+	let suggestionsLoading = $state(false);
 	let sortBy = $state<'date' | 'engagement' | 'views'>('date');
 	let timeFilter = $state<'all' | 'today' | 'week' | 'month'>('all');
 	let theme = $state<'dark' | 'light'>('dark');
@@ -409,6 +411,31 @@
 		}
 	}
 
+	$effect(() => {
+		const id = selectedArticle?.id;
+		if (id == null) return;
+		let cancelled = false;
+		suggestionsLoading = true;
+		chatSuggestions = [...SUGGESTIONS];
+		api
+			.getChatSuggestions(id)
+			.then((res) => {
+				if (cancelled) return;
+				if (res.suggestions && res.suggestions.length >= 3) {
+					chatSuggestions = res.suggestions;
+				}
+			})
+			.catch(() => {
+				/* keep fallback SUGGESTIONS */
+			})
+			.finally(() => {
+				if (!cancelled) suggestionsLoading = false;
+			});
+		return () => {
+			cancelled = true;
+		};
+	});
+
 	onMount(load);
 	onDestroy(() => { if (pollTimer) clearInterval(pollTimer); });
 </script>
@@ -492,8 +519,9 @@
 						{chatMessages}
 						{chatInput}
 						{chatLoading}
+						{suggestionsLoading}
 						{theme}
-						suggestions={SUGGESTIONS}
+						suggestions={chatSuggestions}
 						onBack={closeReader}
 						onToggleSave={toggleSave}
 						onOpenExternal={(url) => window.open(url, '_blank', 'noopener,noreferrer')}

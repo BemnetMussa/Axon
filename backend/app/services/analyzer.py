@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import time
@@ -338,6 +339,49 @@ Provide a concise, expert answer based on the context above. If the context does
     except Exception as e:
         print(f"AXON CHAT ERROR: {type(e).__name__}: {e}")
         return f"Chat error: {type(e).__name__}. Check server logs."
+
+
+def generate_chat_suggestions(
+    title: str,
+    content_snippet: str,
+    insight: str,
+    category: str = "",
+    source: str = "",
+) -> list[str]:
+    """Return 4–5 short, article-specific chat starter questions."""
+    if not client.api_key:
+        return []
+
+    clean = re.sub(r"<[^>]+>", "", content_snippet or "").strip()[:1200]
+    ins = re.sub(r"<[^>]+>", "", insight or "").strip()[:800]
+
+    prompt = f"""You are helping a technical founder explore a news signal. Based ONLY on the material below, output exactly 5 short questions they might ask in the chat (max 14 words each). Questions must be specific to THIS story (mention technologies, products, or stakes when relevant). No generic filler.
+
+Title: {title}
+Source: {source} | Category: {category}
+Snippet: {clean}
+Insight: {ins}
+
+Return ONLY a JSON array of 5 strings. No markdown fences, no explanation."""
+
+    try:
+        raw = _call_groq_with_fallback(
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0.45,
+        )
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```\w*\n?", "", raw)
+            raw = re.sub(r"\n?```\s*$", "", raw)
+        data = json.loads(raw)
+        if isinstance(data, list):
+            out = [str(x).strip() for x in data[:5] if str(x).strip()]
+            return out if len(out) >= 3 else []
+    except Exception as e:
+        print(f"AXON SUGGESTIONS ERROR: {e}")
+    return []
+
 
 def generate_weekly_digest(session: Session) -> str | None:
     from datetime import datetime, timedelta

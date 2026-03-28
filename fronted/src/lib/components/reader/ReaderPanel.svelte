@@ -18,6 +18,7 @@
 		chatMessages: ChatMessage[];
 		chatInput: string;
 		chatLoading: boolean;
+		suggestionsLoading?: boolean;
 		theme: 'dark' | 'light';
 		suggestions: string[];
 		onBack: () => void;
@@ -206,6 +207,7 @@
 				{chatInput}
 				{chatLoading}
 				{suggestions}
+				{suggestionsLoading}
 				{theme}
 				showSuggestions={chatMessages.length === 0}
 				onInputChange={onChatInputChange}

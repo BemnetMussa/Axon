@@ -76,6 +76,11 @@ export const api = {
         return res.json();
     },
 
+    getChatSuggestions: async (id: number): Promise<{ suggestions: string[] }> => {
+        const res = await fetch(`${BASE_URL}/articles/${id}/suggestions`);
+        return res.json();
+    },
+
     getBrief: async (id: number): Promise<{ title: string; brief: string }> => {
         const res = await fetch(`${BASE_URL}/brief/${id}`);
         return res.json();

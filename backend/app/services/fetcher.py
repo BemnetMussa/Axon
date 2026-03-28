@@ -14,6 +14,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+# "bearer" for fine-grained PATs, "token" for classic PATs (default)
+GITHUB_AUTH_STYLE = (os.getenv("GITHUB_AUTH_STYLE") or "token").strip().lower()
 
 VIRAL_THRESHOLDS = {
     "hackernews": 15,
@@ -57,7 +59,14 @@ def _parse_feed_date(entry) -> datetime:
     return _now()
 
 
-def is_gold(url: str, title: str, engagement: int = 0, source: str = "") -> bool:
+def is_gold(
+    url: str,
+    title: str,
+    engagement: int = 0,
+    source: str = "",
+    fluff_text: str | None = None,
+) -> bool:
+    """fluff_text: if set, TITLE_FLUFF is checked against this only (e.g. GitHub owner/repo, not description)."""
     try:
         threshold = VIRAL_THRESHOLDS.get(source.lower(), 0)
         if threshold and engagement >= threshold:
@@ -65,11 +74,24 @@ def is_gold(url: str, title: str, engagement: int = 0, source: str = "") -> bool
         domain = url.split("/")[2].replace("www.", "")
         if any(bad in domain for bad in DOMAIN_BLACKLIST):
             return False
-        if any(w in title.lower() for w in TITLE_FLUFF):
+        check = (fluff_text if fluff_text is not None else title).lower()
+        if any(w in check for w in TITLE_FLUFF):
             return False
         return True
     except Exception:
         return False
+
+
+def _github_api_headers() -> dict[str, str]:
+    """GitHub REST API requires User-Agent; merge with optional auth."""
+    h = dict(HEADERS)
+    if not GITHUB_TOKEN:
+        return h
+    if GITHUB_AUTH_STYLE == "bearer":
+        h["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+    else:
+        h["Authorization"] = f"token {GITHUB_TOKEN}"
+    return h
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +169,7 @@ async def hunt_hn_discussions(client: httpx.AsyncClient):
 
 async def hunt_github_trending(client: httpx.AsyncClient):
     """Multiple GitHub search strategies to surface genuinely trending repos."""
-    gh_headers = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
+    gh_headers = _github_api_headers()
     signals: list[dict] = []
 
     async def search_github(query: str, label: str):
@@ -155,11 +177,20 @@ async def hunt_github_trending(client: httpx.AsyncClient):
         try:
             res = await client.get(url, headers=gh_headers, timeout=15.0)
             if res.status_code != 200:
+                body = (res.text or "")[:400]
+                print(f"AXON GitHub search HTTP {res.status_code} for q={query[:80]}... body={body}")
                 return []
             items = res.json().get("items", [])
             results = []
             for i in items:
-                if not is_gold(i["html_url"], i["name"], i["stargazers_count"], "github"):
+                fluff_key = i.get("full_name") or i.get("name") or ""
+                if not is_gold(
+                    i["html_url"],
+                    i["name"],
+                    i["stargazers_count"],
+                    "github",
+                    fluff_text=fluff_key,
+                ):
                     continue
                 pub = _now()
                 if i.get("created_at"):
@@ -169,6 +200,7 @@ async def hunt_github_trending(client: httpx.AsyncClient):
                         pass
                 results.append({
                     "title": f"{i['name']}: {i['description'] or 'No description'}",
+                    "fluff_key": fluff_key,
                     "url": i["html_url"],
                     "snippet": (
                         f"{i['stargazers_count']:,} stars · {i['language'] or 'Multi'} · "
@@ -181,30 +213,47 @@ async def hunt_github_trending(client: httpx.AsyncClient):
                     "published": pub,
                 })
             return results
-        except Exception:
+        except Exception as e:
+            print(f"AXON GitHub search error: {e}")
             return []
 
-    week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-    month_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+    month_ago = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
 
     queries = [
         (f"pushed:>{week_ago} stars:>500", "Momentum"),
         (f"created:>{month_ago} stars:>500 topic:ai", "AI"),
     ]
 
-    results = []
-    # Execute sequentially to avoid concurrent rate limit bans from GitHub
+    results: list[list[dict]] = []
     for q, cat in queries:
         res = await search_github(q, cat)
         results.append(res)
         await asyncio.sleep(1.0)
-        
+
     seen_urls: set[str] = set()
     for batch in results:
         for item in batch:
             if item["url"] not in seen_urls:
                 signals.append(item)
                 seen_urls.add(item["url"])
+
+    # Fallback if primary queries returned nothing (strict stars/date)
+    if not signals:
+        fallback_queries = [
+            ("stars:>200 topic:machine-learning", "AI"),
+            ("stars:>100 language:Python topic:ai", "Momentum"),
+            ("stars:>50 sort:updated", "Momentum"),
+        ]
+        for q, cat in fallback_queries:
+            batch = await search_github(q, cat)
+            for item in batch:
+                if item["url"] not in seen_urls:
+                    signals.append(item)
+                    seen_urls.add(item["url"])
+            if signals:
+                break
+            await asyncio.sleep(1.0)
 
     return signals
 
@@ -492,7 +541,8 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
             engagement = sig.get("likes", 0)
             if not url or url in all_existing_urls or url in seen:
                 continue
-            if not is_gold(url, sig["title"], engagement, source):
+            fluff_key = sig.get("fluff_key")
+            if not is_gold(url, sig["title"], engagement, source, fluff_text=fluff_key):
                 continue
             source_counts[source] = source_counts.get(source, 0) + 1
             if source_counts[source] > MAX_PER_SOURCE:
