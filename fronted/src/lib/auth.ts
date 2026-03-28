@@ -5,12 +5,23 @@ import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/auth-schema';
 
+/** Public origin for OAuth callbacks and CSRF. On Vercel, set BETTER_AUTH_URL or rely on VERCEL_URL. */
+function appBaseUrl(): string {
+	const explicit = process.env.BETTER_AUTH_URL?.trim();
+	if (explicit) return explicit.replace(/\/$/, '');
+	if (process.env.VERCEL_URL)
+		return `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '').replace(/\/$/, '')}`;
+	return 'http://localhost:5173';
+}
+
+const base = appBaseUrl();
+
 export const auth = betterAuth({
 	secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-me-min-32-chars-long!!',
-	baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:5173',
+	baseURL: base,
 	trustedOrigins: [
-		process.env.BETTER_AUTH_URL || 'http://localhost:5173',
-		...(process.env.PUBLIC_APP_URL ? [process.env.PUBLIC_APP_URL] : []),
+		base,
+		...(process.env.PUBLIC_APP_URL ? [process.env.PUBLIC_APP_URL.replace(/\/$/, '')] : []),
 	],
 	database: drizzleAdapter(db, {
 		provider: 'pg',
