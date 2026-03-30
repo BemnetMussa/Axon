@@ -16,7 +16,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event.locals.user = null;
 		}
 	} catch (e) {
-		console.error('[auth] getSession failed (check DATABASE_URL / SSL / migrations)', e);
+		console.error('[auth] getSession failed', e);
 		event.locals.session = null;
 		event.locals.user = null;
 	}
