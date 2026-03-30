@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { marked } from 'marked';
 	import { api, feedCache, type Article, type Trend } from '$lib/api';
 	import FeedPanel from '$lib/components/feed/FeedPanel.svelte';
 	import DesktopSidebar from '$lib/components/navigation/DesktopSidebar.svelte';
@@ -528,7 +529,7 @@ let digestLoading = $state(false);
 							<p class={`mb-12 text-sm ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'}`}>Synthesized roughly {digestContent.created_at ? new Date(digestContent.created_at).toLocaleDateString() : 'recently'}</p>
 							
 							<div class={`prose max-w-none text-[15px] leading-[1.8] sm:text-[17px] ${theme === 'dark' ? 'prose-invert prose-p:text-[#d4d4d8] prose-headings:text-white' : 'prose-p:text-zinc-700 prose-headings:text-black'}`}>
-								{digestContent.content}
+								{@html marked.parse(digestContent.content || '')}
 							</div>
 							<button onclick={generateDigest} disabled={digestLoading} class={`mt-8 rounded-lg px-6 py-3 text-[13px] font-bold shadow-lg transition-all disabled:opacity-60 ${theme === 'dark' ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}>
 								{digestLoading ? 'Generating…' : 'Refresh Weekly Digest'}
