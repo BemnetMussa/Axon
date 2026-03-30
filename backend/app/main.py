@@ -286,6 +286,11 @@ def get_latest_digest(session: Session = Depends(get_session)):
 @app.post("/digests/generate")
 def trigger_digest(session: Session = Depends(get_session)):
     content = generate_weekly_digest(session)
+    if not content:
+        return JSONResponse(
+            {"status": "error", "detail": "No articles available to generate a weekly digest yet."},
+            status_code=503,
+        )
     return {"status": "success", "digest": content}
 
 

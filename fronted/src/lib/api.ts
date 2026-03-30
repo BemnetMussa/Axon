@@ -112,6 +112,11 @@ export const api = {
     getLatestDigest: async (): Promise<{ content: string; created_at: string }> => {
         const res = await fetch(`${BASE_URL}/digests/latest`);
         return jsonOrThrow<{ content: string; created_at: string }>(res);
+    },
+
+    generateDigest: async (): Promise<{ status: string; digest?: string; detail?: string }> => {
+        const res = await fetch(`${BASE_URL}/digests/generate`, { method: 'POST' });
+        return jsonOrThrow<{ status: string; digest?: string; detail?: string }>(res);
     }
 };
 
