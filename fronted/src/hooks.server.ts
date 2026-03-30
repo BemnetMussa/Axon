@@ -4,14 +4,19 @@ import { building } from '$app/environment';
 import type { Handle } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const session = await auth.api.getSession({
-		headers: event.request.headers,
-	});
-
-	if (session) {
-		event.locals.session = session.session;
-		event.locals.user = session.user;
-	} else {
+	try {
+		const session = await auth.api.getSession({
+			headers: event.request.headers,
+		});
+		if (session) {
+			event.locals.session = session.session;
+			event.locals.user = session.user;
+		} else {
+			event.locals.session = null;
+			event.locals.user = null;
+		}
+	} catch (e) {
+		console.error('[auth] getSession failed (check DATABASE_URL / SSL / migrations)', e);
 		event.locals.session = null;
 		event.locals.user = null;
 	}

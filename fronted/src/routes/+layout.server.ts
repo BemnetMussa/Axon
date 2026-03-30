@@ -5,6 +5,7 @@ const publicPaths = new Set(['/login', '/signup']);
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const path = url.pathname;
+	if (path.startsWith('/api/auth')) return { user: locals.user, session: locals.session };
 	const isPublic = publicPaths.has(path);
 
 	if (!locals.user && !isPublic) {
