@@ -33,6 +33,19 @@ from app.services.extractor import extract_article_content
 
 scheduler = AsyncIOScheduler()
 
+INTERNAL_SECRET = os.getenv("AXON_INTERNAL_SECRET", "").strip()
+if not INTERNAL_SECRET:
+    raise RuntimeError("Missing required env var: AXON_INTERNAL_SECRET")
+
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
+
 
 async def scheduled_ingest():
     """Runs ingestion + analysis on a timer."""
@@ -70,12 +83,10 @@ app = FastAPI(title="Axon Intelligence Engine", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-INTERNAL_SECRET = os.getenv("AXON_INTERNAL_SECRET")
 
 
 @app.middleware("http")

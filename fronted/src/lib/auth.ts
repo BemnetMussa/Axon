@@ -6,6 +6,14 @@ import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/auth-schema';
 
+function requireEnv(name: 'BETTER_AUTH_SECRET' | 'GOOGLE_CLIENT_ID' | 'GOOGLE_CLIENT_SECRET'): string {
+	const value = env[name]?.trim();
+	if (!value) {
+		throw new Error(`[auth] Missing required env var: ${name}`);
+	}
+	return value;
+}
+
 function fallbackBaseUrl(): string {
 	const explicit = env.BETTER_AUTH_URL?.trim();
 	if (explicit) return explicit.replace(/\/$/, '');
@@ -34,9 +42,12 @@ function buildAllowedHosts(): string[] {
 }
 
 const fallback = fallbackBaseUrl();
+const authSecret = requireEnv('BETTER_AUTH_SECRET');
+const googleClientId = requireEnv('GOOGLE_CLIENT_ID');
+const googleClientSecret = requireEnv('GOOGLE_CLIENT_SECRET');
 
 export const auth = betterAuth({
-	secret: env.BETTER_AUTH_SECRET || 'dev-secret-change-me-min-32-chars-long!!',
+	secret: authSecret,
 	baseURL: {
 		allowedHosts: buildAllowedHosts(),
 		fallback,
@@ -51,8 +62,8 @@ export const auth = betterAuth({
 	}),
 	socialProviders: {
 		google: {
-			clientId: env.GOOGLE_CLIENT_ID as string,
-			clientSecret: env.GOOGLE_CLIENT_SECRET as string,
+			clientId: googleClientId,
+			clientSecret: googleClientSecret,
 		},
 	},
 	plugins: [sveltekitCookies(getRequestEvent)],

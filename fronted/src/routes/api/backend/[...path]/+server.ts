@@ -2,9 +2,16 @@ import { auth } from '$lib/auth';
 import { env } from '$env/dynamic/private';
 import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 
-function upstreamBase(): string {
-	return env.INTERNAL_API_URL || 'http://127.0.0.1:8000';
+function requireEnv(name: 'AXON_INTERNAL_SECRET' | 'INTERNAL_API_URL'): string {
+	const value = env[name]?.trim();
+	if (!value) {
+		throw new Error(`[api/backend proxy] Missing required env var: ${name}`);
+	}
+	return value;
 }
+
+const INTERNAL_SECRET = requireEnv('AXON_INTERNAL_SECRET');
+const INTERNAL_API_URL = requireEnv('INTERNAL_API_URL');
 
 async function proxy(event: RequestEvent, method: string): Promise<Response> {
 	const session = await auth.api.getSession({
@@ -17,20 +24,12 @@ async function proxy(event: RequestEvent, method: string): Promise<Response> {
 		});
 	}
 
-	const secret = env.AXON_INTERNAL_SECRET;
-	if (!secret) {
-		return new Response(JSON.stringify({ detail: 'AXON_INTERNAL_SECRET not configured' }), {
-			status: 500,
-			headers: { 'Content-Type': 'application/json' },
-		});
-	}
-
 	const path = event.params.path ?? '';
-	const url = `${upstreamBase().replace(/\/$/, '')}/${path}${event.url.search}`;
+	const url = `${INTERNAL_API_URL.replace(/\/$/, '')}/${path}${event.url.search}`;
 
 	const headers: Record<string, string> = {
 		'X-Axon-User-Id': session.user.id,
-		'X-Axon-Internal-Secret': secret,
+		'X-Axon-Internal-Secret': INTERNAL_SECRET,
 	};
 	const contentType = event.request.headers.get('content-type');
 	if (contentType) headers['Content-Type'] = contentType;
