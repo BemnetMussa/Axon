@@ -1,0 +1,51 @@
+<svg width="1200" height="1600" viewBox="0 0 1200 1600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="45%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#052E2B"/>
+    </linearGradient>
+    <radialGradient id="glowC" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(930 260) rotate(35) scale(360 360)">
+      <stop stop-color="#34D399" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#34D399" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowD" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(220 1040) rotate(40) scale(460 460)">
+      <stop stop-color="#22D3EE" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="1600" fill="url(#bg2)"/>
+  <rect width="1200" height="1600" fill="url(#glowC)"/>
+  <rect width="1200" height="1600" fill="url(#glowD)"/>
+
+  <g opacity="0.24" stroke="#6EE7B7" stroke-width="2">
+    <path d="M130 280H1050"/>
+    <path d="M130 520H1050"/>
+    <path d="M130 760H1050"/>
+    <path d="M130 1000H1050"/>
+    <path d="M130 1240H1050"/>
+    <path d="M220 180V1360"/>
+    <path d="M430 180V1360"/>
+    <path d="M640 180V1360"/>
+    <path d="M850 180V1360"/>
+    <path d="M1060 180V1360"/>
+  </g>
+
+  <g opacity="0.95">
+    <rect x="220" y="320" width="760" height="240" rx="22" fill="#0B1220" stroke="#34D399" stroke-opacity="0.5"/>
+    <text x="270" y="405" fill="#CCFBF1" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700">Signal -> Insight -> Decision</text>
+    <text x="270" y="455" fill="#A7F3D0" font-family="Inter, Arial, sans-serif" font-size="24">Build your intelligence layer in minutes.</text>
+    <text x="270" y="495" fill="#99F6E4" font-family="Inter, Arial, sans-serif" font-size="24">Track frontier sources. Stay ahead every day.</text>
+
+    <rect x="320" y="760" width="560" height="360" rx="22" fill="#0B1220" stroke="#22D3EE" stroke-opacity="0.5"/>
+    <rect x="370" y="840" width="140" height="210" rx="12" fill="#0F766E" fill-opacity="0.55"/>
+    <rect x="540" y="800" width="140" height="250" rx="12" fill="#0891B2" fill-opacity="0.55"/>
+    <rect x="710" y="740" width="140" height="310" rx="12" fill="#10B981" fill-opacity="0.55"/>
+    <polyline points="370,760 540,720 710,680 850,630" fill="none" stroke="#99F6E4" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="370" cy="760" r="7" fill="#D1FAE5"/>
+    <circle cx="540" cy="720" r="7" fill="#D1FAE5"/>
+    <circle cx="710" cy="680" r="7" fill="#D1FAE5"/>
+    <circle cx="850" cy="630" r="7" fill="#D1FAE5"/>
+  </g>
+</svg>
