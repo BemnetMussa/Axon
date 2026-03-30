@@ -15,6 +15,7 @@
 	let allArticles = $state<Article[]>([]);
 	let trends = $state<Trend[]>([]);
 	let loading = $state(true);
+	let fetchError = $state<string | null>(null);
 	let syncIndicator = $state(false);
 	let searchQuery = $state('');
 	let activeSource = $state<string | null>(null);
@@ -145,6 +146,7 @@
 		const cached = feedCache.get();
 
 		if (cached && feedCache.isUsable()) {
+			fetchError = null;
 			allArticles = cached.articles;
 			trends = cached.trends;
 			nextCursor = cached.nextCursor;
@@ -164,6 +166,7 @@
 	async function fetchFirstPage() {
 		loading = allArticles.length === 0;
 		syncIndicator = true;
+		fetchError = null;
 		try {
 			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
 			allArticles = articleRes.articles;
@@ -173,6 +176,7 @@
 			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
 		} catch (error) {
 			console.error('Fetch failed', error);
+			fetchError = error instanceof Error ? error.message : 'Failed to load articles.';
 		} finally {
 			loading = false;
 			syncIndicator = false;
@@ -329,7 +333,7 @@
 		if (!digestContent) return;
 		digestContent = { ...digestContent, content: 'Generating new Weekly Synthesis. Please wait roughly 10 seconds...' };
 		try {
-			const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/digests/generate`, { method: 'POST' });
+			const res = await fetch('/api/backend/digests/generate', { method: 'POST' });
 			const data = await res.json();
 			if (data.status === 'success') {
 				const fresh = await api.getLatestDigest();
@@ -350,12 +354,14 @@
 
 	async function manualRefresh() {
 		syncIndicator = true;
+		fetchError = null;
 		try {
 			await api.triggerRefresh(activeCategory);
 			if (activeCategory === 'GitHub') activeSource = 'GitHub';
 			await fetchFirstPage();
 		} catch (error) {
 			console.error('Refresh failed', error);
+			fetchError = error instanceof Error ? error.message : 'Failed to refresh feed.';
 			syncIndicator = false;
 		}
 	}
@@ -460,35 +466,42 @@
 
 	<div class="relative flex min-w-0 flex-1 overflow-hidden">
 		<div class={`min-w-0 overflow-hidden ${selectedArticle || showDigestView ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
-			<FeedPanel
-				title={currentTitle}
-				articles={filtered}
-				{sources}
-				{activeSource}
-				{searchQuery}
-				{sortBy}
-				{timeFilter}
-				{theme}
-				{hasMore}
-				{loadingMore}
-				selectedArticleId={selectedArticle?.id ?? null}
-				{savedArticleIds}
-				{readArticleIds}
-				{loading}
-				{syncIndicator}
-				{newArticleIds}
-				onSearchChange={(value) => (searchQuery = value)}
-				onSourceSelect={selectSource}
-				onSortChange={(value) => (sortBy = value)}
-				onTimeFilterChange={(value) => (timeFilter = value)}
-				onArticleOpen={openArticle}
-				onToggleSave={toggleSave}
-				onRefresh={manualRefresh}
-				onLoadMore={loadMore}
-				onCheckNew={checkForNew}
-				onToggleTheme={toggleTheme}
-				bind:scrollArea={feedScrollArea}
-			/>
+			<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+				{#if fetchError}
+					<div class={`mx-3 mt-3 rounded-md border px-3 py-2 text-xs ${theme === 'dark' ? 'border-red-400/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'}`}>
+						{fetchError}
+					</div>
+				{/if}
+				<FeedPanel
+					title={currentTitle}
+					articles={filtered}
+					{sources}
+					{activeSource}
+					{searchQuery}
+					{sortBy}
+					{timeFilter}
+					{theme}
+					{hasMore}
+					{loadingMore}
+					selectedArticleId={selectedArticle?.id ?? null}
+					{savedArticleIds}
+					{readArticleIds}
+					{loading}
+					{syncIndicator}
+					{newArticleIds}
+					onSearchChange={(value) => (searchQuery = value)}
+					onSourceSelect={selectSource}
+					onSortChange={(value) => (sortBy = value)}
+					onTimeFilterChange={(value) => (timeFilter = value)}
+					onArticleOpen={openArticle}
+					onToggleSave={toggleSave}
+					onRefresh={manualRefresh}
+					onLoadMore={loadMore}
+					onCheckNew={checkForNew}
+					onToggleTheme={toggleTheme}
+					bind:scrollArea={feedScrollArea}
+				/>
+			</div>
 		</div>
 
 		{#if selectedArticle || showDigestView}

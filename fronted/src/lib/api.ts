@@ -1,6 +1,22 @@
 /** Proxied through SvelteKit (`/api/backend`) so FastAPI receives internal auth headers. */
 const BASE_URL = '/api/backend';
 
+async function failIfNotOk(res: Response): Promise<void> {
+    if (res.ok) return;
+    let body = '';
+    try {
+        body = await res.text();
+    } catch {
+        body = '';
+    }
+    throw new Error(`API ${res.status}${body ? `: ${body}` : ''}`);
+}
+
+async function jsonOrThrow<T>(res: Response): Promise<T> {
+    await failIfNotOk(res);
+    return res.json() as Promise<T>;
+}
+
 export interface Trend {
     keyword: string;
     count: number;
@@ -34,25 +50,25 @@ const PAGE_SIZE = 10;
 export const api = {
     getTrends: async (): Promise<Trend[]> => {
         const res = await fetch(`${BASE_URL}/trends`);
-        return res.json();
+        return jsonOrThrow<Trend[]>(res);
     },
 
     getArticles: async (cursor?: number | null, limit = PAGE_SIZE): Promise<ArticlesResponse> => {
         const params = new URLSearchParams({ limit: String(limit) });
         if (cursor) params.set('cursor', String(cursor));
         const res = await fetch(`${BASE_URL}/articles?${params}`);
-        return res.json();
+        return jsonOrThrow<ArticlesResponse>(res);
     },
 
     countNewSince: async (sinceId: number): Promise<number> => {
         const res = await fetch(`${BASE_URL}/articles/count-since?since_id=${sinceId}`);
-        const data = await res.json();
+        const data = await jsonOrThrow<{ new_count?: number }>(res);
         return data.new_count ?? 0;
     },
 
     getArticleContent: async (id: number): Promise<{ content: string }> => {
         const res = await fetch(`${BASE_URL}/articles/${id}/content`);
-        return res.json();
+        return jsonOrThrow<{ content: string }>(res);
     },
 
     triggerRefresh: async (contextId?: string | null) => {
@@ -60,12 +76,12 @@ export const api = {
         if (contextId) {
             url += `?context_id=${encodeURIComponent(contextId === 'GitHub' ? 'GitHub' : contextId)}`;
         }
-        await fetch(url, { method: 'POST' });
-        await fetch(`${BASE_URL}/analyze`, { method: 'POST' });
+        await failIfNotOk(await fetch(url, { method: 'POST' }));
+        await failIfNotOk(await fetch(`${BASE_URL}/analyze`, { method: 'POST' }));
     },
 
     trackView: async (id: number) => {
-        await fetch(`${BASE_URL}/articles/${id}/view`, { method: 'POST' });
+        await failIfNotOk(await fetch(`${BASE_URL}/articles/${id}/view`, { method: 'POST' }));
     },
 
     chatWithArticle: async (id: number, question: string): Promise<{ answer: string }> => {
@@ -74,28 +90,28 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question })
         });
-        return res.json();
+        return jsonOrThrow<{ answer: string }>(res);
     },
 
     getChatSuggestions: async (id: number): Promise<{ suggestions: string[] }> => {
         const res = await fetch(`${BASE_URL}/articles/${id}/suggestions`);
-        return res.json();
+        return jsonOrThrow<{ suggestions: string[] }>(res);
     },
 
     getBrief: async (id: number): Promise<{ title: string; brief: string }> => {
         const res = await fetch(`${BASE_URL}/brief/${id}`);
-        return res.json();
+        return jsonOrThrow<{ title: string; brief: string }>(res);
     },
 
     searchSemantic: async (query: string): Promise<{ articles: Article[] }> => {
         const params = new URLSearchParams({ query });
         const res = await fetch(`${BASE_URL}/search/semantic?${params}`);
-        return res.json();
+        return jsonOrThrow<{ articles: Article[] }>(res);
     },
 
     getLatestDigest: async (): Promise<{ content: string; created_at: string }> => {
         const res = await fetch(`${BASE_URL}/digests/latest`);
-        return res.json();
+        return jsonOrThrow<{ content: string; created_at: string }>(res);
     }
 };
 

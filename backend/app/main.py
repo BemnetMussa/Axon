@@ -2,6 +2,11 @@ import os
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
+
 from fastapi import FastAPI, Depends, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
