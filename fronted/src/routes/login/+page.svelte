@@ -73,11 +73,10 @@
 		<!-- The Vision (Left Panel) -->
 		<aside class="relative hidden lg:block overflow-hidden bg-zinc-100 dark:bg-black">
 			<img 
-			src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=90&w=2000&auto=format&fit=crop" 
-			alt="Axon global signal network" 
-			class="absolute inset-0 h-full w-full object-cover opacity-90 dark:opacity-80 mix-blend-luminosity hover:mix-blend-normal hover:scale-105 transition-all duration-[3s] ease-out" 
-		/>
-			<!-- Gradient overlay for perfect text legibility -->
+				src="https://images.unsplash.com/photo-1614729939124-032f0b56c9ce?q=90&w=2000&auto=format&fit=crop" 
+				alt="Axon data streams converging" 
+				class="absolute inset-0 h-full w-full object-cover opacity-90 dark:opacity-70 mix-blend-luminosity hover:mix-blend-normal hover:scale-105 transition-all duration-[3s] ease-out" 
+			/>
 			<div class="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent dark:from-[#050505] dark:via-[#050505]/40 dark:to-transparent"></div>
 			
 			<div class="absolute inset-0 flex flex-col justify-between p-12">
@@ -89,11 +88,14 @@
 				</div>
 
 				<div class="max-w-md">
+					<p class="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-zinc-500 dark:text-blue-400/90">
+						Your Daily Briefing
+					</p>
 					<h2 class="text-3xl font-medium tracking-tight text-zinc-900 dark:text-white mb-4">
-						Intelligence, <br/> seamlessly connected.
+						Cut through the noise.
 					</h2>
 					<p class="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
-						Your feed is already tuned. Sign in to sync your data and continue from exactly where you left off.
+						Sign in to see exactly where the tech world is heading today. Catch up on the latest from OpenAI, Nvidia, ProductHunt, and more.
 					</p>
 				</div>
 			</div>
