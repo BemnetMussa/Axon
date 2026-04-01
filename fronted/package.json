@@ -23,6 +23,7 @@
 		"@tailwindcss/typography": "^0.5.14",
 		"@tailwindcss/vite": "^4.1.18",
 		"@types/node": "^22",
+		"@types/three": "^0.183.1",
 		"autoprefixer": "^10.4.24",
 		"drizzle-kit": "^0.31.4",
 		"eslint": "^9.39.2",
@@ -47,6 +48,7 @@
 		"drizzle-orm": "^0.41.0",
 		"lucide-svelte": "^0.563.0",
 		"marked": "^17.0.3",
-		"postgres": "^3.4.5"
+		"postgres": "^3.4.5",
+		"three": "^0.183.2"
 	}
 }

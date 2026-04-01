@@ -26,7 +26,7 @@
 		}
 		formLoading = true;
 		try {
-			const redirectTo = page.url.searchParams.get('redirectTo') || '/';
+			const redirectTo = page.url.searchParams.get('redirectTo') || '/app';
 			const { error } = await authClient.signUp.email({
 				name: name.trim(),
 				email: email.trim(),
@@ -49,7 +49,7 @@
 		errorMessage = '';
 		googleLoading = true;
 		try {
-			const redirectTo = page.url.searchParams.get('redirectTo') || '/';
+			const redirectTo = page.url.searchParams.get('redirectTo') || '/app';
 			const { data, error } = await authClient.signIn.social({
 				provider: 'google',
 				callbackURL: redirectTo,

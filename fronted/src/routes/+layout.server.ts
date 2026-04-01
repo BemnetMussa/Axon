@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 
-const publicPaths = new Set(['/login', '/signup']);
+const publicPaths = new Set(['/', '/login', '/signup']);
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const path = url.pathname;
@@ -13,8 +13,8 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		throw redirect(302, `/login?redirectTo=${encodeURIComponent(dest || '/')}`);
 	}
 
-	if (locals.user && isPublic) {
-		throw redirect(302, '/');
+	if (locals.user && (path === '/login' || path === '/signup' || path === '/')) {
+		throw redirect(302, '/app');
 	}
 
 	return {
