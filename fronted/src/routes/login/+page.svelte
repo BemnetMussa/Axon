@@ -2,25 +2,20 @@
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Zap } from 'lucide-svelte';
+	import { Zap, ArrowRight, AlertCircle } from 'lucide-svelte';
 	import { authClient } from '$lib/auth-client';
+	import { fade, slide } from 'svelte/transition';
 
 	let googleLoading = $state(false);
 	let formLoading = $state(false);
 	let errorMessage = $state('');
 	let email = $state('');
 	let password = $state('');
-	let theme = $state<'dark' | 'light'>('dark');
-
-	$effect(() => {
-		if (!browser) return;
-		theme = document.documentElement.classList.contains('light') ? 'light' : 'dark';
-	});
 
 	async function signInEmail() {
 		errorMessage = '';
 		if (!email.trim() || !password) {
-			errorMessage = 'Email and password are required.';
+			errorMessage = 'Please enter both email and password.';
 			return;
 		}
 		formLoading = true;
@@ -32,12 +27,12 @@
 				callbackURL: redirectTo,
 			});
 			if (error) {
-				errorMessage = error.message || 'Unable to sign in.';
+				errorMessage = error.message || 'Unable to sign in. Please verify your credentials.';
 				return;
 			}
 			await goto(redirectTo);
 		} catch {
-			errorMessage = 'Unable to sign in right now. Please try again.';
+			errorMessage = 'A network anomaly occurred. Please try again.';
 		} finally {
 			formLoading = false;
 		}
@@ -54,14 +49,14 @@
 				disableRedirect: true,
 			});
 			if (error) {
-				errorMessage = error.message || 'Google sign-in failed.';
+				errorMessage = error.message || 'Google authentication failed.';
 				return;
 			}
 			if (data?.url && browser) {
 				window.location.href = data.url;
 			}
 		} catch {
-			errorMessage = 'Google sign-in failed. Please try again.';
+			errorMessage = 'Unable to connect to Google right now.';
 		} finally {
 			googleLoading = false;
 		}
@@ -72,86 +67,147 @@
 	<title>Sign in — AXON</title>
 </svelte:head>
 
-<div class={`min-h-screen transition-colors ${theme === 'dark' ? 'bg-[#0b0b0b] text-zinc-200' : 'bg-white text-zinc-900'}`}>
-	<div class="mx-auto grid min-h-screen max-w-7xl lg:grid-cols-2">
-		<aside class="relative hidden overflow-hidden rounded-r-3xl lg:block">
-			<img src="/images/auth-login-hero.svg" alt="Axon intelligence network visualization" class="h-full w-full object-cover" />
-			<div class="absolute inset-0 bg-black/35"></div>
-			<div class="absolute bottom-10 left-10 right-10">
-				<p class="text-sm uppercase tracking-[0.2em] text-cyan-200/90">Welcome back</p>
-				<h2 class="mt-3 text-3xl font-bold text-white">Monitor fast-moving signals with confidence.</h2>
-				<p class="mt-3 max-w-md text-sm text-zinc-200">Your feed is already tuned. Sign in and continue from where you left off.</p>
+<div class="min-h-screen w-full bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 transition-colors duration-500 selection:bg-zinc-900 selection:text-white dark:selection:bg-white dark:selection:text-black">
+	<div class="grid min-h-screen lg:grid-cols-2">
+		
+		<!-- The Vision (Left Panel) -->
+		<aside class="relative hidden lg:block overflow-hidden bg-zinc-100 dark:bg-black">
+			<img 
+			src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=90&w=2000&auto=format&fit=crop" 
+			alt="Axon global signal network" 
+			class="absolute inset-0 h-full w-full object-cover opacity-90 dark:opacity-80 mix-blend-luminosity hover:mix-blend-normal hover:scale-105 transition-all duration-[3s] ease-out" 
+		/>
+			<!-- Gradient overlay for perfect text legibility -->
+			<div class="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent dark:from-[#050505] dark:via-[#050505]/40 dark:to-transparent"></div>
+			
+			<div class="absolute inset-0 flex flex-col justify-between p-12">
+				<div class="flex items-center gap-2">
+					<div class="flex h-8 w-8 items-center justify-center rounded bg-black dark:bg-white text-white dark:text-black shadow-lg">
+						<Zap class="h-4 w-4 fill-current" />
+					</div>
+					<span class="text-lg font-black uppercase tracking-[0.2em] italic text-zinc-900 dark:text-white">Axon</span>
+				</div>
+
+				<div class="max-w-md">
+					<h2 class="text-3xl font-medium tracking-tight text-zinc-900 dark:text-white mb-4">
+						Intelligence, <br/> seamlessly connected.
+					</h2>
+					<p class="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
+						Your feed is already tuned. Sign in to sync your data and continue from exactly where you left off.
+					</p>
+				</div>
 			</div>
 		</aside>
 
-		<section class="flex items-center justify-center px-6 py-10 sm:px-10">
-			<div class="w-full max-w-sm">
-				<div class="mb-8 flex items-center gap-3">
-					<div class={`flex h-10 w-10 items-center justify-center rounded-lg ${theme === 'dark' ? 'bg-white' : 'bg-black'}`}>
-						<Zap class={`h-5 w-5 ${theme === 'dark' ? 'fill-black text-black' : 'fill-white text-white'}`} />
+		<!-- The Interaction (Right Panel) -->
+		<section class="flex flex-col items-center justify-center px-6 py-12 sm:px-12 lg:px-20">
+			<div class="w-full max-w-[380px]">
+				
+				<!-- Mobile Logo -->
+				<div class="mb-12 flex lg:hidden items-center gap-3">
+					<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-black dark:bg-white text-white dark:text-black shadow-md">
+						<Zap class="h-5 w-5 fill-current" />
 					</div>
-					<span class={`text-lg font-black uppercase tracking-[3px] italic ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Axon</span>
+					<span class="text-xl font-black uppercase tracking-[0.2em] italic text-zinc-900 dark:text-white">Axon</span>
 				</div>
 
-				<div class={`w-full rounded-2xl border p-8 shadow-xl ${theme === 'dark' ? 'border-white/[0.08] bg-[#111]' : 'border-zinc-200 bg-zinc-50'}`}>
-		<h1 class={`mb-1 text-center text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Welcome back</h1>
-		<p class={`mb-8 text-center text-[13px] ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-500'}`}>
-			Sign in with your account to open your intelligence feed.
-		</p>
-
-		<form class="space-y-3" onsubmit={(e) => { e.preventDefault(); signInEmail(); }}>
-			<input
-				type="email"
-				bind:value={email}
-				placeholder="Email"
-				autocomplete="email"
-				class={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition ${theme === 'dark' ? 'border-white/[0.12] bg-black/30 text-zinc-100 placeholder:text-zinc-500 focus:border-white/40' : 'border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500'}`}
-			/>
-			<input
-				type="password"
-				bind:value={password}
-				placeholder="Password"
-				autocomplete="current-password"
-				class={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition ${theme === 'dark' ? 'border-white/[0.12] bg-black/30 text-zinc-100 placeholder:text-zinc-500 focus:border-white/40' : 'border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500'}`}
-			/>
-			<button
-				type="submit"
-				disabled={formLoading || googleLoading}
-				class={`w-full rounded-xl py-3 text-[13px] font-semibold transition disabled:opacity-50 ${theme === 'dark' ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}
-			>
-				{formLoading ? 'Signing in…' : 'Sign in'}
-			</button>
-		</form>
-
-		<div class="my-5 flex items-center gap-3">
-			<div class={`h-px flex-1 ${theme === 'dark' ? 'bg-white/[0.08]' : 'bg-zinc-200'}`}></div>
-			<span class={`text-[11px] uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>or</span>
-			<div class={`h-px flex-1 ${theme === 'dark' ? 'bg-white/[0.08]' : 'bg-zinc-200'}`}></div>
-		</div>
-
-		<button
-			type="button"
-			onclick={signInGoogle}
-			disabled={googleLoading || formLoading}
-			class={`flex w-full items-center justify-center gap-2 rounded-xl border py-3 text-[13px] font-semibold transition-all disabled:opacity-50 ${theme === 'dark' ? 'border-white/[0.1] bg-transparent text-zinc-100 hover:bg-white/[0.06]' : 'border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-100'}`}
-		>
-			{#if googleLoading}
-				<span>Connecting…</span>
-			{:else}
-				<span class={`grid h-7 w-7 place-items-center rounded-full border text-xs font-bold ${theme === 'dark' ? 'border-white/[0.18]' : 'border-zinc-300'}`}>G</span>
-				Continue with Google
-			{/if}
-		</button>
-
-		{#if errorMessage}
-			<p class="mt-4 text-center text-xs text-red-400">{errorMessage}</p>
-		{/if}
-
-		<p class={`mt-6 text-center text-xs ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-500'}`}>
-			No account yet?
-			<a class={`font-semibold underline ${theme === 'dark' ? 'text-zinc-200' : 'text-zinc-700'}`} href="/signup">Create one</a>
-		</p>
+				<!-- Header -->
+				<div class="mb-8">
+					<h1 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Welcome back</h1>
+					<p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+						Enter your credentials to access your workspace.
+					</p>
 				</div>
+
+				<!-- Form -->
+				<form class="space-y-4" onsubmit={(e) => { e.preventDefault(); signInEmail(); }}>
+					<div class="space-y-3">
+						<div class="relative">
+							<input
+								type="email"
+								bind:value={email}
+								placeholder="name@example.com"
+								autocomplete="email"
+								required
+								class="peer w-full rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/5 px-4 py-3.5 text-sm text-zinc-900 dark:text-white placeholder-transparent focus:border-black dark:focus:border-white focus:bg-white dark:focus:bg-black focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-all duration-200"
+							/>
+							<label class="pointer-events-none absolute left-4 top-3.5 text-sm text-zinc-400 transition-all duration-200 peer-focus:-translate-y-[1.1rem] peer-focus:scale-[0.8] peer-focus:bg-white dark:peer-focus:bg-[#050505] peer-focus:px-1 peer-valid:-translate-y-[1.1rem] peer-valid:scale-[0.8] peer-valid:bg-white dark:peer-valid:bg-[#050505] peer-valid:px-1">
+								Email address
+							</label>
+						</div>
+
+						<div class="relative">
+							<input
+								type="password"
+								bind:value={password}
+								placeholder="Password"
+								autocomplete="current-password"
+								required
+								class="peer w-full rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/5 px-4 py-3.5 text-sm text-zinc-900 dark:text-white placeholder-transparent focus:border-black dark:focus:border-white focus:bg-white dark:focus:bg-black focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-all duration-200"
+							/>
+							<label class="pointer-events-none absolute left-4 top-3.5 text-sm text-zinc-400 transition-all duration-200 peer-focus:-translate-y-[1.1rem] peer-focus:scale-[0.8] peer-focus:bg-white dark:peer-focus:bg-[#050505] peer-focus:px-1 peer-valid:-translate-y-[1.1rem] peer-valid:scale-[0.8] peer-valid:bg-white dark:peer-valid:bg-[#050505] peer-valid:px-1">
+								Password
+							</label>
+						</div>
+					</div>
+
+					<button
+						type="submit"
+						disabled={formLoading || googleLoading}
+						class="group relative w-full overflow-hidden rounded-xl bg-black dark:bg-white px-4 py-3.5 text-sm font-medium text-white dark:text-black shadow-[0_0_40px_-10px_rgba(0,0,0,0.4)] dark:shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100"
+					>
+						<div class="flex items-center justify-center gap-2">
+							{#if formLoading}
+								<span class="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white dark:border-black/20 dark:border-t-black"></span>
+								<span>Authenticating...</span>
+							{:else}
+								<span>Sign in to AXON</span>
+								<ArrowRight class="h-4 w-4 opacity-70 transition-transform group-hover:translate-x-1" />
+							{/if}
+						</div>
+					</button>
+				</form>
+
+				<div class="relative flex items-center py-6">
+					<div class="flex-grow border-t border-zinc-200 dark:border-white/10"></div>
+					<span class="mx-4 flex-shrink-0 text-xs font-medium uppercase tracking-widest text-zinc-400">or</span>
+					<div class="flex-grow border-t border-zinc-200 dark:border-white/10"></div>
+				</div>
+
+				<button
+					type="button"
+					onclick={signInGoogle}
+					disabled={googleLoading || formLoading}
+					class="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-transparent px-4 py-3.5 text-sm font-medium text-zinc-700 dark:text-zinc-200 shadow-sm transition-all hover:bg-zinc-50 dark:hover:bg-white/5 active:scale-[0.99] disabled:opacity-50 disabled:hover:bg-transparent"
+				>
+					{#if googleLoading}
+						<span class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+						<span>Connecting via Google...</span>
+					{:else}
+						<svg class="h-5 w-5" viewBox="0 0 24 24">
+							<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+							<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+							<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+							<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+						</svg>
+						<span>Continue with Google</span>
+					{/if}
+				</button>
+
+				<!-- Error State -->
+				{#if errorMessage}
+					<div transition:slide={{ duration: 300, axis: 'y' }} class="mt-4">
+						<div class="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20">
+							<AlertCircle class="h-4 w-4 shrink-0" />
+							<p>{errorMessage}</p>
+						</div>
+					</div>
+				{/if}
+
+				<p class="mt-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+					Don't have an account?
+					<a class="font-medium text-zinc-900 dark:text-white underline decoration-zinc-300 dark:decoration-zinc-600 underline-offset-4 hover:decoration-zinc-900 dark:hover:decoration-white transition-colors" href="/signup">Request access</a>
+				</p>
 			</div>
 		</section>
 	</div>
