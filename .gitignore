@@ -15,9 +15,11 @@ node_modules/
 .netlify/
 
 # === Environment / Secrets ===
+# Real credentials live only in untracked .env files; commit *.example templates.
 .env
 .env.*
 !.env.example
+!.env.test
 
 # === IDE / Editor ===
 .vscode/

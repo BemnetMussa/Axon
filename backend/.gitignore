@@ -1,3 +1,11 @@
-# Covered by root .gitignore — this file adds backend-specific ignores
+# Covered by root .gitignore — backend-specific ignores
 *.db
 *.sqlite3
+
+# Env files (never commit secrets). Keep templates as .env.example only.
+.env
+.env.*
+!.env.example
+
+venv/
+.venv/
