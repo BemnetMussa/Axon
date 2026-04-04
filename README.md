@@ -1,4 +1,4 @@
-# Axon
+ # Axon v2
 
 **An open-source intelligence feed for builders.** Axon continuously scans technical sources — ArXiv, Hacker News, GitHub, Reddit, Product Hunt, expert blogs, and AI lab announcements — filters out noise, and presents what matters through a clean web interface with AI-powered analysis.
 
