@@ -331,6 +331,10 @@ def get_rss_feed(session: Session = Depends(get_session)):
     
     return Response(content="\n".join(xml), media_type="application/rss+xml")
 
+@app.get("/ping")
+def ping():
+    return {"status": "pong", "env": {k: "set" for k in os.environ if "SECRET" in k or "PASS" in k or "URL" in k or "DB_" in k}}
+
 @app.get("/")
 def health():
     return {"status": "Axon is online", "scheduler": scheduler.running}
