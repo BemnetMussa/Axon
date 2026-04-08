@@ -58,7 +58,7 @@
 	});
 </script>
 
-<div class={`min-w-0 rounded-xl border shadow-lg backdrop-blur-2xl ${dark ? 'border-white/[0.08] bg-[#111]/90 shadow-[0_8px_32px_rgba(0,0,0,0.5)]' : 'border-zinc-200 bg-white/95 shadow-[0_4px_24px_rgba(0,0,0,0.08)]'}`}>
+<div class={`min-w-0 rounded-2xl border shadow-lg backdrop-blur-2xl ${dark ? 'border-white/[0.08] bg-[#111]/90 shadow-[0_8px_32px_rgba(0,0,0,0.5)]' : 'border-zinc-200 bg-white/95 shadow-[0_4px_24px_rgba(0,0,0,0.08)]'}`}>
 	{#if showSuggestions}
 		<div class={`no-scrollbar flex min-h-[2.75rem] items-center gap-1.5 overflow-x-auto border-b px-3 py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
 			{#each suggestions as tip}
@@ -66,7 +66,7 @@
 					type="button"
 					onclick={() => onSend(tip)}
 					disabled={suggestionsLoading}
-					class={`whitespace-nowrap rounded-md border px-2.5 py-1.5 text-[10.5px] transition-colors disabled:opacity-50 ${dark ? 'border-white/[0.06] text-zinc-400 hover:border-white/15 hover:text-zinc-200' : 'border-zinc-200 text-zinc-500 hover:border-zinc-300 hover:text-zinc-700'}`}
+					class={`whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[10.5px] transition-colors disabled:opacity-50 ${dark ? 'border-white/[0.06] text-zinc-400 hover:border-white/15 hover:text-zinc-200' : 'border-zinc-200 text-zinc-500 hover:border-zinc-300 hover:text-zinc-700'}`}
 				>{tip}</button>
 			{/each}
 			{#if suggestionsLoading}
@@ -88,7 +88,7 @@
 			<button
 				type="button"
 				onclick={toggleSpeech}
-				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all ${isListening ? (dark ? 'bg-white/15 text-white' : 'bg-zinc-200 text-zinc-900') : (dark ? 'bg-white/[0.06] text-zinc-500 hover:text-zinc-300' : 'bg-zinc-100 text-zinc-400 hover:text-zinc-600')}`}
+				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all ${isListening ? (dark ? 'bg-white/15 text-white' : 'bg-zinc-200 text-zinc-900') : (dark ? 'bg-white/[0.06] text-zinc-500 hover:text-zinc-300' : 'bg-zinc-100 text-zinc-400 hover:text-zinc-600')}`}
 				aria-label={isListening ? 'Stop listening' : 'Voice input'}
 			>
 				{#if isListening}
@@ -102,7 +102,7 @@
 			type="button"
 			onclick={() => onSend()}
 			disabled={!chatInput.trim() || chatLoading}
-			class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all disabled:opacity-20 ${dark ? 'bg-white/[0.06] text-zinc-400' : 'bg-zinc-100 text-zinc-500'}`}
+			class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all disabled:opacity-20 ${dark ? 'bg-white/[0.06] text-zinc-400' : 'bg-zinc-100 text-zinc-500'}`}
 			aria-label="Send message"
 		>
 			<Send class="h-3.5 w-3.5" />

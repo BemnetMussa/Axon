@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowDownUp, Loader2, Check, Clock } from 'lucide-svelte';
+	import { ArrowDownUp, Loader2, Check, Clock, X } from 'lucide-svelte';
 	import type { Article } from '$lib/api';
 	import ArticleCard from '$lib/components/feed/ArticleCard.svelte';
 	import FeedHeader from '$lib/components/feed/FeedHeader.svelte';
@@ -25,11 +25,15 @@
 		loading: boolean;
 		syncIndicator: boolean;
 		newArticleIds?: Set<number>;
+		activeCategory: string | null;
+		showSavedOnly: boolean;
 		scrollArea?: HTMLDivElement;
 		onSearchChange: (value: string) => void;
 		onSourceSelect: (source: string | null) => void;
 		onSortChange: (value: SortOption) => void;
 		onTimeFilterChange: (value: TimeFilter) => void;
+		onClearCategoryOrSaved: () => void;
+		onClearAllFilters: () => void;
 		onArticleOpen: (article: Article) => void;
 		onToggleSave: (id: number) => void;
 		onRefresh: () => void;
@@ -42,8 +46,9 @@
 		title, articles, sources, activeSource, searchQuery, sortBy, timeFilter, theme,
 		hasMore, loadingMore, selectedArticleId, savedArticleIds, readArticleIds, loading,
 		syncIndicator, newArticleIds = new Set(), scrollArea = $bindable(),
+		activeCategory, showSavedOnly,
 		onSearchChange, onSourceSelect, onSortChange, onTimeFilterChange,
-		onArticleOpen, onToggleSave, onRefresh, onLoadMore, onCheckNew, onToggleTheme
+		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onToggleSave, onRefresh, onLoadMore, onCheckNew, onToggleTheme
 	}: Props = $props();
 
 	const sortOptions: { value: SortOption; label: string }[] = [
@@ -61,6 +66,7 @@
 
 	let dark = $derived(theme === 'dark');
 	let pullStatus = $state<PullStatus>('idle');
+	let showMobileFilters = $state(false);
 	let touchStartY = 0;
 	let pullDelta = 0;
 
@@ -119,12 +125,39 @@
 		if (active && !dark) return 'bg-zinc-100 text-zinc-800';
 		return dark ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-400 hover:text-zinc-600';
 	}
+
+	let activeFilterChips = $derived.by(() => {
+		const chips: { key: string; label: string; clear: () => void }[] = [];
+		if (showSavedOnly || activeCategory) {
+			chips.push({
+				key: 'mode',
+				label: showSavedOnly ? 'Saved' : `Category: ${activeCategory}`,
+				clear: onClearCategoryOrSaved
+			});
+		}
+		if (activeSource) chips.push({ key: 'source', label: `Source: ${activeSource}`, clear: () => onSourceSelect(null) });
+		if (timeFilter !== 'all') chips.push({ key: 'time', label: `Time: ${timeFilter}`, clear: () => onTimeFilterChange('all') });
+		if (sortBy !== 'date') chips.push({ key: 'sort', label: `Sort: ${sortBy}`, clear: () => onSortChange('date') });
+		if (searchQuery.trim()) chips.push({ key: 'search', label: `Search: ${searchQuery.trim()}`, clear: () => onSearchChange('') });
+		return chips;
+	});
 </script>
 
 <section class={`relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${dark ? 'bg-[#0b0b0b]' : 'bg-white'}`}>
-	<FeedHeader {title} articleCount={articles.length} {searchQuery} {syncIndicator} {theme} onSearchChange={onSearchChange} onRefresh={onRefresh} {onToggleTheme} />
+	<FeedHeader
+		{title}
+		articleCount={articles.length}
+		{searchQuery}
+		{syncIndicator}
+		{theme}
+		onSearchChange={onSearchChange}
+		onRefresh={onRefresh}
+		onOpenFilters={() => (showMobileFilters = true)}
+		hasActiveFilters={activeFilterChips.length > 0}
+		{onToggleTheme}
+	/>
 
-	<div class={`border-b px-3 py-1.5 sm:px-5 sm:py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
+	<div class={`hidden border-b px-3 py-1.5 sm:px-5 sm:py-2 lg:block ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
 		<div class="no-scrollbar flex items-center gap-1 overflow-x-auto sm:gap-1.5">
 			<button
 				onclick={() => onSourceSelect(null)}
@@ -139,7 +172,7 @@
 		</div>
 	</div>
 
-	<div class={`flex items-center gap-1 border-b px-3 py-1.5 sm:gap-2 sm:px-5 sm:py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
+	<div class={`hidden items-center gap-1 border-b px-3 py-1.5 sm:gap-2 sm:px-5 sm:py-2 lg:flex ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
 		<div class="flex items-center gap-0.5 sm:gap-1">
 			<Clock class={`h-3 w-3 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`} />
 			{#each timeOptions as opt}
@@ -158,6 +191,32 @@
 				>{opt.label}</button>
 			{/each}
 		</div>
+	</div>
+
+	<div class={`border-b px-3 py-2 lg:hidden ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
+		<div class="flex items-center justify-end gap-2">
+			{#if activeFilterChips.length > 0}
+				<button
+					onclick={onClearAllFilters}
+					class={`text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-500 hover:text-zinc-700'}`}
+				>
+					Clear all
+				</button>
+			{/if}
+		</div>
+		{#if activeFilterChips.length > 0}
+			<div class="no-scrollbar mt-2 flex items-center gap-1.5 overflow-x-auto">
+				{#each activeFilterChips as chip (chip.key)}
+					<button
+						onclick={chip.clear}
+						class={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${dark ? 'border-white/[0.08] bg-white/[0.05] text-zinc-300' : 'border-zinc-200 bg-white text-zinc-700'}`}
+					>
+						{chip.label}
+						<X class="h-3 w-3" />
+					</button>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	{#if pullStatus === 'up-to-date' || pullStatus === 'checking'}
@@ -229,4 +288,55 @@
 			{/if}
 		{/if}
 	</div>
+
+	{#if showMobileFilters}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="fixed inset-0 z-40 bg-black/55 lg:hidden" onclick={() => (showMobileFilters = false)}></div>
+		<div class={`fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-4 lg:hidden ${dark ? 'border-white/[0.06] bg-[#111214]' : 'border-zinc-200 bg-white'}`}>
+			<div class="mb-3 flex items-center justify-between">
+				<p class={`text-sm font-bold ${dark ? 'text-zinc-100' : 'text-zinc-900'}`}>Feed filters</p>
+				<button onclick={() => (showMobileFilters = false)} class={`${dark ? 'text-zinc-500' : 'text-zinc-400'}`} aria-label="Close filters">
+					<X class="h-4 w-4" />
+				</button>
+			</div>
+
+			<p class={`mb-1 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Source</p>
+			<div class="no-scrollbar mb-3 flex items-center gap-1.5 overflow-x-auto">
+				<button onclick={() => onSourceSelect(null)} class={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${sourceBtnClass(activeSource === null)}`}>All</button>
+				{#each sources as source}
+					<button onclick={() => onSourceSelect(source)} class={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${sourceBtnClass(activeSource === source)}`}>{source}</button>
+				{/each}
+			</div>
+
+			<p class={`mb-1 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Time</p>
+			<div class="mb-3 flex flex-wrap gap-1.5">
+				{#each timeOptions as opt}
+					<button onclick={() => onTimeFilterChange(opt.value)} class={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${sortBtnClass(timeFilter === opt.value)}`}>{opt.label}</button>
+				{/each}
+			</div>
+
+			<p class={`mb-1 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Sort</p>
+			<div class="mb-4 flex flex-wrap gap-1.5">
+				{#each sortOptions as opt}
+					<button onclick={() => onSortChange(opt.value)} class={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${sortBtnClass(sortBy === opt.value)}`}>{opt.label}</button>
+				{/each}
+			</div>
+
+			<div class="flex items-center justify-between gap-2">
+				<button
+					onclick={onClearAllFilters}
+					class={`rounded-xl border px-3 py-2 text-[11px] font-semibold ${dark ? 'border-white/[0.08] text-zinc-300' : 'border-zinc-200 text-zinc-700'}`}
+				>
+					Reset all
+				</button>
+				<button
+					onclick={() => (showMobileFilters = false)}
+					class={`rounded-xl px-3 py-2 text-[11px] font-semibold ${dark ? 'bg-white text-black' : 'bg-black text-white'}`}
+				>
+					Apply
+				</button>
+			</div>
+		</div>
+	{/if}
 </section>

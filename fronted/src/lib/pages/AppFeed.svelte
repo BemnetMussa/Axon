@@ -39,6 +39,7 @@
 	let nextCursor = $state<number | null>(null);
 	let hasMore = $state(false);
 	let loadingMore = $state(false);
+	let loadMoreLock = $state(false);
 	let newArticleIds = $state<Set<number>>(new Set());
 	let readArticleIds = $state<Set<number>>(new Set());
 	let feedScrollArea = $state<HTMLDivElement | undefined>();
@@ -89,11 +90,13 @@
 		}
 	});
 
+	let savedIdSet = $derived(new Set(savedArticleIds));
+
 	let filtered = $derived.by(() => {
 		if (semanticSearchResults && searchQuery.trim().length > 2) return semanticSearchResults;
 
 		let list = allArticles;
-		if (showSavedOnly) list = list.filter((a) => savedArticleIds.includes(a.id));
+		if (showSavedOnly) list = list.filter((a) => savedIdSet.has(a.id));
 		if (activeSource) list = list.filter((a) => a.source === activeSource);
 		if (activeCategory) {
 			if (activeCategory === 'GitHub') list = list.filter((a) => a.source === 'GitHub');
@@ -109,8 +112,8 @@
 						: now - 30 * 86_400_000;
 			list = list.filter((a) => parseDate(a.published_date) >= cutoff);
 		}
-		if (searchQuery.trim()) {
-			const q = searchQuery.toLowerCase();
+		const q = searchQuery.trim().toLowerCase();
+		if (q) {
 			list = list.filter(
 				(a) =>
 					a.title.toLowerCase().includes(q) ||
@@ -315,6 +318,20 @@
 		activeSource = source;
 	}
 
+	function clearCategoryOrSaved() {
+		showSavedOnly = false;
+		activeCategory = null;
+	}
+
+	function clearAllFilters() {
+		searchQuery = '';
+		activeSource = null;
+		activeCategory = null;
+		showSavedOnly = false;
+		sortBy = 'date';
+		timeFilter = 'all';
+	}
+
 	async function showDigest() {
 		showDigestView = true;
 		activeCategory = null;
@@ -380,8 +397,9 @@
 	}
 
 	async function loadMore() {
-		if (loadingMore || !hasMore || !nextCursor) return;
+		if (loadingMore || loadMoreLock || !hasMore || !nextCursor) return;
 		loadingMore = true;
+		loadMoreLock = true;
 		try {
 			const res = await api.getArticles(nextCursor);
 			const existingIds = new Set(allArticles.map((a) => a.id));
@@ -394,6 +412,9 @@
 			console.error('Load more failed', error);
 		} finally {
 			loadingMore = false;
+			setTimeout(() => {
+				loadMoreLock = false;
+			}, 350);
 		}
 	}
 
@@ -466,7 +487,8 @@
 	<meta name="theme-color" content={theme === 'dark' ? '#0b0b0b' : '#ffffff'} />
 </svelte:head>
 
-<div class={`relative flex h-screen overflow-hidden transition-colors duration-300 ${theme === 'dark' ? 'bg-[#0b0b0b] text-[#e4e4e7]' : 'bg-white text-zinc-900'}`}>
+<div class={`relative flex h-screen overflow-hidden transition-colors duration-300 ${theme === 'dark' ? 'bg-[#070707] text-[#e4e4e7]' : 'bg-[#f8fafc] text-zinc-900'}`}>
+	<div class={`pointer-events-none absolute inset-0 ${theme === 'dark' ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.045),transparent_42%)]' : 'bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.06),transparent_45%)]'}`}></div>
 	<DesktopSidebar
 		navigation={NAVIGATION}
 		{activeCategory}
@@ -481,9 +503,9 @@
 
 	<div class="relative flex min-w-0 flex-1 overflow-hidden">
 		<div class={`min-w-0 overflow-hidden ${selectedArticle || showDigestView ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
-			<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+			<div class={`glass-panel flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0b0b0b]/85' : 'bg-white/85'}`}>
 				{#if fetchError}
-					<div class={`mx-3 mt-3 rounded-md border px-3 py-2 text-xs ${theme === 'dark' ? 'border-red-400/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'}`}>
+					<div class={`mx-3 mt-3 rounded-xl border px-3 py-2 text-xs ${theme === 'dark' ? 'border-red-400/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'}`}>
 						{fetchError}
 					</div>
 				{/if}
@@ -504,10 +526,14 @@
 					{loading}
 					{syncIndicator}
 					{newArticleIds}
+					{activeCategory}
+					{showSavedOnly}
 					onSearchChange={(value) => (searchQuery = value)}
 					onSourceSelect={selectSource}
 					onSortChange={(value) => (sortBy = value)}
 					onTimeFilterChange={(value) => (timeFilter = value)}
+					onClearCategoryOrSaved={clearCategoryOrSaved}
+					onClearAllFilters={clearAllFilters}
 					onArticleOpen={openArticle}
 					onToggleSave={toggleSave}
 					onRefresh={manualRefresh}
@@ -619,5 +645,9 @@
 	:global(.prose a) {
 		text-decoration: underline;
 		text-underline-offset: 2px;
+	}
+	:global(.glass-panel) {
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
 	}
 </style>

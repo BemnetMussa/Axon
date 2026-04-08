@@ -1,5 +1,5 @@
 <script lang="ts">
-	import AxonNetworkBg from '$lib/components/hero/AxonNetworkBg.svelte';
+import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 	import { Zap, ArrowRight, Github, Terminal, Cpu, Layers, Globe, Code2, Sparkles, Newspaper, Play, Users } from 'lucide-svelte';
 </script>
 

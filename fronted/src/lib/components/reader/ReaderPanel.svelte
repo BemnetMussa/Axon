@@ -76,10 +76,10 @@
 </script>
 
 <section
-	class={`relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${dark ? 'bg-[#0a0a0a]' : 'bg-white'}`}
+	class={`relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${dark ? 'bg-[#0a0a0a]' : 'bg-white/95'}`}
 	transition:fly={{ x: 60, duration: 300, opacity: 0 }}
 >
-	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2 sm:gap-3 sm:px-5 sm:py-2.5 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}>
+	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2 sm:gap-3 sm:px-5 sm:py-2.5 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]/92' : 'border-zinc-100 bg-white/92'} backdrop-blur-xl`}>
 		<button
 			onclick={onBack}
 			class={`flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 transition-colors sm:gap-2 sm:px-2 ${dark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-black'}`}
@@ -144,7 +144,7 @@
 				<span class="sm:hidden" style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
 			</div>
 
-			<h2 class={`mb-6 text-[22px] font-bold leading-tight tracking-tight sm:text-[26px] ${dark ? 'text-white' : 'text-zinc-900'}`}>{article.title}</h2>
+			<h2 class={`mb-6 text-[24px] font-bold leading-tight tracking-tight sm:text-[30px] ${dark ? 'text-white' : 'text-zinc-900'}`}>{article.title}</h2>
 
 			{#if dark}
 				<div class="prose prose-invert prose-sm max-w-none text-[14px] leading-7 text-zinc-300 sm:text-[15px] sm:leading-8">
@@ -192,7 +192,13 @@
 							<span class="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:0.15s]"></span>
 							<span class="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:0.3s]"></span>
 						</div>
-						<span class={`text-[11px] ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Analyzing...</span>
+						<span class={`text-[11px] ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Analyzing signal context...</span>
+					</div>
+				{/if}
+
+				{#if chatMessages.length === 0 && !chatLoading}
+					<div class={`mt-3 rounded-xl border px-3 py-2.5 text-[11px] ${dark ? 'border-white/[0.05] bg-white/[0.02] text-zinc-500' : 'border-zinc-100 bg-zinc-50 text-zinc-500'}`}>
+						Ask for implementation ideas, risks, or practical steps from this signal.
 					</div>
 				{/if}
 			</div>

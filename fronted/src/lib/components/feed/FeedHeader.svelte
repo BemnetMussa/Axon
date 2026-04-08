@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { RefreshCw, Search, Zap, Sun, Moon, LogOut } from 'lucide-svelte';
+	import { RefreshCw, Search, Zap, Sun, Moon, LogOut, SlidersHorizontal } from 'lucide-svelte';
 	import { authClient } from '$lib/auth-client';
 
 	type Props = {
@@ -11,9 +11,11 @@
 		onSearchChange: (value: string) => void;
 		onRefresh: () => void;
 		onToggleTheme?: () => void;
+		onOpenFilters?: () => void;
+		hasActiveFilters?: boolean;
 	};
 
-	let { title, articleCount, searchQuery, syncIndicator, theme, onSearchChange, onRefresh, onToggleTheme }: Props = $props();
+	let { title, articleCount, searchQuery, syncIndicator, theme, onSearchChange, onRefresh, onToggleTheme, onOpenFilters, hasActiveFilters = false }: Props = $props();
 	let dark = $derived(theme === 'dark');
 </script>
 
@@ -63,6 +65,15 @@
 			>
 				<LogOut class="h-3.5 w-3.5" />
 			</button>
+			{#if onOpenFilters}
+				<button
+					onclick={onOpenFilters}
+					class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all lg:hidden ${dark ? 'border-white/[0.06] bg-white/[0.03] text-zinc-300' : 'border-zinc-200 bg-zinc-50 text-zinc-600'}`}
+					aria-label="Open filters"
+				>
+					<SlidersHorizontal class="h-3.5 w-3.5" />
+				</button>
+			{/if}
 			<button
 				onclick={onRefresh}
 				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] bg-white/[0.03] text-zinc-400' : 'border-zinc-200 bg-zinc-50 text-zinc-500'}`}
@@ -76,5 +87,8 @@
 	<div class="flex min-w-0 items-baseline gap-2.5 overflow-hidden px-4 pb-2.5 sm:px-5 lg:hidden">
 		<h2 class={`min-w-0 truncate text-[14px] font-bold ${dark ? 'text-white' : 'text-zinc-900'}`}>{title}</h2>
 		<span class={`text-[10px] font-medium tabular-nums ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{articleCount}</span>
+		{#if hasActiveFilters}
+			<span class={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${dark ? 'bg-white/[0.08] text-zinc-300' : 'bg-zinc-100 text-zinc-600'}`}>Filtered</span>
+		{/if}
 	</div>
 </header>

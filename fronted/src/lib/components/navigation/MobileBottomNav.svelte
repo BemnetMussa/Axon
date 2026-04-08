@@ -21,12 +21,12 @@
 	let overflowTabs = $derived(items.filter(i => i.id === 'Discovery'));
 
 	function navBg() {
-		return dark ? 'border-white/[0.04] bg-[#0b0b0b]/95' : 'border-zinc-200 bg-white/95';
+		return dark ? 'border-white/[0.05] bg-[#0b0b0b]/90' : 'border-zinc-200 bg-white/90';
 	}
 
 	function itemColor(active: boolean) {
 		if (active) return dark ? 'text-white' : 'text-black';
-		return dark ? 'text-zinc-600' : 'text-zinc-400';
+		return dark ? 'text-zinc-500' : 'text-zinc-400';
 	}
 </script>
 
@@ -74,7 +74,7 @@
 {/if}
 
 <nav
-	class={`fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t pb-[env(safe-area-inset-bottom,0px)] lg:hidden ${navBg()}`}
+	class={`fixed inset-x-2 bottom-2 z-40 flex items-center justify-around rounded-2xl border pb-[env(safe-area-inset-bottom,0px)] shadow-xl lg:hidden ${navBg()}`}
 	style="backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px)"
 >
 	{#each mainTabs as item}
