@@ -90,6 +90,29 @@ app.add_middleware(
 
 
 @app.middleware("http")
+async def error_reporting_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        import traceback
+        error_type = type(e).__name__
+        error_detail = str(e)
+        # Check for internal secret to avoid leaking details to public
+        if request.headers.get("X-Axon-Internal-Secret") == INTERNAL_SECRET:
+            return JSONResponse(
+                {
+                    "error": True, 
+                    "type": error_type, 
+                    "detail": error_detail,
+                    "traceback": traceback.format_exc() if os.getenv("DEBUG", "false") == "true" else None
+                },
+                status_code=500
+            )
+        # Fallback to standard 500
+        return JSONResponse({"detail": "Internal Server Error"}, status_code=500)
+
+
+@app.middleware("http")
 async def require_internal_auth(request: Request, call_next):
     """When AXON_INTERNAL_SECRET is set, require SvelteKit proxy headers (see fronted /api/backend)."""
     if not INTERNAL_SECRET:

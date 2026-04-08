@@ -52,12 +52,22 @@ from sqlalchemy import text
 def init_db():
     try:
         with engine.connect() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-            conn.commit()
+            print("AXON: Testing database connection...")
+            conn.execute(text("SELECT 1"))
+            print("AXON: Database connection successful!")
+            
+            try:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                conn.commit()
+                print("AXON: Vector extension checked/created.")
+            except Exception as e:
+                print(f"AXON: Failed to create vector extension (may already exist or insufficient permissions): {e}")
+
+        SQLModel.metadata.create_all(engine)
+        print("AXON: Database schema synchronized successfully!")
     except Exception as e:
-        print(f"Failed to create vector extension: {e}")
-    SQLModel.metadata.create_all(engine)
-    print("Database initialized successfully!")
+        print(f"AXON: CRITICAL DATABASE INIT ERROR: {e}")
+        # We don't reraise here so the app can at least start and show the ping/debug endpoints
 
 
 def get_session() -> Generator[Session, None, None]:
