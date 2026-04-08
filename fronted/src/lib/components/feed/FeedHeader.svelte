@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { RefreshCw, Search, Zap, Sun, Moon, LogOut, SlidersHorizontal } from 'lucide-svelte';
+	import { RefreshCw, Search, Zap, Sun, Moon, LogOut, SlidersHorizontal, BellDot, Eraser } from 'lucide-svelte';
 	import { authClient } from '$lib/auth-client';
 
 	type Props = {
@@ -13,10 +13,27 @@
 		onToggleTheme?: () => void;
 		onOpenFilters?: () => void;
 		hasActiveFilters?: boolean;
+		hasNewSignals?: boolean;
+		onCheckNew?: () => Promise<boolean>;
+		onClearAllFilters?: () => void;
 	};
 
-	let { title, articleCount, searchQuery, syncIndicator, theme, onSearchChange, onRefresh, onToggleTheme, onOpenFilters, hasActiveFilters = false }: Props = $props();
+	let {
+		title, articleCount, searchQuery, syncIndicator, theme, onSearchChange, onRefresh, onToggleTheme,
+		onOpenFilters, hasActiveFilters = false, hasNewSignals = false, onCheckNew, onClearAllFilters
+	}: Props = $props();
 	let dark = $derived(theme === 'dark');
+	let checkingNew = $state(false);
+
+	async function checkNewNow() {
+		if (!onCheckNew || checkingNew) return;
+		checkingNew = true;
+		try {
+			await onCheckNew();
+		} finally {
+			checkingNew = false;
+		}
+	}
 </script>
 
 <header class={`sticky top-0 z-20 min-w-0 overflow-hidden border-b backdrop-blur-xl ${dark ? 'border-white/[0.04] bg-[#0b0b0b]/90' : 'border-zinc-100 bg-white/90'}`}>
@@ -74,13 +91,6 @@
 					<SlidersHorizontal class="h-3.5 w-3.5" />
 				</button>
 			{/if}
-			<button
-				onclick={onRefresh}
-				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] bg-white/[0.03] text-zinc-400' : 'border-zinc-200 bg-zinc-50 text-zinc-500'}`}
-				aria-label="Refresh feed"
-			>
-				<RefreshCw class={`h-3.5 w-3.5 ${syncIndicator ? 'animate-spin' : ''}`} />
-			</button>
 		</div>
 	</div>
 
@@ -90,5 +100,34 @@
 		{#if hasActiveFilters}
 			<span class={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${dark ? 'bg-white/[0.08] text-zinc-300' : 'bg-zinc-100 text-zinc-600'}`}>Filtered</span>
 		{/if}
+	</div>
+
+	<div class={`hidden items-center gap-1.5 border-t px-4 py-2 lg:flex ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
+		<button
+			type="button"
+			onclick={onRefresh}
+			class={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold ${dark ? 'border-white/[0.08] bg-white/[0.03] text-zinc-300 hover:bg-white/[0.08]' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100'}`}
+		>
+			<RefreshCw class={`h-3 w-3 ${syncIndicator ? 'animate-spin' : ''}`} />
+			Refresh
+		</button>
+		<button
+			type="button"
+			onclick={checkNewNow}
+			disabled={checkingNew || !onCheckNew}
+			class={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold disabled:opacity-60 ${dark ? 'border-white/[0.08] bg-white/[0.03] text-zinc-300 hover:bg-white/[0.08]' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100'}`}
+		>
+			<BellDot class={`h-3 w-3 ${hasNewSignals ? 'text-emerald-500' : ''}`} />
+			{hasNewSignals ? 'New available' : 'Check new'}
+		</button>
+		<button
+			type="button"
+			onclick={onClearAllFilters}
+			disabled={!hasActiveFilters || !onClearAllFilters}
+			class={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold disabled:opacity-50 ${dark ? 'border-white/[0.08] bg-white/[0.03] text-zinc-300 hover:bg-white/[0.08]' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100'}`}
+		>
+			<Eraser class="h-3 w-3" />
+			Clear filters
+		</button>
 	</div>
 </header>

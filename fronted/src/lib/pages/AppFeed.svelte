@@ -126,6 +126,14 @@
 		return list;
 	});
 	let currentTitle = $derived(showSavedOnly ? 'Saved' : (activeCategory ?? 'Frontier'));
+	let hasActiveFilters = $derived(
+		!!searchQuery.trim() ||
+		!!activeSource ||
+		!!activeCategory ||
+		showSavedOnly ||
+		timeFilter !== 'all' ||
+		sortBy !== 'date'
+	);
 
 	function applyTheme(t: 'dark' | 'light') {
 		theme = t;
@@ -488,20 +496,23 @@
 </svelte:head>
 
 <div class={`relative flex h-screen overflow-hidden transition-colors duration-300 ${theme === 'dark' ? 'bg-[#070707] text-[#e4e4e7]' : 'bg-[#f8fafc] text-zinc-900'}`}>
-	<div class={`pointer-events-none absolute inset-0 ${theme === 'dark' ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.045),transparent_42%)]' : 'bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.06),transparent_45%)]'}`}></div>
+	<div class={`app-bg pointer-events-none absolute inset-0 ${theme === 'dark' ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.045),transparent_42%)]' : 'bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.06),transparent_45%)]'}`}></div>
+	<div class="mx-auto flex h-full w-full max-w-[1500px] min-w-0 overflow-hidden px-0 lg:px-4">
 	<DesktopSidebar
 		navigation={NAVIGATION}
 		{activeCategory}
 		{showSavedOnly}
 		{sourceCounts}
 		{theme}
+		newSignalCount={newArticleIds.size}
+		{hasActiveFilters}
 		onNavigate={selectCategory}
 		onShowSaved={showSavedView}
 		onShowDigest={showDigest}
 		onToggleTheme={toggleTheme}
 	/>
 
-	<div class="relative flex min-w-0 flex-1 overflow-hidden">
+	<div class="relative flex min-w-0 flex-1 overflow-hidden lg:rounded-2xl lg:border lg:border-white/5">
 		<div class={`min-w-0 overflow-hidden ${selectedArticle || showDigestView ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
 			<div class={`glass-panel flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0b0b0b]/85' : 'bg-white/85'}`}>
 				{#if fetchError}
@@ -537,6 +548,7 @@
 					onArticleOpen={openArticle}
 					onToggleSave={toggleSave}
 					onRefresh={manualRefresh}
+					onShowDigest={showDigest}
 					onLoadMore={loadMore}
 					onCheckNew={checkForNew}
 					onToggleTheme={toggleTheme}
@@ -597,6 +609,7 @@
 			onToggleTheme={toggleTheme}
 		/>
 	{/if}
+	</div>
 </div>
 
 <style>
@@ -649,5 +662,51 @@
 	:global(.glass-panel) {
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
+	}
+	:global(.app-bg) {
+		animation: appGradientDrift 22s ease-in-out infinite alternate;
+	}
+	:global(.app-bg::before),
+	:global(.app-bg::after) {
+		content: '';
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+	}
+	:global(.app-bg::before) {
+		background-image:
+			linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.05) 45%, transparent 70%),
+			repeating-linear-gradient(90deg, transparent 0 42px, rgba(255,255,255,0.035) 43px 44px, transparent 45px 90px);
+		opacity: 0.18;
+		animation: appLinesPulse 7s ease-in-out infinite alternate;
+	}
+	:global(.app-bg::after) {
+		background:
+			radial-gradient(circle at 18% 34%, rgba(255,255,255,0.12) 0 2px, transparent 3px),
+			radial-gradient(circle at 74% 62%, rgba(255,255,255,0.1) 0 2px, transparent 3px),
+			radial-gradient(circle at 50% 18%, rgba(255,255,255,0.08) 0 1.5px, transparent 2.5px);
+		opacity: 0.12;
+		animation: appStarsTwinkle 5.5s ease-in-out infinite;
+	}
+	@keyframes appGradientDrift {
+		0% { transform: translate3d(0, 0, 0) scale(1); }
+		100% { transform: translate3d(0, -18px, 0) scale(1.02); }
+	}
+	@keyframes appLinesPulse {
+		0% { opacity: 0.1; transform: translateX(-8px); }
+		100% { opacity: 0.22; transform: translateX(8px); }
+	}
+	@keyframes appStarsTwinkle {
+		0%, 100% { opacity: 0.08; }
+		50% { opacity: 0.18; }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		:global(.app-bg) {
+			animation: none;
+		}
+		:global(.app-bg::before),
+		:global(.app-bg::after) {
+			animation: none;
+		}
 	}
 </style>

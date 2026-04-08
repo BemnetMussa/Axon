@@ -37,6 +37,7 @@
 		onArticleOpen: (article: Article) => void;
 		onToggleSave: (id: number) => void;
 		onRefresh: () => void;
+		onShowDigest: () => void;
 		onLoadMore: () => void;
 		onCheckNew?: () => Promise<boolean>;
 		onToggleTheme?: () => void;
@@ -48,7 +49,7 @@
 		syncIndicator, newArticleIds = new Set(), scrollArea = $bindable(),
 		activeCategory, showSavedOnly,
 		onSearchChange, onSourceSelect, onSortChange, onTimeFilterChange,
-		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onToggleSave, onRefresh, onLoadMore, onCheckNew, onToggleTheme
+		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onToggleSave, onRefresh, onShowDigest, onLoadMore, onCheckNew, onToggleTheme
 	}: Props = $props();
 
 	const sortOptions: { value: SortOption; label: string }[] = [
@@ -152,6 +153,9 @@
 		{theme}
 		onSearchChange={onSearchChange}
 		onRefresh={onRefresh}
+		onCheckNew={onCheckNew}
+		onClearAllFilters={onClearAllFilters}
+		hasNewSignals={newArticleIds.size > 0}
 		onOpenFilters={() => (showMobileFilters = true)}
 		hasActiveFilters={activeFilterChips.length > 0}
 		{onToggleTheme}

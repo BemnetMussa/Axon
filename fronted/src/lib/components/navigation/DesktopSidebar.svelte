@@ -9,18 +9,25 @@
 		showSavedOnly: boolean;
 		sourceCounts: Record<string, number>;
 		theme: 'dark' | 'light';
+		newSignalCount?: number;
+		hasActiveFilters?: boolean;
 		onNavigate: (id: string | null) => void;
 		onShowSaved: () => void;
 		onShowDigest: () => void;
 		onToggleTheme: () => void;
 	};
 
-	let { navigation, activeCategory, showSavedOnly, sourceCounts, theme, onNavigate, onShowSaved, onShowDigest, onToggleTheme }: Props = $props();
+	let {
+		navigation, activeCategory, showSavedOnly, sourceCounts, theme, newSignalCount = 0, hasActiveFilters = false,
+		onNavigate, onShowSaved, onShowDigest, onToggleTheme
+	}: Props = $props();
 
 	let showFeedbackForm = $state(false);
 	let feedbackText = $state('');
 	let feedbackSent = $state(false);
 	let dark = $derived(theme === 'dark');
+	let topSources = $derived(Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]).slice(0, 6));
+	let activeModeLabel = $derived(showSavedOnly ? 'Saved' : (activeCategory ?? 'Frontier'));
 
 	function openFeedback() {
 		showFeedbackForm = !showFeedbackForm;
@@ -48,6 +55,7 @@
 		if (dark) return 'text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-300';
 		return 'text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600';
 	}
+
 </script>
 
 <nav class={`hidden w-56 shrink-0 flex-col border-r lg:flex ${dark ? 'border-white/[0.05] bg-[#0b0b0b]/90' : 'border-zinc-200 bg-white/90'} backdrop-blur-xl`}>
@@ -58,7 +66,15 @@
 		<span class={`text-[13px] font-black uppercase tracking-[2px] italic ${dark ? 'text-white' : 'text-black'}`}>Axon</span>
 	</div>
 
-	<div class="flex flex-col gap-1 px-2.5 pt-2">
+	<div class="px-5 pb-2">
+		<p class={`text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-500'}`}>Active</p>
+		<p class={`mt-1 text-[12px] font-semibold ${dark ? 'text-zinc-200' : 'text-zinc-800'}`}>{activeModeLabel}</p>
+	</div>
+
+	<div class="px-2.5 pb-1">
+		<p class={`px-3 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Navigate</p>
+	</div>
+	<div class="flex flex-col gap-1 px-2.5">
 		{#each navigation as item}
 			{@const isActive = activeCategory === item.id && !showSavedOnly}
 			<button
@@ -68,7 +84,7 @@
 				<item.icon class="h-4 w-4 shrink-0" />
 				<span class="text-[11px] font-semibold tracking-wide">{item.label}</span>
 				{#if isActive}
-					<div class={`absolute -left-2.5 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full ${dark ? 'bg-white' : 'bg-black'}`}></div>
+					<div class={`absolute -left-2.5 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full ${dark ? 'bg-white' : 'bg-black'}`}></div>
 				{/if}
 			</button>
 		{/each}
@@ -80,9 +96,30 @@
 			<Zap class="h-4 w-4 shrink-0" />
 			<span class="text-[11px] font-semibold">Saved</span>
 			{#if showSavedOnly}
-				<div class={`absolute -left-2.5 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full ${dark ? 'bg-white' : 'bg-black'}`}></div>
+				<div class={`absolute -left-2.5 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full ${dark ? 'bg-white' : 'bg-black'}`}></div>
 			{/if}
 		</button>
+	</div>
+
+	<div class="px-2.5 pt-3">
+		<p class={`px-3 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Context</p>
+		<div class={`mx-3 mt-2 rounded-xl border px-3 py-2 ${dark ? 'border-white/[0.06] bg-white/[0.02]' : 'border-zinc-200 bg-zinc-50'}`}>
+			<div class="flex items-center justify-between text-[10px]">
+				<span class={`${dark ? 'text-zinc-500' : 'text-zinc-600'}`}>New Signals</span>
+				<span class={`font-semibold ${newSignalCount > 0 ? 'text-emerald-500' : (dark ? 'text-zinc-300' : 'text-zinc-700')}`}>{newSignalCount}</span>
+			</div>
+			<div class={`mt-2 border-t pt-2 ${dark ? 'border-white/[0.06]' : 'border-zinc-200'}`}>
+				<p class={`mb-1 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Top Sources</p>
+				<div class="space-y-1">
+					{#each topSources as [source, count]}
+						<div class="flex items-center justify-between text-[10px]">
+							<span class={`${dark ? 'text-zinc-400' : 'text-zinc-600'}`}>{source}</span>
+							<span class={`tabular-nums ${dark ? 'text-zinc-500' : 'text-zinc-500'}`}>{count}</span>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<div class="mt-auto px-5 pb-3">
@@ -93,16 +130,7 @@
 			<Sparkles class="h-4 w-4" />
 			Weekly Synthesis
 		</button>
-		
-		<p class={`mb-2 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-400'}`}>Sources</p>
-		<div class="flex flex-col gap-0.5">
-			{#each Object.entries(sourceCounts) as [source, count]}
-				<div class="flex items-center justify-between py-0.5 text-[10px]">
-					<span class="text-zinc-500">{source}</span>
-					<span class={`tabular-nums ${dark ? 'text-zinc-700' : 'text-zinc-400'}`}>{count}</span>
-				</div>
-			{/each}
-		</div>
+		<p class={`mb-4 text-center text-[10px] ${dark ? 'text-zinc-600' : 'text-zinc-500'}`}>3-minute summary of the week</p>
 	</div>
 
 	<div class={`flex flex-col gap-0.5 border-t px-2.5 py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-200'}`}>

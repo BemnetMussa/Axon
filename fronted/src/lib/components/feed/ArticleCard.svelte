@@ -17,6 +17,19 @@
 	let { article, selected, isSaved, isNew = false, isRead = false, theme, onOpen, onToggleSave }: Props = $props();
 	let dark = $derived(theme === 'dark');
 
+function signalTier(): 'High' | 'Medium' | 'Low' {
+	const score = (article.engagement_score || 0) + (article.likes || 0) * 0.6 + (article.views || 0) * 0.15;
+	if (score >= 180) return 'High';
+	if (score >= 60) return 'Medium';
+	return 'Low';
+}
+
+function signalClass(tier: 'High' | 'Medium' | 'Low') {
+	if (tier === 'High') return dark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-700';
+	if (tier === 'Medium') return dark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700';
+	return dark ? 'bg-zinc-700/70 text-zinc-300' : 'bg-zinc-200 text-zinc-700';
+}
+
 	function cardClass() {
 		if (selected && dark) return 'border-white/15 bg-white/[0.06] shadow-[0_0_0_1px_rgba(255,255,255,0.04)]';
 		if (selected && !dark) return 'border-zinc-300 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.08)]';
@@ -39,6 +52,9 @@
 			<span class="shrink-0 truncate" style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
 			<span class={`shrink-0 ${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>/</span>
 			<span class="min-w-0 truncate">{article.category}</span>
+			<span class={`shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold normal-case tracking-normal ${signalClass(signalTier())}`}>
+				Signal {signalTier()}
+			</span>
 			{#if formatEngagement(article.likes)}
 				<span class={`flex shrink-0 items-center gap-0.5 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>
 					<ArrowUp class="h-2.5 w-2.5" />{formatEngagement(article.likes)}

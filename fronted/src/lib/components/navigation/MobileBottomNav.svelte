@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Zap, Sparkles, Menu, Sun, Moon, X, Boxes } from 'lucide-svelte';
+	import { Zap, Sparkles, Menu, Sun, Moon, X } from 'lucide-svelte';
 	import type { NavItem } from '$lib/ui';
 
 	type Props = {
@@ -17,7 +17,7 @@
 	let dark = $derived(theme === 'dark');
 	let showMenu = $state(false);
 
-	let mainTabs = $derived(items.filter(i => ['GitHub', 'AI', 'Signal', null].includes(i.id)));
+	let mainTabs = $derived(items.filter(i => i.id !== null && ['GitHub', 'AI', 'Signal'].includes(i.id)));
 	let overflowTabs = $derived(items.filter(i => i.id === 'Discovery'));
 
 	function navBg() {
@@ -86,6 +86,14 @@
 			<span class="truncate text-[9px] font-bold mt-1">{item.label}</span>
 		</button>
 	{/each}
+
+	<button
+		onclick={onShowDigest}
+		class={`flex flex-col items-center gap-0.5 px-1 py-4 transition-colors ${itemColor(false)}`}
+	>
+		<Sparkles class="h-5 w-5" />
+		<span class="truncate text-[9px] font-bold mt-1">Digest</span>
+	</button>
 
 	<button
 		onclick={() => showMenu = true}
