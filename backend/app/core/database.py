@@ -29,7 +29,11 @@ def _build_engine():
             "DATABASE_URL",
             "postgresql://axon:axon123@127.0.0.1:5432/axon_db"
         )
-        connect_args = {}
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+            
+        is_local = "127.0.0.1" in url or "localhost" in url
+        connect_args = {"sslmode": "require"} if not is_local else {}
 
     return create_engine(
         url,
