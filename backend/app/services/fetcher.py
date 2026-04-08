@@ -193,11 +193,6 @@ async def hunt_github_trending(client: httpx.AsyncClient):
                 ):
                     continue
                 pub = _now()
-                if i.get("created_at"):
-                    try:
-                        pub = datetime.fromisoformat(i["created_at"].replace("Z", "+00:00"))
-                    except Exception:
-                        pass
                 results.append({
                     "title": f"{i['name']}: {i['description'] or 'No description'}",
                     "fluff_key": fluff_key,
