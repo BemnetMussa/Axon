@@ -21,7 +21,7 @@ class Article(SQLModel, table=True):
     likes: int = Field(default=0)
     engagement_score: float = Field(default=0.0)
     last_viewed: Optional[datetime] = None
-    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(384)))
+    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(384)), exclude=True)
     
 class Digest(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
