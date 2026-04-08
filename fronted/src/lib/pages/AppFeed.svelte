@@ -514,7 +514,7 @@
 
 	<div class="relative flex min-w-0 flex-1 overflow-hidden lg:rounded-2xl lg:border lg:border-white/5">
 		<div class={`min-w-0 overflow-hidden ${selectedArticle || showDigestView ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
-			<div class={`glass-panel flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0b0b0b]/85' : 'bg-white/85'}`}>
+			<div class={`glass-panel flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0b0b0b]/40' : 'bg-white/50'}`}>
 				{#if fetchError}
 					<div class={`mx-3 mt-3 rounded-xl border px-3 py-2 text-xs ${theme === 'dark' ? 'border-red-400/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'}`}>
 						{fetchError}
@@ -558,7 +558,7 @@
 		</div>
 
 		{#if selectedArticle || showDigestView}
-			<div class={`absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a] lg:border-white/[0.04]' : 'bg-white lg:border-zinc-200'}`}>
+			<div class={`glass-panel absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a]/50 lg:border-white/[0.04]' : 'bg-white/60 lg:border-zinc-200'}`}>
 				{#if showDigestView && digestContent}
 					<div class="flex h-full w-full flex-col overflow-y-auto px-6 py-8 sm:px-12 sm:py-12">
 						<div class="mx-auto w-full max-w-3xl">
@@ -675,30 +675,32 @@
 	}
 	:global(.app-bg::before) {
 		background-image:
-			linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.05) 45%, transparent 70%),
-			repeating-linear-gradient(90deg, transparent 0 42px, rgba(255,255,255,0.035) 43px 44px, transparent 45px 90px);
-		opacity: 0.18;
+			linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.1) 45%, transparent 70%),
+			repeating-linear-gradient(90deg, transparent 0 42px, rgba(255,255,255,0.08) 43px 44px, transparent 45px 90px);
+		opacity: 0.3;
 		animation: appLinesPulse 7s ease-in-out infinite alternate;
+		will-change: transform, opacity;
 	}
 	:global(.app-bg::after) {
 		background:
-			radial-gradient(circle at 18% 34%, rgba(255,255,255,0.12) 0 2px, transparent 3px),
-			radial-gradient(circle at 74% 62%, rgba(255,255,255,0.1) 0 2px, transparent 3px),
-			radial-gradient(circle at 50% 18%, rgba(255,255,255,0.08) 0 1.5px, transparent 2.5px);
-		opacity: 0.12;
+			radial-gradient(circle at 18% 34%, rgba(255,255,255,0.18) 0 2px, transparent 3px),
+			radial-gradient(circle at 74% 62%, rgba(255,255,255,0.15) 0 2px, transparent 3px),
+			radial-gradient(circle at 50% 18%, rgba(255,255,255,0.12) 0 1.5px, transparent 2.5px);
+		opacity: 0.2;
 		animation: appStarsTwinkle 5.5s ease-in-out infinite;
+		will-change: opacity;
 	}
 	@keyframes appGradientDrift {
 		0% { transform: translate3d(0, 0, 0) scale(1); }
-		100% { transform: translate3d(0, -18px, 0) scale(1.02); }
+		100% { transform: translate3d(0, -25px, 0) scale(1.03); }
 	}
 	@keyframes appLinesPulse {
-		0% { opacity: 0.1; transform: translateX(-8px); }
-		100% { opacity: 0.22; transform: translateX(8px); }
+		0% { opacity: 0.2; transform: translate3d(-15px, 0, 0); }
+		100% { opacity: 0.45; transform: translate3d(15px, 0, 0); }
 	}
 	@keyframes appStarsTwinkle {
-		0%, 100% { opacity: 0.08; }
-		50% { opacity: 0.18; }
+		0%, 100% { opacity: 0.15; }
+		50% { opacity: 0.4; }
 	}
 	@media (prefers-reduced-motion: reduce) {
 		:global(.app-bg) {
