@@ -1,7 +1,7 @@
 import os
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -18,7 +18,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.core.database import init_db, get_session, get_script_session
-from app.models import Article, Trend, Digest
+from app.models import Article, Trend, Digest, SavedArticle
 from app.services.fetcher import ingest_intelligence
 from app.services.analyzer import (
     analyze_articles,
@@ -151,6 +151,72 @@ def read_articles(
         "next_cursor": next_cursor,
         "has_more": len(articles) == limit,
     }
+
+
+@app.get("/articles/trending")
+def get_trending_articles(
+    session: Session = Depends(get_session),
+):
+    # Hot algorithmic sort: views / ((hours_since_published + 2)^1.8)
+    # Since we might be using SQLite or Postgres and cross-compatibility is hard with math,
+    # we'll fetch recent articles and compute the score, then sort and return.
+    cutoff = datetime.utcnow() - timedelta(days=7)
+    query = select(Article).where(col(Article.published_date) >= cutoff)
+    recent_articles = session.exec(query).all()
+    
+    def calculate_hot_score(article: Article) -> float:
+        views = article.views or 0
+        likes = article.likes or 0
+        base_score = views + (likes * 5)
+        # Handle timezone naive vs aware
+        pub_date = article.published_date
+        if pub_date.tzinfo is None:
+            pub_date = pub_date.replace(tzinfo=timezone.utc)
+        hours_since = (datetime.now(timezone.utc) - pub_date).total_seconds() / 3600
+        return base_score / ((hours_since + 2) ** 1.8)
+
+    recent_articles.sort(key=calculate_hot_score, reverse=True)
+    return {"articles": recent_articles[:30]}
+
+
+@app.get("/saved")
+def get_saved_articles(
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    user_id = request.headers.get("X-Axon-User-Id")
+    if not user_id:
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    
+    saved = session.exec(select(SavedArticle).where(SavedArticle.user_id == user_id)).all()
+    article_ids = [s.article_id for s in saved]
+    if not article_ids:
+        return {"articles": []}
+    
+    articles = session.exec(select(Article).where(col(Article.id).in_(article_ids))).all()
+    return {"articles": articles}
+
+
+@app.post("/articles/{article_id}/save")
+def toggle_save_article(
+    article_id: int,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    user_id = request.headers.get("X-Axon-User-Id")
+    if not user_id:
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    
+    existing = session.get(SavedArticle, {"user_id": user_id, "article_id": article_id})
+    if existing:
+        session.delete(existing)
+        session.commit()
+        return {"status": "removed"}
+    else:
+        new_save = SavedArticle(user_id=user_id, article_id=article_id) # type: ignore
+        session.add(new_save)
+        session.commit()
+        return {"status": "saved"}
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@
 	};
 
 	let allArticles = $state<Article[]>([]);
+	let trendingArticles = $state<Article[]>([]);
 	let trends = $state<Trend[]>([]);
 	let loading = $state(true);
 	let fetchError = $state<string | null>(null);
@@ -94,11 +95,12 @@
 
 	let filtered = $derived.by(() => {
 		if (semanticSearchResults && searchQuery.trim().length > 2) return semanticSearchResults;
+		if (activeCategory === 'Trending' && !showSavedOnly) return trendingArticles;
 
 		let list = allArticles;
 		if (showSavedOnly) list = list.filter((a) => savedIdSet.has(a.id));
 		if (activeSource) list = list.filter((a) => a.source === activeSource);
-		if (activeCategory) {
+		if (activeCategory && activeCategory !== 'Trending') {
 			if (activeCategory === 'GitHub') list = list.filter((a) => a.source === 'GitHub');
 			else list = list.filter((a) => a.category === activeCategory);
 		}
@@ -149,8 +151,13 @@
 		const savedTheme = localStorage.getItem(THEME_KEY) as 'dark' | 'light' | null;
 		if (savedTheme) applyTheme(savedTheme);
 
-		const saved = localStorage.getItem(SAVED_KEY);
-		if (saved) savedArticleIds = JSON.parse(saved);
+		try {
+			const savedRes = await api.getSavedArticles();
+			savedArticleIds = savedRes.articles.map(a => a.id);
+		} catch {
+			const saved = localStorage.getItem(SAVED_KEY);
+			if (saved) savedArticleIds = JSON.parse(saved);
+		}
 
 		readArticleIds = loadReadIds();
 
@@ -300,18 +307,22 @@
 		localStorage.setItem(SAVED_KEY, JSON.stringify(savedArticleIds));
 	}
 
-	function selectCategory(id: string | null) {
+	async function selectCategory(id: string | null) {
 		activeCategory = id;
 		activeSource = null;
 		selectedArticle = null;
 		showSavedOnly = false;
 		showDigestView = false;
 
-		setTimeout(() => {
-			if (filtered.length === 0) {
-				manualRefresh();
-			}
-		}, 10);
+		if (id === 'Trending') {
+			await fetchTrendingPage();
+		} else {
+			setTimeout(() => {
+				if (filtered.length === 0) {
+					manualRefresh();
+				}
+			}, 10);
+		}
 	}
 
 	function showSavedView() {
@@ -338,6 +349,22 @@
 		showSavedOnly = false;
 		sortBy = 'date';
 		timeFilter = 'all';
+	}
+
+	async function fetchTrendingPage() {
+		loading = true;
+		syncIndicator = true;
+		fetchError = null;
+		try {
+			const res = await api.getTrending();
+			trendingArticles = res.articles;
+		} catch (error) {
+			console.error('Fetch trending failed', error);
+			fetchError = error instanceof Error ? error.message : 'Failed to load trending articles.';
+		} finally {
+			loading = false;
+			syncIndicator = false;
+		}
 	}
 
 	async function showDigest() {
@@ -383,11 +410,22 @@
 		}
 	}
 
-	function toggleSave(id: number) {
-		savedArticleIds = savedArticleIds.includes(id)
+	async function toggleSave(id: number) {
+		const isCurrentlySaved = savedArticleIds.includes(id);
+		savedArticleIds = isCurrentlySaved
 			? savedArticleIds.filter((s) => s !== id)
 			: [...savedArticleIds, id];
 		persistSaved();
+		
+		try {
+			await api.toggleSave(id);
+		} catch (e) {
+			console.error("Failed to sync save status to backend", e);
+			savedArticleIds = isCurrentlySaved
+				? [...savedArticleIds, id]
+				: savedArticleIds.filter((s) => s !== id);
+			persistSaved();
+		}
 	}
 
 	async function manualRefresh() {

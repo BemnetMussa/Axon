@@ -34,3 +34,8 @@ class Trend(SQLModel, table=True):
     count: int
     trend_date: date = Field(default_factory=date.today) # type: ignore # Group by day
 
+class SavedArticle(SQLModel, table=True):
+    user_id: str = Field(primary_key=True, index=True)
+    article_id: int = Field(primary_key=True, index=True)
+    saved_at: datetime = Field(default_factory=datetime.utcnow) # type: ignore
+

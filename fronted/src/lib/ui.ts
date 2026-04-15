@@ -1,4 +1,4 @@
-import { Boxes, Home, Sparkles, Lightbulb, Github } from 'lucide-svelte';
+import { Boxes, Home, Sparkles, Lightbulb, Github, Flame } from 'lucide-svelte';
 
 export type NavItem = {
 	id: string | null;
@@ -16,6 +16,7 @@ export const SUGGESTIONS = [
 
 export const NAVIGATION: NavItem[] = [
 	{ id: null, label: 'Frontier', icon: Home },
+	{ id: 'Trending', label: 'Trending', icon: Flame },
 	{ id: 'GitHub', label: 'GitHub', icon: Github },
 	{ id: 'AI', label: 'AI & News', icon: Sparkles },
 	{ id: 'Discovery', label: 'Cool Tools', icon: Boxes },

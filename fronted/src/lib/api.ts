@@ -60,6 +60,21 @@ export const api = {
         return jsonOrThrow<ArticlesResponse>(res);
     },
 
+    getTrending: async (): Promise<{ articles: Article[] }> => {
+        const res = await fetch(`${BASE_URL}/articles/trending`);
+        return jsonOrThrow<{ articles: Article[] }>(res);
+    },
+
+    getSavedArticles: async (): Promise<{ articles: Article[] }> => {
+        const res = await fetch(`${BASE_URL}/saved`);
+        return jsonOrThrow<{ articles: Article[] }>(res);
+    },
+
+    toggleSave: async (id: number): Promise<{ status: string }> => {
+        const res = await fetch(`${BASE_URL}/articles/${id}/save`, { method: 'POST' });
+        return jsonOrThrow<{ status: string }>(res);
+    },
+
     countNewSince: async (sinceId: number): Promise<number> => {
         const res = await fetch(`${BASE_URL}/articles/count-since?since_id=${sinceId}`);
         const data = await jsonOrThrow<{ new_count?: number }>(res);
