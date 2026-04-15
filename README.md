@@ -39,6 +39,8 @@ Axon fetches signals, classifies them into five categories (**AI**, **Signal**, 
 - **Auto-ingestion** — background scheduler fetches new signals every 4 hours (configurable)
 - **AI insights** — every article gets a concise two-paragraph summary via Groq
 - **Article chat** — ask questions about any article, powered by LLaMA 3.3 70B
+- **Cloud Persistence** — authenticated user saves are seamlessly synced to the database
+- **Trending Feed** — HackerNews-style algorithmic sorting bubbles up the most engaging content
 - **Content extraction** — fetches full article text on demand using readability-lxml
 - **Infinite scroll** — cursor-based pagination loads articles as you scroll
 - **Share** — native share sheet on mobile, clipboard copy on desktop
@@ -178,7 +180,10 @@ axon/
 | ------ | --------------------------------- | ----------------------------------------------- |
 | GET    | `/`                               | Health check + scheduler status                 |
 | GET    | `/articles?limit=40&cursor=123`   | List articles (cursor-based pagination)         |
+| GET    | `/articles/trending`              | Fetch algorithmically sorted top performing articles |
 | GET    | `/articles/{id}/content`          | Extract and return full article content          |
+| GET    | `/saved`                          | Retrieve the authenticated user's saved articles |
+| POST   | `/articles/{id}/save`             | Toggle the save status of an article             |
 | GET    | `/trends`                         | Top 10 trending keywords                        |
 | GET    | `/brief/{id}`                     | Generate a structured deep brief                 |
 | POST   | `/ingest`                         | Trigger ingestion from all sources               |
@@ -283,7 +288,6 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for th
 - Accessibility improvements (keyboard nav, screen readers, ARIA)
 - Deployment guides (Vercel, Railway, Fly.io, Coolify)
 - New data sources and smarter classification logic
-- User accounts and persistent saved articles
 - Internationalization
 
 ---
