@@ -32,7 +32,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 				</a>
 				<a href="/signup" class="group inline-flex items-center gap-2 rounded-xl bg-[#5B8CFF] px-4 py-2 text-sm font-semibold text-[#0B0F17] transition-colors hover:bg-[#4A78EA]">
 					<span class="relative z-10 flex items-center gap-2">
-						Join Network <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+						Get today's brief <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
 					</span>
 				</a>
 			</div>
@@ -51,17 +51,17 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 		</div>
 
 		<h1 class="max-w-4xl text-4xl font-bold leading-tight tracking-tight text-[#E8ECF4] sm:text-6xl">
-			Stop scrolling. <br />
-			<span class="bg-gradient-to-r from-[#5B8CFF] via-[#A3ADBF] to-[#22C3A6] bg-clip-text text-transparent">Start synthesizing.</span>
+			Track where the world is moving. <br />
+			<span class="bg-gradient-to-r from-[#5B8CFF] via-[#A3ADBF] to-[#22C3A6] bg-clip-text text-transparent">Stay on the leading edge.</span>
 		</h1>
 		
 		<p class="mt-6 max-w-2xl text-base font-normal leading-7 text-[#A3ADBF] sm:text-lg">
-			AXON is an intelligence engine for builders. We aggregate the absolute best of <span class="text-[#E8ECF4]">AI, code, and tech news</span>, using Grok to distill hours of reading into a 3-minute tactical briefing.
+			Built for founders and anyone who wants to stay ahead, AXON turns <span class="text-[#E8ECF4]">AI, tech, research, and GitHub signals</span> into a 3-minute daily brief so you don't need to juggle 50 sites.
 		</p>
 
 		<div class="mt-8 flex w-full max-w-sm flex-col items-center gap-3">
 			<a href="/signup" class="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#5B8CFF] px-6 text-sm font-semibold text-[#0B0F17] transition-colors hover:bg-[#4A78EA]">
-				Initialize your feed
+				Get today's brief
 				<ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
 			</a>
 			<button class="group inline-flex items-center gap-2 text-sm font-medium text-[#7B8497] transition-colors hover:text-[#A3ADBF]">
@@ -246,7 +246,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 					Join thousands of elite builders who use AXON to stay ahead of the curve without sacrificing their time.
 				</p>
 				<a href="/signup" class="inline-flex h-12 items-center justify-center gap-3 rounded-xl bg-[#5B8CFF] px-8 text-base font-semibold text-[#0B0F17] transition-colors hover:bg-[#4A78EA]">
-					Create your free account
+					Get today's brief
 					<ArrowRight class="h-5 w-5" />
 				</a>
 				<p class="mt-6 text-sm text-[#7B8497]">No credit card required. Unsubscribe anytime.</p>
