@@ -6,6 +6,7 @@
 	import type { Article } from '$lib/api';
 	import ChatDock from '$lib/components/reader/ChatDock.svelte';
 	import { formatEngagement, getBrandColor } from '$lib/ui';
+	import { iconButtonClass } from '$lib/ui-styles';
 
 	type ChatMessage = {
 		role: 'user' | 'ai';
@@ -91,7 +92,7 @@
 		<div class="flex items-center gap-1.5 sm:gap-2">
 			<button
 				onclick={() => onToggleSave(article.id)}
-				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors sm:w-auto sm:gap-1.5 sm:px-2.5 ${dark ? 'border-white/[0.06] hover:bg-white/5' : 'border-zinc-200 hover:bg-zinc-50'}`}
+				class={`${iconButtonClass(theme)} sm:w-auto sm:gap-1.5 sm:px-2.5`}
 				aria-label={isSaved ? 'Unsave' : 'Save'}
 			>
 				<Zap class={`h-3 w-3 ${savedStyle()}`} />
@@ -102,7 +103,7 @@
 
 			<button
 				onclick={shareArticle}
-				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] text-zinc-400 hover:bg-white hover:text-black' : 'border-zinc-200 text-zinc-500 hover:bg-black hover:text-white'}`}
+				class={`${iconButtonClass(theme, 'muted')} ${dark ? 'hover:bg-white hover:text-black' : 'hover:bg-black hover:text-white'}`}
 				aria-label="Share article"
 			>
 				{#if shareSuccess}
@@ -126,7 +127,7 @@
 
 			<button
 				onclick={() => onOpenExternal(article.url)}
-				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all ${dark ? 'border-white/[0.06] text-zinc-400 hover:bg-white hover:text-black' : 'border-zinc-200 text-zinc-500 hover:bg-black hover:text-white'}`}
+				class={`${iconButtonClass(theme, 'muted')} ${dark ? 'hover:bg-white hover:text-black' : 'hover:bg-black hover:text-white'}`}
 				aria-label="Open original article"
 			>
 				<ExternalLink class="h-3.5 w-3.5" />

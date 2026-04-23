@@ -3,6 +3,7 @@
 	import type { Article } from '$lib/api';
 	import ArticleCard from '$lib/components/feed/ArticleCard.svelte';
 	import FeedHeader from '$lib/components/feed/FeedHeader.svelte';
+	import { chipButtonClass } from '$lib/ui-styles';
 
 	type SortOption = 'date' | 'engagement' | 'views';
 	type TimeFilter = 'all' | 'today' | 'week' | 'month';
@@ -122,9 +123,7 @@
 	}
 
 	function sortBtnClass(active: boolean) {
-		if (active && dark) return 'bg-white/[0.08] text-zinc-200';
-		if (active && !dark) return 'bg-zinc-100 text-zinc-800';
-		return dark ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-400 hover:text-zinc-600';
+		return chipButtonClass(theme, active);
 	}
 
 	let activeFilterChips = $derived.by(() => {

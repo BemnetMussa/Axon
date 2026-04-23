@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Send, Mic, MicOff, Loader2 } from 'lucide-svelte';
 	import { onDestroy } from 'svelte';
+	import { inputClass, panelClass, iconButtonClass } from '$lib/ui-styles';
 
 	type Props = {
 		chatInput: string;
@@ -58,7 +59,7 @@
 	});
 </script>
 
-<div class={`min-w-0 rounded-xl border shadow-lg backdrop-blur-2xl ${dark ? 'border-white/[0.08] bg-[#111]/90 shadow-[0_8px_32px_rgba(0,0,0,0.5)]' : 'border-zinc-200 bg-white/95 shadow-[0_4px_24px_rgba(0,0,0,0.08)]'}`}>
+<div class={`min-w-0 ${panelClass(theme)}`}>
 	{#if showSuggestions}
 		<div class={`no-scrollbar flex min-h-[2.75rem] items-center gap-1.5 overflow-x-auto border-b px-3 py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
 			{#each suggestions as tip}
@@ -82,13 +83,13 @@
 			oninput={(event) => onInputChange((event.currentTarget as HTMLInputElement).value)}
 			onkeydown={(event) => event.key === 'Enter' && onSend()}
 			placeholder={isListening ? 'Listening...' : 'Ask about this signal...'}
-			class={`h-8 min-w-0 flex-1 rounded-md border px-2.5 text-[12px] outline-none transition-colors ${dark ? 'border-white/[0.06] bg-white/[0.03] text-white placeholder:text-zinc-600 focus:border-white/15' : 'border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400'}`}
+			class={`${inputClass(theme)} min-w-0 flex-1`}
 		/>
 		{#if speechSupported}
 			<button
 				type="button"
 				onclick={toggleSpeech}
-				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-all ${isListening ? (dark ? 'bg-white/15 text-white' : 'bg-zinc-200 text-zinc-900') : (dark ? 'bg-white/[0.06] text-zinc-500 hover:text-zinc-300' : 'bg-zinc-100 text-zinc-400 hover:text-zinc-600')}`}
+				class={`${iconButtonClass(theme)} border-0 ${isListening ? (dark ? 'bg-white/15 text-white hover:text-white' : 'bg-zinc-200 text-zinc-900 hover:text-zinc-900') : ''}`}
 				aria-label={isListening ? 'Stop listening' : 'Voice input'}
 			>
 				{#if isListening}
@@ -102,7 +103,7 @@
 			type="button"
 			onclick={() => onSend()}
 			disabled={!chatInput.trim() || chatLoading}
-			class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-all disabled:opacity-20 ${dark ? 'bg-white/[0.06] text-zinc-400' : 'bg-zinc-100 text-zinc-500'}`}
+			class={`${iconButtonClass(theme)} border-0 disabled:opacity-20`}
 			aria-label="Send message"
 		>
 			<Send class="h-3.5 w-3.5" />

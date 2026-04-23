@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { RefreshCw, Search, Zap, LogOut, SlidersHorizontal, BellDot, Eraser } from 'lucide-svelte';
 	import { authClient } from '$lib/auth-client';
+	import { inputClass, iconButtonClass } from '$lib/ui-styles';
 
 	type Props = {
 		title: string;
@@ -58,13 +59,13 @@
 					value={searchQuery}
 					oninput={(event) => onSearchChange((event.currentTarget as HTMLInputElement).value)}
 					placeholder="Search..."
-					class={`h-8 w-full rounded-md border pl-8 pr-3 text-[12px] outline-none transition-all sm:w-40 sm:focus:w-56 lg:w-44 lg:focus:w-64 ${dark ? 'border-white/[0.06] bg-white/[0.03] text-white placeholder:text-zinc-600 focus:border-white/15' : 'border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400'}`}
+					class={`${inputClass(theme)} w-full pl-8 pr-3 sm:w-40 sm:focus:w-56 lg:w-44 lg:focus:w-64`}
 				/>
 			</label>
 			<button
 				type="button"
 				onclick={() => authClient.signOut()}
-				class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all lg:hidden ${dark ? 'border-white/[0.06] text-zinc-500 hover:text-red-400' : 'border-zinc-200 text-zinc-500 hover:text-red-600'}`}
+				class={`${iconButtonClass(theme)} lg:hidden ${dark ? 'hover:text-red-400' : 'hover:text-red-600'}`}
 				aria-label="Sign out"
 			>
 				<LogOut class="h-3.5 w-3.5" />
@@ -72,7 +73,7 @@
 			{#if onOpenFilters}
 				<button
 					onclick={onOpenFilters}
-					class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all lg:hidden ${dark ? 'border-white/[0.06] bg-white/[0.03] text-zinc-300' : 'border-zinc-200 bg-zinc-50 text-zinc-600'}`}
+					class={`${iconButtonClass(theme, 'muted')} lg:hidden`}
 					aria-label="Open filters"
 				>
 					<SlidersHorizontal class="h-3.5 w-3.5" />
