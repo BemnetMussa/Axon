@@ -17,8 +17,8 @@
 	let dark = $derived(theme === 'dark');
 	let showMenu = $state(false);
 
-	let mainTabs = $derived(items.filter(i => i.id !== null && ['GitHub', 'AI', 'Signal'].includes(i.id)));
-	let overflowTabs = $derived(items.filter(i => i.id === 'Discovery'));
+	let mainTabs = $derived(items.filter(i => i.id === null || i.id === 'Trending'));
+	let overflowTabs = $derived(items.filter(i => i.id !== null && !['Trending'].includes(i.id)));
 
 	function navBg() {
 		return dark ? 'border-white/[0.05] bg-[#0b0b0b]/90' : 'border-zinc-200 bg-white/90';
@@ -48,11 +48,6 @@
 				</button>
 			{/each}
 			
-			<button onclick={() => { onShowSaved(); showMenu = false; }} class={`flex items-center gap-3 rounded-lg p-3 ${showSavedOnly ? (dark ? 'bg-white/10 text-white' : 'bg-black/5 text-black') : (dark ? 'text-zinc-400' : 'text-zinc-600')}`}>
-				<Zap class={`h-5 w-5 ${showSavedOnly ? (dark ? 'fill-white' : 'fill-black') : ''}`} />
-				<span class="text-xs font-semibold">Saved</span>
-			</button>
-
 			<button onclick={() => { onShowDigest(); showMenu = false; }} class={`flex items-center gap-3 rounded-lg p-3 ${dark ? 'text-zinc-400' : 'text-zinc-600'}`}>
 				<Sparkles class="h-5 w-5" />
 				<span class="text-xs font-semibold">Weekly Synthesis</span>
@@ -86,6 +81,14 @@
 			<span class="truncate text-[9px] font-bold mt-1">{item.label}</span>
 		</button>
 	{/each}
+
+	<button
+		onclick={onShowSaved}
+		class={`flex flex-col items-center gap-0.5 px-1 py-4 transition-colors ${itemColor(showSavedOnly)}`}
+	>
+		<Zap class={`h-5 w-5 ${showSavedOnly ? (dark ? 'fill-white' : 'fill-black') : ''}`} />
+		<span class="truncate text-[9px] font-bold mt-1">Saved</span>
+	</button>
 
 	<button
 		onclick={onShowDigest}

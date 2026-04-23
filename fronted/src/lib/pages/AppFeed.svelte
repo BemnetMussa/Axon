@@ -70,6 +70,15 @@
 	let semanticSearchResults = $state<Article[] | null>(null);
 	let searchingSemantic = $state(false);
 	let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+	let uiNotice = $state<string | null>(null);
+	let semanticSearchActive = $derived(searchQuery.trim().length > 2);
+
+	function flashNotice(message: string) {
+		uiNotice = message;
+		setTimeout(() => {
+			if (uiNotice === message) uiNotice = null;
+		}, 2500);
+	}
 
 	$effect(() => {
 		if (searchQuery.trim().length > 2) {
@@ -308,8 +317,9 @@
 	}
 
 	async function selectCategory(id: string | null) {
+		const changed = activeCategory !== id || showSavedOnly || showDigestView;
 		activeCategory = id;
-		activeSource = null;
+		if (changed) activeSource = null;
 		selectedArticle = null;
 		showSavedOnly = false;
 		showDigestView = false;
@@ -385,9 +395,6 @@
 			}
 		}
 
-		if (digestContent?.content?.includes('No weekly digest available')) {
-			await generateDigest();
-		}
 	}
 
 	async function generateDigest() {
@@ -421,6 +428,7 @@
 			await api.toggleSave(id);
 		} catch (e) {
 			console.error("Failed to sync save status to backend", e);
+			flashNotice('Save failed to sync. Reverted.');
 			savedArticleIds = isCurrentlySaved
 				? [...savedArticleIds, id]
 				: savedArticleIds.filter((s) => s !== id);
@@ -543,7 +551,6 @@
 		{sourceCounts}
 		{theme}
 		newSignalCount={newArticleIds.size}
-		{hasActiveFilters}
 		onNavigate={selectCategory}
 		onShowSaved={showSavedView}
 		onShowDigest={showDigest}
@@ -556,6 +563,11 @@
 				{#if fetchError}
 					<div class={`mx-3 mt-3 rounded-xl border px-3 py-2 text-xs ${theme === 'dark' ? 'border-red-400/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'}`}>
 						{fetchError}
+					</div>
+				{/if}
+				{#if uiNotice}
+					<div class={`mx-3 mt-3 rounded-xl border px-3 py-2 text-xs ${theme === 'dark' ? 'border-amber-400/40 bg-amber-500/10 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+						{uiNotice}
 					</div>
 				{/if}
 				<FeedPanel
@@ -577,6 +589,7 @@
 					{newArticleIds}
 					{activeCategory}
 					{showSavedOnly}
+					{semanticSearchActive}
 					onSearchChange={(value) => (searchQuery = value)}
 					onSourceSelect={selectSource}
 					onSortChange={(value) => (sortBy = value)}
@@ -589,7 +602,6 @@
 					onShowDigest={showDigest}
 					onLoadMore={loadMore}
 					onCheckNew={checkForNew}
-					onToggleTheme={toggleTheme}
 					bind:scrollArea={feedScrollArea}
 				/>
 			</div>
@@ -610,7 +622,7 @@
 								{@html marked.parse(digestContent.content || '')}
 							</div>
 							<button onclick={generateDigest} disabled={digestLoading} class={`mt-8 rounded-lg px-6 py-3 text-[13px] font-bold shadow-lg transition-all disabled:opacity-60 ${theme === 'dark' ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}>
-								{digestLoading ? 'Generating…' : 'Refresh Weekly Digest'}
+								{digestLoading ? 'Generating…' : digestContent.content.includes('No weekly digest available') ? 'Generate first digest' : 'Refresh Weekly Digest'}
 							</button>
 						</div>
 					</div>

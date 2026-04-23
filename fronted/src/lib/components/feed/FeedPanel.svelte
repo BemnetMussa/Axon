@@ -27,6 +27,7 @@
 		newArticleIds?: Set<number>;
 		activeCategory: string | null;
 		showSavedOnly: boolean;
+		semanticSearchActive?: boolean;
 		scrollArea?: HTMLDivElement;
 		onSearchChange: (value: string) => void;
 		onSourceSelect: (source: string | null) => void;
@@ -40,16 +41,15 @@
 		onShowDigest: () => void;
 		onLoadMore: () => void;
 		onCheckNew?: () => Promise<boolean>;
-		onToggleTheme?: () => void;
 	};
 
 	let {
 		title, articles, sources, activeSource, searchQuery, sortBy, timeFilter, theme,
 		hasMore, loadingMore, selectedArticleId, savedArticleIds, readArticleIds, loading,
 		syncIndicator, newArticleIds = new Set(), scrollArea = $bindable(),
-		activeCategory, showSavedOnly,
+		activeCategory, showSavedOnly, semanticSearchActive = false,
 		onSearchChange, onSourceSelect, onSortChange, onTimeFilterChange,
-		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onToggleSave, onRefresh, onShowDigest, onLoadMore, onCheckNew, onToggleTheme
+		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onToggleSave, onRefresh, onShowDigest, onLoadMore, onCheckNew
 	}: Props = $props();
 
 	const sortOptions: { value: SortOption; label: string }[] = [
@@ -158,7 +158,7 @@
 		hasNewSignals={newArticleIds.size > 0}
 		onOpenFilters={() => (showMobileFilters = true)}
 		hasActiveFilters={activeFilterChips.length > 0}
-		{onToggleTheme}
+		hasSemanticSearch={semanticSearchActive}
 	/>
 
 	<div class={`hidden border-b px-3 py-1.5 sm:px-5 sm:py-2 lg:block ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
@@ -257,6 +257,13 @@
 				<div>
 					<p class={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>No signals found</p>
 					<p class="mt-2 text-[13px] text-zinc-500">Adjust your filters or search to widen the feed.</p>
+					<button
+						type="button"
+						onclick={onClearAllFilters}
+						class={`mt-4 inline-flex rounded-lg px-3 py-1.5 text-[11px] font-semibold ${dark ? 'bg-white/[0.08] text-zinc-200 hover:bg-white/[0.12]' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'}`}
+					>
+						Clear all filters
+					</button>
 				</div>
 			</div>
 		{:else}
@@ -338,7 +345,7 @@
 					onclick={() => (showMobileFilters = false)}
 					class={`rounded-xl px-3 py-2 text-[11px] font-semibold ${dark ? 'bg-white text-black' : 'bg-black text-white'}`}
 				>
-					Apply
+					Done
 				</button>
 			</div>
 		</div>

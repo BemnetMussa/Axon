@@ -41,8 +41,8 @@ function signalClass(tier: 'High' | 'Medium' | 'Low') {
 	}
 </script>
 
-<article class={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-2xl border px-3.5 py-3.5 transition-all duration-200 sm:px-4 sm:py-4 ${cardClass()}`}>
-	<button type="button" onclick={() => onOpen(article)} class="absolute inset-0 rounded-lg" aria-label={`Open ${article.title}`}></button>
+<article class={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border px-3.5 py-3.5 transition-all duration-200 sm:px-4 sm:py-4 ${cardClass()}`}>
+	<button type="button" onclick={() => onOpen(article)} class="absolute inset-0 rounded-xl" aria-label={`Open ${article.title}`}></button>
 
 	<div class="flex min-w-0 items-center justify-between gap-2">
 		<div class={`flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
@@ -71,7 +71,7 @@ function signalClass(tier: 'High' | 'Medium' | 'Low') {
 		<button
 			type="button"
 			onclick={(event) => { event.stopPropagation(); onToggleSave(article.id); }}
-			class={`pointer-events-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${dark ? 'text-zinc-500 hover:bg-white/[0.06]' : 'text-zinc-400 hover:bg-zinc-100'}`}
+			class={`pointer-events-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${dark ? 'text-zinc-500 hover:bg-white/[0.06]' : 'text-zinc-400 hover:bg-zinc-100'}`}
 			aria-label={isSaved ? 'Remove from saved' : 'Save article'}
 		>
 			<Zap class={`h-3.5 w-3.5 ${isSaved ? (dark ? 'fill-white text-white' : 'fill-black text-black') : ''}`} />

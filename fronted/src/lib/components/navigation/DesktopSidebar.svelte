@@ -10,7 +10,6 @@
 		sourceCounts: Record<string, number>;
 		theme: 'dark' | 'light';
 		newSignalCount?: number;
-		hasActiveFilters?: boolean;
 		onNavigate: (id: string | null) => void;
 		onShowSaved: () => void;
 		onShowDigest: () => void;
@@ -18,7 +17,7 @@
 	};
 
 	let {
-		navigation, activeCategory, showSavedOnly, sourceCounts, theme, newSignalCount = 0, hasActiveFilters = false,
+		navigation, activeCategory, showSavedOnly, sourceCounts, theme, newSignalCount = 0,
 		onNavigate, onShowSaved, onShowDigest, onToggleTheme
 	}: Props = $props();
 
@@ -125,12 +124,11 @@
 	<div class="mt-auto px-5 pb-3">
 		<button
 			onclick={onShowDigest}
-			class={`mb-4 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[11px] font-bold transition-all ${dark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}
+			class={`mb-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[11px] font-bold transition-all ${dark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}
 		>
 			<Sparkles class="h-4 w-4" />
-			Weekly Synthesis
+			Digest
 		</button>
-		<p class={`mb-4 text-center text-[10px] ${dark ? 'text-zinc-600' : 'text-zinc-500'}`}>3-minute summary of the week</p>
 	</div>
 
 	<div class={`flex flex-col gap-0.5 border-t px-2.5 py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-200'}`}>
