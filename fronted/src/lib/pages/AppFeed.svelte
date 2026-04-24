@@ -7,6 +7,8 @@
 	import MobileBottomNav from '$lib/components/navigation/MobileBottomNav.svelte';
 	import ReaderPanel from '$lib/components/reader/ReaderPanel.svelte';
 	import { NAVIGATION, SUGGESTIONS } from '$lib/ui';
+	import { analytics } from '$lib/analytics';
+	import OnboardingOverlay from '$lib/components/onboarding/OnboardingOverlay.svelte';
 
 	type ChatMessage = {
 		role: 'user' | 'ai';
@@ -49,6 +51,9 @@
 	const SEEN_KEY = 'axon_seen_articles';
 	const READ_KEY = 'axon_read_articles';
 	const THEME_KEY = 'axon_theme';
+	const ONBOARDED_KEY = 'axon_onboarded';
+
+	let showOnboarding = $state(false);
 	const POLL_INTERVAL_MS = 60_000;
 
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -157,9 +162,18 @@
 		applyTheme(theme === 'dark' ? 'light' : 'dark');
 	}
 
+	function finishOnboarding() {
+		showOnboarding = false;
+		localStorage.setItem(ONBOARDED_KEY, '1');
+	}
+
 	async function load() {
 		const savedTheme = localStorage.getItem(THEME_KEY) as 'dark' | 'light' | null;
 		if (savedTheme) applyTheme(savedTheme);
+
+		if (!localStorage.getItem(ONBOARDED_KEY)) {
+			showOnboarding = true;
+		}
 
 		try {
 			const savedRes = await api.getSavedArticles();
@@ -379,6 +393,7 @@
 	}
 
 	async function showDigest() {
+		analytics.digestOpened();
 		showDigestView = true;
 		activeCategory = null;
 		activeSource = null;
@@ -438,6 +453,7 @@
 	}
 
 	async function manualRefresh() {
+		analytics.syncSources(activeCategory);
 		syncIndicator = true;
 		fetchError = null;
 		try {
@@ -481,6 +497,15 @@
 		markSeen(article.id);
 		markRead(article.id);
 		api.trackView(article.id);
+		analytics.articleOpened(article.id, article.source, article.category);
+	}
+
+	function openArticleWithChat(article: Article, starterQuestion: string) {
+		openArticle(article);
+		// Pre-fill and immediately send the starter question so the user lands in an active chat
+		chatInput = starterQuestion;
+		// Small delay so the reader panel + suggestions have time to mount before the send
+		setTimeout(() => sendChat(starterQuestion), 80);
 	}
 
 	function closeReader() {
@@ -601,8 +626,9 @@
 					onTimeFilterChange={(value) => (timeFilter = value)}
 					onClearCategoryOrSaved={clearCategoryOrSaved}
 					onClearAllFilters={clearAllFilters}
-					onArticleOpen={openArticle}
-					onToggleSave={toggleSave}
+				onArticleOpen={openArticle}
+				onArticleOpenWithChat={openArticleWithChat}
+				onToggleSave={toggleSave}
 					onSyncSources={manualRefresh}
 					onShowDigest={showDigest}
 					onLoadMore={loadMore}
@@ -684,6 +710,10 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if showOnboarding}
+		<OnboardingOverlay {theme} onDone={finishOnboarding} />
+	{/if}
 
 	{#if !selectedArticle}
 		<MobileBottomNav

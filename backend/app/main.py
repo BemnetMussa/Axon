@@ -1,5 +1,6 @@
 import os
 import asyncio
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -11,6 +12,9 @@ from fastapi import FastAPI, Depends, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlmodel import Session, select, col
 from sqlalchemy import update, func
 from pydantic import BaseModel
@@ -32,6 +36,32 @@ from app.services.analyzer import (
 from app.services.extractor import extract_article_content
 
 scheduler = AsyncIOScheduler()
+
+# ---------------------------------------------------------------------------
+# Rate limiting — keyed by authenticated user ID (falls back to IP)
+# ---------------------------------------------------------------------------
+
+def _rate_limit_key(request: Request) -> str:
+    return request.headers.get("X-Axon-User-Id") or get_remote_address(request)
+
+limiter = Limiter(key_func=_rate_limit_key)
+
+# ---------------------------------------------------------------------------
+# In-memory suggestions cache — avoids re-generating on every article open
+# TTL: 6 hours per article
+# ---------------------------------------------------------------------------
+
+_suggestions_cache: dict[int, tuple[list[str], float]] = {}
+_SUGGESTIONS_TTL = 6 * 3600  # seconds
+
+def _get_cached_suggestions(article_id: int) -> list[str] | None:
+    entry = _suggestions_cache.get(article_id)
+    if entry and (time.time() - entry[1]) < _SUGGESTIONS_TTL:
+        return entry[0]
+    return None
+
+def _set_cached_suggestions(article_id: int, suggestions: list[str]) -> None:
+    _suggestions_cache[article_id] = (suggestions, time.time())
 
 INTERNAL_SECRET = os.getenv("AXON_INTERNAL_SECRET", "").strip()
 if not INTERNAL_SECRET:
@@ -80,6 +110,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Axon Intelligence Engine", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(
+    RateLimitExceeded,
+    lambda req, exc: JSONResponse(
+        {"detail": "Rate limit exceeded. Please slow down."},
+        status_code=429,
+        headers={"Retry-After": "60"},
+    ),
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -111,7 +150,8 @@ async def require_internal_auth(request: Request, call_next):
 # ---------------------------------------------------------------------------
 
 @app.post("/ingest")
-async def trigger_ingestion(context_id: str | None = Query(default=None), session: Session = Depends(get_session)):
+@limiter.limit("5/hour")
+async def trigger_ingestion(request: Request, context_id: str | None = Query(default=None), session: Session = Depends(get_session)):
     count = await ingest_intelligence(session, context_id)
     return {"status": "success", "new_articles": count}
 
@@ -293,10 +333,15 @@ class ChatRequest(BaseModel):
 
 
 @app.get("/articles/{article_id}/suggestions")
-def article_chat_suggestions(article_id: int, session: Session = Depends(get_session)):
+@limiter.limit("30/minute")
+def article_chat_suggestions(request: Request, article_id: int, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
         return {"error": "Not found", "suggestions": []}
+    # Serve from cache if fresh — avoids expensive LLM call on every article open
+    cached = _get_cached_suggestions(article_id)
+    if cached:
+        return {"suggestions": cached, "cached": True}
     suggestions = generate_chat_suggestions(
         title=article.title,
         content_snippet=article.content_snippet or "",
@@ -304,11 +349,13 @@ def article_chat_suggestions(article_id: int, session: Session = Depends(get_ses
         category=article.category,
         source=article.source,
     )
-    return {"suggestions": suggestions}
+    _set_cached_suggestions(article_id, suggestions)
+    return {"suggestions": suggestions, "cached": False}
 
 
 @app.post("/articles/{article_id}/chat")
-def article_chat(article_id: int, req: ChatRequest, session: Session = Depends(get_session)):
+@limiter.limit("20/minute")
+def article_chat(request: Request, article_id: int, req: ChatRequest, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
         return {"error": "Not found"}
@@ -350,7 +397,8 @@ def get_latest_digest(session: Session = Depends(get_session)):
     return {"content": digest.content, "created_at": digest.created_at}
 
 @app.post("/digests/generate")
-def trigger_digest(session: Session = Depends(get_session)):
+@limiter.limit("3/hour")
+def trigger_digest(request: Request, session: Session = Depends(get_session)):
     content = generate_weekly_digest(session)
     if not content:
         return JSONResponse(

@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { ArrowUp, Zap } from 'lucide-svelte';
+	import { ArrowUp, Zap, Sparkles } from 'lucide-svelte';
 	import type { Article } from '$lib/api';
 	import { getBrandColor, formatEngagement, relativeTime, stripHtml, readingTime } from '$lib/ui';
+	import { analytics } from '$lib/analytics';
 
 	type Props = {
 		article: Article;
@@ -11,24 +12,28 @@
 		isRead?: boolean;
 		theme: 'dark' | 'light';
 		onOpen: (article: Article) => void;
+		onOpenWithChat: (article: Article, starterQuestion: string) => void;
 		onToggleSave: (id: number) => void;
 	};
 
-	let { article, selected, isSaved, isNew = false, isRead = false, theme, onOpen, onToggleSave }: Props = $props();
+	let { article, selected, isSaved, isNew = false, isRead = false, theme, onOpen, onOpenWithChat, onToggleSave }: Props = $props();
 	let dark = $derived(theme === 'dark');
 
-function signalTier(): 'High' | 'Medium' | 'Low' {
-	const score = (article.engagement_score || 0) + (article.likes || 0) * 0.6 + (article.views || 0) * 0.15;
-	if (score >= 180) return 'High';
-	if (score >= 60) return 'Medium';
-	return 'Low';
-}
+	// A quick, punchy starter question for the card teaser
+	const TEASER_QUESTION = 'What can I build or do with this?';
 
-function signalClass(tier: 'High' | 'Medium' | 'Low') {
-	if (tier === 'High') return dark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-700';
-	if (tier === 'Medium') return dark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700';
-	return dark ? 'bg-zinc-700/70 text-zinc-300' : 'bg-zinc-200 text-zinc-700';
-}
+	function signalTier(): 'High' | 'Medium' | 'Low' {
+		const score = (article.engagement_score || 0) + (article.likes || 0) * 0.6 + (article.views || 0) * 0.15;
+		if (score >= 180) return 'High';
+		if (score >= 60) return 'Medium';
+		return 'Low';
+	}
+
+	function signalClass(tier: 'High' | 'Medium' | 'Low') {
+		if (tier === 'High') return dark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-700';
+		if (tier === 'Medium') return dark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700';
+		return dark ? 'bg-zinc-700/70 text-zinc-300' : 'bg-zinc-200 text-zinc-700';
+	}
 
 	function cardClass() {
 		if (selected && dark) return 'border-white/15 bg-white/[0.06] shadow-[0_0_0_1px_rgba(255,255,255,0.04)]';
@@ -39,11 +44,30 @@ function signalClass(tier: 'High' | 'Medium' | 'Low') {
 		if (dark) return 'border-transparent hover:bg-white/[0.03]';
 		return 'border-transparent hover:bg-zinc-50';
 	}
+
+	function handleOpen() {
+		analytics.articleOpened(article.id, article.source, article.category);
+		onOpen(article);
+	}
+
+	function handleChatTeaser(e: MouseEvent) {
+		e.stopPropagation();
+		analytics.chatStarted(article.id, 'card_teaser');
+		onOpenWithChat(article, TEASER_QUESTION);
+	}
+
+	function handleSave(e: MouseEvent) {
+		e.stopPropagation();
+		analytics.articleSaved(article.id, !isSaved);
+		onToggleSave(article.id);
+	}
 </script>
 
 <article class={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border px-3.5 py-3.5 transition-all duration-200 sm:px-4 sm:py-4 ${cardClass()}`}>
-	<button type="button" onclick={() => onOpen(article)} class="absolute inset-0 rounded-xl" aria-label={`Open ${article.title}`}></button>
+	<!-- Full-card open button (behind everything) -->
+	<button type="button" onclick={handleOpen} class="absolute inset-0 rounded-xl" aria-label={`Open ${article.title}`}></button>
 
+	<!-- Source / category / signal meta row -->
 	<div class="flex min-w-0 items-center justify-between gap-2">
 		<div class={`flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
 			{#if isNew}
@@ -62,25 +86,48 @@ function signalClass(tier: 'High' | 'Medium' | 'Low') {
 			{/if}
 		</div>
 		<div class="flex shrink-0 items-center gap-1.5">
-		{#if readingTime(article.insight || article.content_snippet || '')}
-			<span class={`text-[10px] font-medium ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{readingTime(article.insight || article.content_snippet || '')}</span>
-			<span class={`${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>·</span>
-		{/if}
-		<span class={`text-[10px] font-semibold ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>{relativeTime(article.published_date)}</span>
-	</div>
+			{#if readingTime(article.insight || article.content_snippet || '')}
+				<span class={`text-[10px] font-medium ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{readingTime(article.insight || article.content_snippet || '')}</span>
+				<span class={`${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>·</span>
+			{/if}
+			<span class={`text-[10px] font-semibold ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>{relativeTime(article.published_date)}</span>
+		</div>
 	</div>
 
+	<!-- Title -->
 	<h3 class={`mt-2 mb-2 line-clamp-2 min-w-0 break-words text-[15px] font-semibold leading-snug tracking-tight transition-colors sm:text-[16px] ${dark ? 'text-zinc-100' : 'text-zinc-800'}`} style="overflow-wrap: anywhere;">{article.title}</h3>
 
+	<!-- Snippet + actions row -->
 	<div class="flex min-w-0 items-end gap-2">
 		<p class={`line-clamp-2 min-w-0 flex-1 overflow-hidden text-[12.5px] leading-relaxed sm:text-[13px] ${dark ? 'text-zinc-400' : 'text-zinc-500'}`} style="overflow-wrap: anywhere;">{stripHtml(article.insight || article.content_snippet || '')}</p>
+
+		<div class="pointer-events-auto flex shrink-0 items-center gap-1">
+			<!-- Save -->
+			<button
+				type="button"
+				onclick={handleSave}
+				class={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${dark ? 'text-zinc-500 hover:bg-white/[0.06]' : 'text-zinc-400 hover:bg-zinc-100'}`}
+				aria-label={isSaved ? 'Remove from saved' : 'Save article'}
+			>
+				<Zap class={`h-3.5 w-3.5 ${isSaved ? (dark ? 'fill-white text-white' : 'fill-black text-black') : ''}`} />
+			</button>
+		</div>
+	</div>
+
+	<!-- AI chat teaser — always visible, bottom of card -->
+	<div class="mt-2.5 pt-2 border-t {dark ? 'border-white/[0.04]' : 'border-zinc-100'}">
 		<button
 			type="button"
-			onclick={(event) => { event.stopPropagation(); onToggleSave(article.id); }}
-			class={`pointer-events-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${dark ? 'text-zinc-500 hover:bg-white/[0.06]' : 'text-zinc-400 hover:bg-zinc-100'}`}
-			aria-label={isSaved ? 'Remove from saved' : 'Save article'}
+			onclick={handleChatTeaser}
+			class={`pointer-events-auto inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all ${
+				dark
+					? 'border-white/[0.06] text-zinc-500 hover:border-white/15 hover:bg-white/[0.05] hover:text-zinc-300'
+					: 'border-zinc-200 text-zinc-400 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-600'
+			}`}
+			aria-label="Ask Axon AI about this article"
 		>
-			<Zap class={`h-3.5 w-3.5 ${isSaved ? (dark ? 'fill-white text-white' : 'fill-black text-black') : ''}`} />
+			<Sparkles class="h-3 w-3 shrink-0" />
+			Ask Axon
 		</button>
 	</div>
 </article>

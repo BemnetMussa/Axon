@@ -12,3 +12,4 @@ python-dotenv
 apscheduler
 pgvector
 fastembed
+slowapi
