@@ -172,15 +172,20 @@
 		const ox = rect.left + rect.width / 2;
 		const oy = rect.top + rect.height / 2;
 
-		// Radius large enough to cover every corner of the viewport from origin
-		const maxR = Math.ceil(
-			Math.hypot(
-				Math.max(ox, window.innerWidth - ox),
-				Math.max(oy, window.innerHeight - oy)
-			)
-		) + 2;
+		// Radius just large enough to cover every viewport corner from the origin
+		const maxR =
+			Math.ceil(
+				Math.hypot(
+					Math.max(ox, window.innerWidth - ox),
+					Math.max(oy, window.innerHeight - oy)
+				)
+			) + 10;
 
-		// Overlay coloured in the new theme's background — sits above everything
+		// Overlay in the CURRENT theme's color — starts covering the entire page.
+		// The new theme is applied underneath it, then the overlay shrinks away
+		// (iris-close) to reveal the new look. This avoids the "two colors visible
+		// at once" problem of the growing-circle approach.
+		const currentBg = theme === 'dark' ? '#070707' : '#f8fafc';
 		const overlay = document.createElement('div');
 		overlay.style.cssText = [
 			'position:fixed',
@@ -189,30 +194,27 @@
 			`width:${maxR * 2}px`,
 			`height:${maxR * 2}px`,
 			'border-radius:50%',
-			'transform:translate(-50%,-50%) scale(0)',
-			`background:${nextTheme === 'dark' ? '#070707' : '#f8fafc'}`,
+			'transform:translate(-50%,-50%) scale(1.05)', // 5 % buffer for sub-pixel gaps
+			`background:${currentBg}`,
 			'z-index:99999',
 			'pointer-events:none',
 			'will-change:transform',
 		].join(';');
 		document.body.appendChild(overlay);
 
-		// Force a paint of scale(0) before the transition starts
-		void overlay.offsetHeight;
+		// Apply the new theme immediately — completely hidden under the overlay
+		applyTheme(nextTheme);
 
-		overlay.style.transition = 'transform 0.48s cubic-bezier(0.22, 1, 0.36, 1)';
-		overlay.style.transform = 'translate(-50%,-50%) scale(1)';
-
-		overlay.addEventListener(
-			'transitionend',
-			() => {
-				// Apply theme while the overlay covers the entire page — zero flicker
-				applyTheme(nextTheme);
-				// Remove on the next frame so the themed page is painted first
-				requestAnimationFrame(() => overlay.remove());
-			},
-			{ once: true }
-		);
+		// Wait two animation frames so Svelte reconciles + paints the new theme
+		// before we start revealing it. Without this the shrink can start before
+		// the DOM reflects the new theme and you get a flash of the old state.
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				overlay.style.transition = 'transform 0.46s cubic-bezier(0.4, 0, 0.2, 1)';
+				overlay.style.transform = 'translate(-50%,-50%) scale(0)';
+				overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+			});
+		});
 	}
 
 	function finishOnboarding() {
