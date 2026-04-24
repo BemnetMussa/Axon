@@ -1,4 +1,4 @@
-import { Boxes, Home, Sparkles, Lightbulb, Github, Flame } from 'lucide-svelte';
+import { Boxes, Home, Sparkles, Lightbulb, Github, Flame, AlertTriangle } from 'lucide-svelte';
 
 export type NavItem = {
 	id: string | null;
@@ -20,7 +20,8 @@ export const NAVIGATION: NavItem[] = [
 	{ id: 'GitHub', label: 'GitHub', icon: Github },
 	{ id: 'AI', label: 'AI & News', icon: Sparkles },
 	{ id: 'Discovery', label: 'Cool Tools', icon: Boxes },
-	{ id: 'Signal', label: 'Research', icon: Lightbulb }
+	{ id: 'Signal', label: 'Research', icon: Lightbulb },
+	{ id: 'Concerns', label: 'Concerns', icon: AlertTriangle },
 ];
 
 const BRAND_COLORS: Record<string, string> = {
@@ -79,6 +80,18 @@ export function relativeTime(dateStr: string): string {
 	if (days < 30) return `${Math.floor(days / 7)}w ago`;
 	const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 	return `${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+/**
+ * Estimate reading time from a content string.
+ * Returns an empty string if there is not enough content to bother showing.
+ */
+export function readingTime(text: string): string {
+	if (!text) return '';
+	const words = text.trim().split(/\s+/).filter(Boolean).length;
+	if (words < 30) return '';
+	const mins = Math.max(1, Math.round(words / 220));
+	return `${mins} min read`;
 }
 
 export function formatEngagement(likes: number): string {

@@ -29,6 +29,7 @@
 		activeCategory: string | null;
 		showSavedOnly: boolean;
 		semanticSearchActive?: boolean;
+		dbEmpty?: boolean;
 		scrollArea?: HTMLDivElement;
 		onSearchChange: (value: string) => void;
 		onSourceSelect: (source: string | null) => void;
@@ -48,7 +49,7 @@
 		title, articles, sources, activeSource, searchQuery, sortBy, timeFilter, theme,
 		hasMore, loadingMore, selectedArticleId, savedArticleIds, readArticleIds, loading,
 		syncIndicator, newArticleIds = new Set(), scrollArea = $bindable(),
-		activeCategory, showSavedOnly, semanticSearchActive = false,
+		activeCategory, showSavedOnly, semanticSearchActive = false, dbEmpty = false,
 		onSearchChange, onSourceSelect, onSortChange, onTimeFilterChange,
 		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onToggleSave, onSyncSources, onShowDigest, onLoadMore, onCheckNew
 	}: Props = $props();
@@ -245,25 +246,45 @@
 		onwheel={handleWheel}
 	>
 		{#if loading && articles.length === 0}
-			<div class="flex h-full items-center justify-center px-6 text-center">
+			<div class="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+				<div class={`h-6 w-6 animate-spin rounded-full border-2 border-t-transparent ${dark ? 'border-zinc-600' : 'border-zinc-300'}`}></div>
 				<div>
 					<p class={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Syncing feed</p>
-					<p class="mt-2 text-[13px] text-zinc-500">Gathering the latest signals...</p>
+					<p class="mt-1 text-[13px] text-zinc-500">Gathering the latest signals…</p>
 				</div>
 			</div>
 		{:else if articles.length === 0}
 			<div class="flex h-full items-center justify-center px-6 text-center">
-				<div>
-					<p class={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>No signals found</p>
-					<p class="mt-2 text-[13px] text-zinc-500">Adjust your filters or search to widen the feed.</p>
-					<button
-						type="button"
-						onclick={onClearAllFilters}
-						class={`mt-4 inline-flex rounded-lg px-3 py-1.5 text-[11px] font-semibold ${dark ? 'bg-white/[0.08] text-zinc-200 hover:bg-white/[0.12]' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'}`}
-					>
-						Clear all filters
-					</button>
-				</div>
+				{#if dbEmpty}
+					<!-- First-run: database has no articles yet -->
+					<div class="max-w-xs">
+						<div class={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${dark ? 'bg-white/[0.06]' : 'bg-zinc-100'}`}>
+							<svg class={`h-6 w-6 ${dark ? 'text-zinc-400' : 'text-zinc-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.338-2.32 5.75 5.75 0 0 1 1.048 11.09" /></svg>
+						</div>
+						<p class={`text-[13px] font-bold ${dark ? 'text-zinc-200' : 'text-zinc-800'}`}>Your feed is empty</p>
+						<p class="mt-1.5 text-[12px] leading-relaxed text-zinc-500">No signals have been fetched yet. Click below to pull in the first batch from all sources.</p>
+						<button
+							type="button"
+							onclick={onSyncSources}
+							class={`mt-5 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] font-bold shadow-md transition-all ${dark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-zinc-700'}`}
+						>
+							Fetch first signals
+						</button>
+					</div>
+				{:else}
+					<!-- Filtered to empty -->
+					<div>
+						<p class={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>No signals found</p>
+						<p class="mt-2 text-[13px] text-zinc-500">Try broadening your filters or search.</p>
+						<button
+							type="button"
+							onclick={onClearAllFilters}
+							class={`mt-4 inline-flex rounded-lg px-3 py-1.5 text-[11px] font-semibold ${dark ? 'bg-white/[0.08] text-zinc-200 hover:bg-white/[0.12]' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'}`}
+						>
+							Clear all filters
+						</button>
+					</div>
+				{/if}
 			</div>
 		{:else}
 			<div class="flex w-full min-w-0 max-w-full flex-col gap-0.5 overflow-hidden px-2 py-2 sm:px-3 sm:py-3">

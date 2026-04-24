@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ArrowUp, Zap } from 'lucide-svelte';
 	import type { Article } from '$lib/api';
-	import { getBrandColor, formatEngagement, relativeTime, stripHtml } from '$lib/ui';
+	import { getBrandColor, formatEngagement, relativeTime, stripHtml, readingTime } from '$lib/ui';
 
 	type Props = {
 		article: Article;
@@ -61,7 +61,13 @@ function signalClass(tier: 'High' | 'Medium' | 'Low') {
 				</span>
 			{/if}
 		</div>
-		<span class={`shrink-0 text-[10px] font-semibold ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>{relativeTime(article.published_date)}</span>
+		<div class="flex shrink-0 items-center gap-1.5">
+		{#if readingTime(article.insight || article.content_snippet || '')}
+			<span class={`text-[10px] font-medium ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{readingTime(article.insight || article.content_snippet || '')}</span>
+			<span class={`${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>·</span>
+		{/if}
+		<span class={`text-[10px] font-semibold ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>{relativeTime(article.published_date)}</span>
+	</div>
 	</div>
 
 	<h3 class={`mt-2 mb-2 line-clamp-2 min-w-0 break-words text-[15px] font-semibold leading-snug tracking-tight transition-colors sm:text-[16px] ${dark ? 'text-zinc-100' : 'text-zinc-800'}`} style="overflow-wrap: anywhere;">{article.title}</h3>

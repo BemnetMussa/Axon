@@ -366,12 +366,54 @@ def trigger_digest(session: Session = Depends(get_session)):
 
 @app.get("/trends")
 def read_trends(session: Session = Depends(get_session)):
-    statement = select(Trend).order_by(col(Trend.count).desc()).limit(10)
-    results = session.exec(statement).all()
-    return [
-        {"keyword": t.keyword, "count": t.count, "velocity": "Rising", "is_new": True}
-        for t in results
-    ]
+    from datetime import date, timedelta
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    # Get the most recent date we have trend data for (may not be today)
+    latest_date = session.exec(
+        select(Trend.trend_date).order_by(col(Trend.trend_date).desc()).limit(1)
+    ).first()
+
+    if not latest_date:
+        return []
+
+    today_trends = session.exec(
+        select(Trend).where(Trend.trend_date == latest_date).order_by(col(Trend.count).desc()).limit(12)
+    ).all()
+
+    # Load yesterday's counts for velocity comparison
+    prev_date = latest_date - timedelta(days=1)
+    prev_counts: dict[str, int] = {
+        t.keyword: t.count
+        for t in session.exec(select(Trend).where(Trend.trend_date == prev_date)).all()
+    }
+
+    result = []
+    for t in today_trends:
+        prev = prev_counts.get(t.keyword, 0)
+        if prev == 0:
+            velocity = "New"
+            is_new = True
+        elif t.count >= prev * 2:
+            velocity = "Surging"
+            is_new = False
+        elif t.count > prev:
+            velocity = "Rising"
+            is_new = False
+        else:
+            velocity = "Steady"
+            is_new = False
+
+        result.append({
+            "keyword": t.keyword,
+            "count": t.count,
+            "velocity": velocity,
+            "is_new": is_new,
+        })
+
+    return result
 
 # ---------------------------------------------------------------------------
 # RSS

@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { MessageSquare, Moon, Sun, Zap, Sparkles, LogOut } from 'lucide-svelte';
+	import { MessageSquare, Moon, Sun, Zap, Sparkles, LogOut, TrendingUp } from 'lucide-svelte';
 	import { authClient } from '$lib/auth-client';
 	import type { NavItem } from '$lib/ui';
+	import type { Trend } from '$lib/api';
 
 	type Props = {
 		navigation: NavItem[];
@@ -9,17 +10,19 @@
 		showSavedOnly: boolean;
 		showDigestView: boolean;
 		sourceCounts: Record<string, number>;
+		trends?: Trend[];
 		theme: 'dark' | 'light';
 		newSignalCount?: number;
 		onNavigate: (id: string | null) => void;
 		onShowSaved: () => void;
 		onShowDigest: () => void;
 		onToggleTheme: () => void;
+		onTopicSearch: (keyword: string) => void;
 	};
 
 	let {
-		navigation, activeCategory, showSavedOnly, showDigestView, sourceCounts, theme, newSignalCount = 0,
-		onNavigate, onShowSaved, onShowDigest, onToggleTheme
+		navigation, activeCategory, showSavedOnly, showDigestView, sourceCounts, trends = [],
+		theme, newSignalCount = 0, onNavigate, onShowSaved, onShowDigest, onToggleTheme, onTopicSearch
 	}: Props = $props();
 
 	let showFeedbackForm = $state(false);
@@ -101,26 +104,59 @@
 		</button>
 	</div>
 
-	<div class="px-2.5 pt-3">
-		<p class={`px-3 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Context</p>
-		<div class={`mx-3 mt-2 rounded-xl border px-3 py-2 ${dark ? 'border-white/[0.06] bg-white/[0.02]' : 'border-zinc-200 bg-zinc-50'}`}>
-			<div class="flex items-center justify-between text-[10px]">
-				<span class={`${dark ? 'text-zinc-500' : 'text-zinc-600'}`}>New Signals</span>
-				<span class={`font-semibold ${newSignalCount > 0 ? 'text-emerald-500' : (dark ? 'text-zinc-300' : 'text-zinc-700')}`}>{newSignalCount}</span>
-			</div>
-			<div class={`mt-2 border-t pt-2 ${dark ? 'border-white/[0.06]' : 'border-zinc-200'}`}>
-				<p class={`mb-1 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Top Sources</p>
-				<div class="space-y-1">
-					{#each topSources as [source, count]}
-						<div class="flex items-center justify-between text-[10px]">
-							<span class={`${dark ? 'text-zinc-400' : 'text-zinc-600'}`}>{source}</span>
-							<span class={`tabular-nums ${dark ? 'text-zinc-500' : 'text-zinc-500'}`}>{count}</span>
-						</div>
-					{/each}
-				</div>
-			</div>
+	<!-- Signal count -->
+	<div class="px-5 pb-1">
+		<div class="flex items-center justify-between">
+			<p class={`text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>New signals</p>
+			<span class={`text-[11px] font-semibold tabular-nums ${newSignalCount > 0 ? 'text-emerald-500' : (dark ? 'text-zinc-600' : 'text-zinc-400')}`}>{newSignalCount}</span>
 		</div>
 	</div>
+
+	<!-- Trending topics -->
+	{#if trends.length > 0}
+		<div class="px-2.5 pt-2">
+			<div class="flex items-center gap-1.5 px-3 pb-1.5">
+				<TrendingUp class={`h-3 w-3 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`} />
+				<p class={`text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Trending now</p>
+			</div>
+			<div class="flex flex-wrap gap-1.5 px-3">
+				{#each trends.slice(0, 10) as trend}
+					{@const isNew = trend.is_new || trend.velocity === 'New'}
+					{@const isSurging = trend.velocity === 'Surging'}
+					<button
+						onclick={() => onTopicSearch(trend.keyword)}
+						class={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-all ${
+							dark
+								? 'border-white/[0.06] bg-white/[0.03] text-zinc-400 hover:border-white/15 hover:bg-white/[0.07] hover:text-zinc-200'
+								: 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-800'
+						}`}
+					>
+						{#if isNew}
+							<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+						{:else if isSurging}
+							<span class="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0"></span>
+						{/if}
+						{trend.keyword}
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	<!-- Top sources -->
+	{#if topSources.length > 0}
+		<div class="px-5 pt-3">
+			<p class={`mb-1.5 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Top sources</p>
+			<div class="space-y-1">
+				{#each topSources as [source, count]}
+					<div class="flex items-center justify-between text-[10px]">
+						<span class={`${dark ? 'text-zinc-400' : 'text-zinc-600'}`}>{source}</span>
+						<span class={`tabular-nums ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{count}</span>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<div class="mt-auto px-5 pb-3">
 		<button

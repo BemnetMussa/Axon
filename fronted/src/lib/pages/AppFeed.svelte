@@ -137,6 +137,7 @@
 		return list;
 	});
 	let currentTitle = $derived(showSavedOnly ? 'Saved' : (activeCategory ?? 'Frontier'));
+	let dbEmpty = $derived(!loading && allArticles.length === 0 && !fetchError);
 	let hasActiveFilters = $derived(
 		!!searchQuery.trim() ||
 		!!activeSource ||
@@ -550,12 +551,14 @@
 		{showSavedOnly}
 		{showDigestView}
 		{sourceCounts}
+		{trends}
 		{theme}
 		newSignalCount={newArticleIds.size}
 		onNavigate={selectCategory}
 		onShowSaved={showSavedView}
 		onShowDigest={showDigest}
 		onToggleTheme={toggleTheme}
+		onTopicSearch={(kw) => { searchQuery = kw; }}
 	/>
 
 	<div class="relative flex min-w-0 flex-1 overflow-hidden lg:rounded-2xl lg:border lg:border-white/5">
@@ -574,6 +577,7 @@
 				<FeedPanel
 					title={currentTitle}
 					articles={filtered}
+					{dbEmpty}
 					{sources}
 					{activeSource}
 					{searchQuery}
