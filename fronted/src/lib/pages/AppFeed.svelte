@@ -152,29 +152,67 @@
 		sortBy !== 'date'
 	);
 
-	function applyTheme(t: 'dark' | 'light', origin?: { x: number; y: number }) {
-		const run = () => {
-			theme = t;
-			document.documentElement.classList.toggle('light', t === 'light');
-			localStorage.setItem(THEME_KEY, t);
-		};
-
-		if (origin && typeof document !== 'undefined' && 'startViewTransition' in document) {
-			document.documentElement.style.setProperty('--vt-x', `${origin.x}px`);
-			document.documentElement.style.setProperty('--vt-y', `${origin.y}px`);
-			document.startViewTransition(run);
-		} else {
-			run();
-		}
+	function applyTheme(t: 'dark' | 'light') {
+		theme = t;
+		document.documentElement.classList.toggle('light', t === 'light');
+		localStorage.setItem(THEME_KEY, t);
 	}
 
 	function toggleTheme(e: MouseEvent) {
+		const nextTheme = theme === 'dark' ? 'light' : 'dark';
+
+		// Respect reduced-motion — instant switch, no overlay
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			applyTheme(nextTheme);
+			return;
+		}
+
 		const el = e.currentTarget as HTMLElement;
 		const rect = el.getBoundingClientRect();
-		applyTheme(theme === 'dark' ? 'light' : 'dark', {
-			x: rect.left + rect.width / 2,
-			y: rect.top + rect.height / 2,
-		});
+		const ox = rect.left + rect.width / 2;
+		const oy = rect.top + rect.height / 2;
+
+		// Radius large enough to cover every corner of the viewport from origin
+		const maxR = Math.ceil(
+			Math.hypot(
+				Math.max(ox, window.innerWidth - ox),
+				Math.max(oy, window.innerHeight - oy)
+			)
+		) + 2;
+
+		// Overlay coloured in the new theme's background — sits above everything
+		const overlay = document.createElement('div');
+		overlay.style.cssText = [
+			'position:fixed',
+			`top:${oy}px`,
+			`left:${ox}px`,
+			`width:${maxR * 2}px`,
+			`height:${maxR * 2}px`,
+			'border-radius:50%',
+			'transform:translate(-50%,-50%) scale(0)',
+			`background:${nextTheme === 'dark' ? '#070707' : '#f8fafc'}`,
+			'z-index:99999',
+			'pointer-events:none',
+			'will-change:transform',
+		].join(';');
+		document.body.appendChild(overlay);
+
+		// Force a paint of scale(0) before the transition starts
+		void overlay.offsetHeight;
+
+		overlay.style.transition = 'transform 0.48s cubic-bezier(0.22, 1, 0.36, 1)';
+		overlay.style.transform = 'translate(-50%,-50%) scale(1)';
+
+		overlay.addEventListener(
+			'transitionend',
+			() => {
+				// Apply theme while the overlay covers the entire page — zero flicker
+				applyTheme(nextTheme);
+				// Remove on the next frame so the themed page is painted first
+				requestAnimationFrame(() => overlay.remove());
+			},
+			{ once: true }
+		);
 	}
 
 	function finishOnboarding() {
