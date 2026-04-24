@@ -152,14 +152,29 @@
 		sortBy !== 'date'
 	);
 
-	function applyTheme(t: 'dark' | 'light') {
-		theme = t;
-		document.documentElement.classList.toggle('light', t === 'light');
-		localStorage.setItem(THEME_KEY, t);
+	function applyTheme(t: 'dark' | 'light', origin?: { x: number; y: number }) {
+		const run = () => {
+			theme = t;
+			document.documentElement.classList.toggle('light', t === 'light');
+			localStorage.setItem(THEME_KEY, t);
+		};
+
+		if (origin && typeof document !== 'undefined' && 'startViewTransition' in document) {
+			document.documentElement.style.setProperty('--vt-x', `${origin.x}px`);
+			document.documentElement.style.setProperty('--vt-y', `${origin.y}px`);
+			document.startViewTransition(run);
+		} else {
+			run();
+		}
 	}
 
-	function toggleTheme() {
-		applyTheme(theme === 'dark' ? 'light' : 'dark');
+	function toggleTheme(e: MouseEvent) {
+		const el = e.currentTarget as HTMLElement;
+		const rect = el.getBoundingClientRect();
+		applyTheme(theme === 'dark' ? 'light' : 'dark', {
+			x: rect.left + rect.width / 2,
+			y: rect.top + rect.height / 2,
+		});
 	}
 
 	function finishOnboarding() {

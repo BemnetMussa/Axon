@@ -11,7 +11,7 @@
 		onNavigate: (id: string | null) => void;
 		onShowSaved: () => void;
 		onShowDigest: () => void;
-		onToggleTheme: () => void;
+		onToggleTheme: (e: MouseEvent) => void;
 	};
 
 	let { items, activeCategory, showSavedOnly, showDigestView, theme, onNavigate, onShowSaved, onShowDigest, onToggleTheme }: Props = $props();
@@ -84,7 +84,7 @@
 			<div class={`my-2 h-px ${dark ? 'bg-white/[0.06]' : 'bg-zinc-100'}`}></div>
 
 			<button
-				onclick={() => { onToggleTheme(); showMenu = false; }}
+				onclick={(e) => { onToggleTheme(e); showMenu = false; }}
 				class={`flex items-center gap-3 rounded-xl px-3 py-3 ${dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'}`}
 			>
 				{#if dark}

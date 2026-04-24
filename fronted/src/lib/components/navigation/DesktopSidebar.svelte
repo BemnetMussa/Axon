@@ -16,7 +16,7 @@
 		onNavigate: (id: string | null) => void;
 		onShowSaved: () => void;
 		onShowDigest: () => void;
-		onToggleTheme: () => void;
+		onToggleTheme: (e: MouseEvent) => void;
 		onTopicSearch: (keyword: string) => void;
 	};
 
@@ -183,7 +183,7 @@
 		</button>
 
 		<button
-			onclick={onToggleTheme}
+			onclick={(e) => onToggleTheme(e)}
 			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-zinc-600 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`}
 		>
 			{#if dark}

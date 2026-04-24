@@ -158,8 +158,12 @@ async def trigger_ingestion(request: Request, context_id: str | None = Query(def
 
 @app.post("/analyze")
 def trigger_analysis(session: Session = Depends(get_session)):
-    count = analyze_articles(session)
-    return {"status": "success", "processed": count}
+    try:
+        count = analyze_articles(session)
+        return {"status": "success", "processed": count}
+    except Exception as exc:
+        print(f"[analyze] failed: {exc}")
+        return {"status": "partial", "processed": 0}
 
 
 @app.post("/retry-insights")
