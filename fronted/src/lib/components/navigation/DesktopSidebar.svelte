@@ -7,6 +7,7 @@
 		navigation: NavItem[];
 		activeCategory: string | null;
 		showSavedOnly: boolean;
+		showDigestView: boolean;
 		sourceCounts: Record<string, number>;
 		theme: 'dark' | 'light';
 		newSignalCount?: number;
@@ -17,7 +18,7 @@
 	};
 
 	let {
-		navigation, activeCategory, showSavedOnly, sourceCounts, theme, newSignalCount = 0,
+		navigation, activeCategory, showSavedOnly, showDigestView, sourceCounts, theme, newSignalCount = 0,
 		onNavigate, onShowSaved, onShowDigest, onToggleTheme
 	}: Props = $props();
 
@@ -124,7 +125,11 @@
 	<div class="mt-auto px-5 pb-3">
 		<button
 			onclick={onShowDigest}
-			class={`mb-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[11px] font-bold transition-all ${dark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-black text-white hover:bg-zinc-800'}`}
+			class={`mb-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[11px] font-bold transition-all ${
+				showDigestView
+					? dark ? 'bg-white text-black' : 'bg-zinc-900 text-white'
+					: dark ? 'bg-white/[0.06] text-zinc-300 hover:bg-white/[0.10] hover:text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 hover:text-black'
+			}`}
 		>
 			<Sparkles class="h-4 w-4" />
 			Digest
