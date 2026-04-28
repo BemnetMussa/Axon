@@ -37,6 +37,12 @@ from app.services.extractor import extract_article_content
 
 scheduler = AsyncIOScheduler()
 
+# Scheduler observability (updated by scheduled_ingest)
+_scheduler_interval_hours = 4
+_last_ingest_at_utc: str | None = None
+_last_ingest_ok: bool | None = None
+_last_ingest_detail: str = ""
+
 # ---------------------------------------------------------------------------
 # Rate limiting — keyed by authenticated user ID (falls back to IP)
 # ---------------------------------------------------------------------------
@@ -79,37 +85,61 @@ CORS_ALLOWED_ORIGINS = [
 
 async def scheduled_ingest():
     """Runs ingestion + analysis on a timer."""
+    global _last_ingest_at_utc, _last_ingest_ok, _last_ingest_detail
     session = get_script_session()
     try:
         count = await ingest_intelligence(session)
         if count > 0:
-            analyzed = analyze_articles(session)
+            try:
+                analyzed = analyze_articles(session)
+            except Exception as ae:
+                print(f"AXON SCHEDULER: analyze after ingest failed: {ae}")
+                analyzed = 0
+            _last_ingest_ok = True
+            _last_ingest_detail = f"ingested {count} new, analyzed {analyzed} articles"
             print(f"AXON SCHEDULER: Ingested {count}, analyzed {analyzed}")
         else:
+            _last_ingest_ok = True
+            _last_ingest_detail = "no new signals (dedupe or empty run)"
             print("AXON SCHEDULER: No new signals")
     except Exception as e:
+        _last_ingest_ok = False
+        _last_ingest_detail = str(e)[:500]
         print(f"AXON SCHEDULER ERROR: {e}")
     finally:
+        _last_ingest_at_utc = datetime.now(timezone.utc).isoformat()
         session.close()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global _scheduler_interval_hours
     init_db()
     # Scheduled ingest only runs while this process is alive. Use a long-lived
     # host (container/VM), not a serverless cold-start model, or the interval
     # will not fire reliably. Override cadence with env INGEST_INTERVAL_HOURS.
-    interval_hours = int(os.getenv("INGEST_INTERVAL_HOURS", "4"))
-    scheduler.add_job(
-        scheduled_ingest,
-        trigger=IntervalTrigger(hours=interval_hours),
-        id="axon_ingest",
-        replace_existing=True,
-    )
-    scheduler.start()
-    print(f"AXON: Scheduler started (every {interval_hours}h)")
+    # Set DISABLE_SCHEDULER=1 if you trigger ingest only via Vercel Cron (see README).
+    _scheduler_interval_hours = int(os.getenv("INGEST_INTERVAL_HOURS", "4"))
+    disable_sched = os.getenv("DISABLE_SCHEDULER", "").lower() in ("1", "true", "yes")
+    if not disable_sched:
+        scheduler.add_job(
+            scheduled_ingest,
+            trigger=IntervalTrigger(hours=_scheduler_interval_hours),
+            id="axon_ingest",
+            replace_existing=True,
+        )
+        scheduler.start()
+        print(f"AXON: Scheduler started (every {_scheduler_interval_hours}h)")
+    else:
+        print("AXON: APScheduler disabled (DISABLE_SCHEDULER=1) — use external cron if needed")
+
+    if os.getenv("INGEST_RUN_ON_STARTUP", "").lower() in ("1", "true", "yes"):
+        asyncio.create_task(scheduled_ingest())
+        print("AXON: INGEST_RUN_ON_STARTUP: queued initial ingest task")
+
     yield
-    scheduler.shutdown()
+    if scheduler.running:
+        scheduler.shutdown()
 
 
 app = FastAPI(title="Axon Intelligence Engine", lifespan=lifespan)
@@ -138,6 +168,9 @@ async def require_internal_auth(request: Request, call_next):
         return await call_next(request)
     path = request.url.path
     if path in ("/docs", "/openapi.json", "/redoc") or path.startswith("/docs"):
+        return await call_next(request)
+    # Public health for uptime monitors (no internal secret)
+    if request.method == "GET" and path in ("/", "/health"):
         return await call_next(request)
     if request.method == "OPTIONS":
         return await call_next(request)
@@ -495,5 +528,38 @@ def get_rss_feed(session: Session = Depends(get_session)):
     return Response(content="\n".join(xml), media_type="application/rss+xml")
 
 @app.get("/")
+def root():
+    return {
+        "status": "Axon is online",
+        "scheduler_running": scheduler.running,
+        "details": "/health",
+    }
+
+
+@app.get("/health")
 def health():
-    return {"status": "Axon is online", "scheduler": scheduler.running}
+    """Public JSON for uptime checks and debugging ingest timing (no auth)."""
+    job = scheduler.get_job("axon_ingest") if scheduler.running else None
+    next_run = None
+    if job and job.next_run_time:
+        next_run = job.next_run_time.isoformat()
+    return {
+        "status": "ok",
+        "service": "axon-api",
+        "scheduler": {
+            "ap_scheduler_running": scheduler.running,
+            "interval_hours": _scheduler_interval_hours,
+            "job_registered": job is not None,
+            "next_run_at_utc": next_run,
+        },
+        "last_scheduled_ingest": {
+            "at_utc": _last_ingest_at_utc,
+            "ok": _last_ingest_ok,
+            "detail": _last_ingest_detail or None,
+        },
+        "hints": {
+            "always_on": "APScheduler only fires while this process stays running.",
+            "env_INGEST_INTERVAL_HOURS": _scheduler_interval_hours,
+            "vercel_cron": "Optional: Vercel Cron can POST via frontend /api/cron/ingest — see project README.",
+        },
+    }

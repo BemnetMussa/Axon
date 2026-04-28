@@ -50,6 +50,32 @@ Axon fetches signals, classifies them into five categories (**AI**, **Signal**, 
 
 **Scheduler note:** Auto-ingestion uses APScheduler inside the API process. It only runs while that process is **continuously up**—deploy the backend on an always-on host (e.g. a container or VM), not a model that cold-stops between requests, or the 4-hour job will not fire reliably. Set `INGEST_INTERVAL_HOURS` in the API environment to change the cadence (default `4`).
 
+### Know if ingest is running (no guessing)
+
+- **`GET /health`** on the API (public, no auth) returns JSON with:
+  - `scheduler.next_run_at_utc` — when APScheduler will run next (if the in-process job is enabled)
+  - `last_scheduled_ingest` — timestamp and outcome of the last scheduled run
+- **`GET /`** — short status plus pointer to `/health`
+
+Backend env toggles:
+
+| Variable | Effect |
+|----------|--------|
+| `INGEST_INTERVAL_HOURS` | Hours between scheduled runs (default `4`) |
+| `INGEST_RUN_ON_STARTUP` | If `true`, queue one ingest when the API starts (good right after deploy) |
+| `DISABLE_SCHEDULER` | If `true`, do not start APScheduler (use when ingest is driven only by external cron) |
+
+### Vercel frontend + cron-triggered ingest
+
+The SvelteKit app can trigger your **hosted FastAPI** on a schedule so ingest still runs even if you rely mainly on Vercel for the UI:
+
+1. Add **`CRON_SECRET`** in the Vercel project (Settings → Environment Variables). Use a long random string. Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` to your route.
+2. Ensure **`INTERNAL_API_URL`**, **`AXON_INTERNAL_SECRET`**, and (optional) **`CRON_INGEST_USER_ID`** are set on Vercel so the serverless function can call `POST {INTERNAL_API_URL}/ingest`.
+3. [`fronted/vercel.json`](fronted/vercel.json) defines `GET /api/cron/ingest` every **4 hours** (UTC cron: `0 */4 * * *`). Adjust the schedule if needed.
+4. **Avoid double ingest:** if your API already runs APScheduler 24/7, you do **not** need Vercel cron—pick one. If you use **only** Vercel cron for ingest, set **`DISABLE_SCHEDULER=1`** on the API.
+
+**Custom domain on Vercel:** update `BETTER_AUTH_URL`, OAuth redirect URIs, and `CORS_ALLOWED_ORIGINS` on the API to match `https://yourdomain.com`.
+
 ---
 
 ## Quick Start
