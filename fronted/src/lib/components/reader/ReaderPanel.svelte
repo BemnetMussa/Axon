@@ -145,14 +145,14 @@
 				<span class="sm:hidden" style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
 			</div>
 
-			<h2 class={`mb-6 text-[24px] font-bold leading-tight tracking-tight sm:text-[30px] ${dark ? 'text-white' : 'text-zinc-900'}`}>{article.title}</h2>
+			<h2 class={`mb-6 text-[24px] font-bold leading-tight tracking-tight sm:text-[30px] lg:text-[32px] ${dark ? 'text-white' : 'text-zinc-900'}`}>{article.title}</h2>
 
 			{#if dark}
-				<div class="prose prose-invert prose-sm max-w-none text-[14px] leading-7 text-zinc-300 sm:text-[15px] sm:leading-8">
+				<div class="prose prose-invert prose-sm max-w-none text-[14px] leading-7 text-zinc-300 sm:text-[15px] sm:leading-8 lg:text-[16px] lg:leading-9">
 					{@html marked.parse(article.insight || article.content_snippet || '')}
 				</div>
 			{:else}
-				<div class="prose prose-sm max-w-none text-[14px] leading-7 text-zinc-700 sm:text-[15px] sm:leading-8">
+				<div class="prose prose-sm max-w-none text-[14px] leading-7 text-zinc-700 sm:text-[15px] sm:leading-8 lg:text-[16px] lg:leading-9">
 					{@html marked.parse(article.insight || article.content_snippet || '')}
 				</div>
 			{/if}

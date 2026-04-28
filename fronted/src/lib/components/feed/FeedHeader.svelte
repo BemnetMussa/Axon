@@ -52,20 +52,20 @@
 
 		<!-- Desktop title -->
 		<div class="hidden items-baseline gap-2.5 lg:flex">
-			<h2 class={`text-[14px] font-bold ${dark ? 'text-white' : 'text-zinc-900'}`}>{title}</h2>
-			<span class={`text-[10px] font-medium tabular-nums ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{articleCount}</span>
+			<h2 class={`text-[15px] font-bold ${dark ? 'text-white' : 'text-zinc-900'}`}>{title}</h2>
+			<span class={`text-[11px] font-medium tabular-nums ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{articleCount}</span>
 		</div>
 
 		<div class="ml-auto flex min-w-0 items-center gap-2">
 			<!-- Search -->
 			<label class="group relative min-w-0 flex-1 sm:flex-none">
-				<Search class={`pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transition-colors ${dark ? 'text-zinc-600' : 'text-zinc-400'}`} />
+				<Search class={`pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transition-colors lg:left-3 lg:h-4 lg:w-4 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`} />
 				<input
 					type="text"
 					value={searchQuery}
 					oninput={(event) => onSearchChange((event.currentTarget as HTMLInputElement).value)}
 					placeholder="Search..."
-					class={`${inputClass(theme)} w-full pl-8 pr-3 sm:w-36 sm:focus:w-52 lg:w-40 lg:focus:w-60`}
+					class={`${inputClass(theme)} w-full pl-8 pr-3 sm:w-36 sm:focus:w-52 lg:w-44 lg:pl-9 lg:focus:w-64`}
 				/>
 			</label>
 

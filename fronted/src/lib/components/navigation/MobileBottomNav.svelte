@@ -40,10 +40,13 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
+		class="fixed inset-0 z-[51] bg-black/60 backdrop-blur-sm lg:hidden"
 		onclick={() => (showMenu = false)}
 	></div>
-	<div class={`fixed inset-x-0 bottom-0 z-50 rounded-t-2xl px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-4 lg:hidden ${dark ? 'bg-[#111]' : 'bg-white'}`}>
+	<div
+		class={`fixed inset-x-0 z-[52] max-h-[min(85vh,calc(100dvh-5rem))] overflow-y-auto rounded-t-2xl px-3 pt-4 lg:hidden ${dark ? 'bg-[#111]' : 'bg-white'}`}
+		style="bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)); padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));"
+	>
 		<div class="mb-3 flex items-center justify-between px-1">
 			<h3 class={`text-sm font-bold ${dark ? 'text-white' : 'text-black'}`}>Explore</h3>
 			<button

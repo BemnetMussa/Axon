@@ -166,12 +166,12 @@
 		<div class="no-scrollbar flex items-center gap-1 overflow-x-auto sm:gap-1.5">
 			<button
 				onclick={() => onSourceSelect(null)}
-				class={`whitespace-nowrap rounded-md px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-all sm:px-2.5 sm:py-1.5 sm:text-[10px] ${sourceBtnClass(activeSource === null)}`}
+				class={`whitespace-nowrap rounded-md px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-all sm:px-2.5 sm:py-1.5 sm:text-[10px] lg:px-3 lg:text-[11px] ${sourceBtnClass(activeSource === null)}`}
 			>All</button>
 			{#each sources as source}
 				<button
 					onclick={() => onSourceSelect(source)}
-					class={`whitespace-nowrap rounded-md px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-all sm:px-2.5 sm:py-1.5 sm:text-[10px] ${sourceBtnClass(activeSource === source)}`}
+					class={`whitespace-nowrap rounded-md px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-all sm:px-2.5 sm:py-1.5 sm:text-[10px] lg:px-3 lg:text-[11px] ${sourceBtnClass(activeSource === source)}`}
 				>{source}</button>
 			{/each}
 		</div>
@@ -183,7 +183,7 @@
 			{#each timeOptions as opt}
 				<button
 					onclick={() => onTimeFilterChange(opt.value)}
-					class={`whitespace-nowrap rounded-md px-1.5 py-1 text-[9px] font-semibold transition-all sm:px-2 sm:text-[10px] ${sortBtnClass(timeFilter === opt.value)}`}
+					class={`whitespace-nowrap rounded-md px-1.5 py-1 text-[9px] font-semibold transition-all sm:px-2 sm:text-[10px] lg:px-2.5 lg:text-[11px] ${sortBtnClass(timeFilter === opt.value)}`}
 				>{opt.label}</button>
 			{/each}
 		</div>
@@ -192,7 +192,7 @@
 			{#each sortOptions as opt}
 				<button
 					onclick={() => onSortChange(opt.value)}
-					class={`whitespace-nowrap rounded-md px-1.5 py-1 text-[9px] font-semibold transition-all sm:px-2 sm:text-[10px] ${sortBtnClass(sortBy === opt.value)}`}
+					class={`whitespace-nowrap rounded-md px-1.5 py-1 text-[9px] font-semibold transition-all sm:px-2 sm:text-[10px] lg:px-2.5 lg:text-[11px] ${sortBtnClass(sortBy === opt.value)}`}
 				>{opt.label}</button>
 			{/each}
 		</div>
@@ -239,7 +239,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={scrollArea}
-		class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pb-20 lg:pb-0"
+		class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))] lg:pb-0"
 		onscroll={handleScroll}
 		ontouchstart={handleTouchStart}
 		ontouchmove={handleTouchMove}
@@ -325,8 +325,11 @@
 	{#if showMobileFilters}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="fixed inset-0 z-40 bg-black/55 lg:hidden" onclick={() => (showMobileFilters = false)}></div>
-		<div class={`fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-4 lg:hidden ${dark ? 'border-white/[0.06] bg-[#111214]' : 'border-zinc-200 bg-white'}`}>
+		<div class="fixed inset-0 z-[51] bg-black/55 lg:hidden" onclick={() => (showMobileFilters = false)}></div>
+		<div
+			class={`fixed inset-x-0 z-[52] max-h-[min(88vh,calc(100dvh-5rem))] overflow-y-auto rounded-t-3xl border px-4 pt-4 lg:hidden ${dark ? 'border-white/[0.06] bg-[#111214]' : 'border-zinc-200 bg-white'}`}
+			style="bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)); padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));"
+		>
 			<div class="mb-3 flex items-center justify-between">
 				<p class={`text-sm font-bold ${dark ? 'text-zinc-100' : 'text-zinc-900'}`}>Feed filters</p>
 				<button onclick={() => (showMobileFilters = false)} class={`${dark ? 'text-zinc-500' : 'text-zinc-400'}`} aria-label="Close filters">

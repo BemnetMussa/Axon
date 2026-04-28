@@ -69,7 +69,7 @@
 
 	<!-- Source / category / signal meta row -->
 	<div class="flex min-w-0 items-center justify-between gap-2">
-		<div class={`flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+		<div class={`flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-[10px] font-semibold uppercase tracking-wider lg:text-[11px] ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
 			{#if isNew}
 				<span class={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-bold tracking-widest ${dark ? 'bg-white/10 text-zinc-300' : 'bg-zinc-200 text-zinc-600'}`}>NEW</span>
 			{/if}
@@ -95,11 +95,11 @@
 	</div>
 
 	<!-- Title -->
-	<h3 class={`mt-2 mb-2 line-clamp-2 min-w-0 break-words text-[15px] font-semibold leading-snug tracking-tight transition-colors sm:text-[16px] ${dark ? 'text-zinc-100' : 'text-zinc-800'}`} style="overflow-wrap: anywhere;">{article.title}</h3>
+	<h3 class={`mt-2 mb-2 line-clamp-2 min-w-0 break-words text-[15px] font-semibold leading-snug tracking-tight transition-colors sm:text-[16px] lg:text-[17px] ${dark ? 'text-zinc-100' : 'text-zinc-800'}`} style="overflow-wrap: anywhere;">{article.title}</h3>
 
 	<!-- Snippet + actions row -->
 	<div class="flex min-w-0 items-end gap-2">
-		<p class={`line-clamp-2 min-w-0 flex-1 overflow-hidden text-[12.5px] leading-relaxed sm:text-[13px] ${dark ? 'text-zinc-400' : 'text-zinc-500'}`} style="overflow-wrap: anywhere;">{stripHtml(article.insight || article.content_snippet || '')}</p>
+		<p class={`line-clamp-2 min-w-0 flex-1 overflow-hidden text-[12.5px] leading-relaxed sm:text-[13px] lg:text-[14px] lg:leading-relaxed ${dark ? 'text-zinc-400' : 'text-zinc-500'}`} style="overflow-wrap: anywhere;">{stripHtml(article.insight || article.content_snippet || '')}</p>
 
 		<div class="pointer-events-auto flex shrink-0 items-center gap-1">
 			<!-- Save -->
@@ -119,7 +119,7 @@
 		<button
 			type="button"
 			onclick={handleChatTeaser}
-			class={`pointer-events-auto inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all ${
+			class={`pointer-events-auto inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all lg:text-[12px] lg:px-3 ${
 				dark
 					? 'border-white/[0.06] text-zinc-500 hover:border-white/15 hover:bg-white/[0.05] hover:text-zinc-300'
 					: 'border-zinc-200 text-zinc-400 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-600'

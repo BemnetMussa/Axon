@@ -2,7 +2,7 @@ export type ThemeMode = 'dark' | 'light';
 
 /** Standard text input — same border/bg/focus language everywhere */
 export function inputClass(theme: ThemeMode) {
-	return `h-9 rounded-lg border px-3 text-[13px] outline-none transition-colors ${
+	return `h-9 rounded-lg border px-3 text-[13px] outline-none transition-colors lg:h-10 lg:text-[14px] ${
 		theme === 'dark'
 			? 'border-white/[0.06] bg-white/[0.03] text-white placeholder:text-zinc-600 focus:border-white/15'
 			: 'border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400'
@@ -33,12 +33,12 @@ export function iconButtonClass(theme: ThemeMode, tone: 'default' | 'muted' = 'd
 export function chipButtonClass(theme: ThemeMode, active = false) {
 	if (active) {
 		return theme === 'dark'
-			? 'rounded-md bg-white/[0.08] text-zinc-200'
-			: 'rounded-md bg-zinc-100 text-zinc-800';
+			? 'rounded-md bg-white/[0.08] text-zinc-200 lg:text-[12px]'
+			: 'rounded-md bg-zinc-100 text-zinc-800 lg:text-[12px]';
 	}
 	return theme === 'dark'
-		? 'rounded-md text-zinc-600 hover:text-zinc-400'
-		: 'rounded-md text-zinc-400 hover:text-zinc-600';
+		? 'rounded-md text-zinc-600 hover:text-zinc-400 lg:text-[12px]'
+		: 'rounded-md text-zinc-400 hover:text-zinc-600 lg:text-[12px]';
 }
 
 /** Floating card / dock panel */
@@ -61,7 +61,7 @@ export function primaryBtnClass(theme: ThemeMode) {
 
 /** Ghost/secondary button in the quick-actions bar */
 export function quickActionClass(theme: ThemeMode, active = false) {
-	return `inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition-all ${
+	return `inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition-all lg:text-[11px] lg:px-3 lg:py-2 ${
 		active
 			? theme === 'dark'
 				? 'border-white/[0.15] bg-white/[0.08] text-zinc-100'
