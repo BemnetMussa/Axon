@@ -104,6 +104,56 @@
 		{/if}
 	</div>
 
+	<!-- Mobile: same quick actions as desktop (touch-friendly) -->
+	<div class={`lg:hidden border-t px-4 py-2.5 sm:px-5 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
+		<p class={`mb-2 text-[9px] font-bold uppercase tracking-wider ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Feed actions</p>
+		<div class="flex flex-wrap items-stretch gap-2">
+			{#if hasSemanticSearch}
+				<span class={`inline-flex items-center rounded-full px-2 py-1.5 text-[10px] font-semibold ${dark ? 'bg-violet-500/15 text-violet-300' : 'bg-violet-100 text-violet-700'}`}>
+					Semantic search
+				</span>
+			{/if}
+			<button
+				type="button"
+				onclick={onSyncSources}
+				title="Fetch fresh articles from the web (all sources)"
+				class={`${quickActionClass(theme, syncIndicator)} min-h-11 py-2`}
+			>
+				{#if syncIndicator}
+					<RefreshCw class="h-3.5 w-3.5 animate-spin" />
+					Syncing…
+				{:else}
+					<Download class="h-3.5 w-3.5" />
+					Sync web sources
+				{/if}
+			</button>
+			<button
+				type="button"
+				onclick={checkNewNow}
+				disabled={checkingNew || !onCheckNew}
+				title="Load newest articles already in the database"
+				class={`${quickActionClass(theme, hasNewSignals)} min-h-11 py-2 disabled:opacity-50`}
+			>
+				{#if checkingNew}
+					<RefreshCw class="h-3.5 w-3.5 animate-spin" />
+					Checking…
+				{:else}
+					<BellDot class={`h-3.5 w-3.5 ${hasNewSignals ? (dark ? 'text-emerald-400' : 'text-emerald-600') : ''}`} />
+					{hasNewSignals ? 'New signals' : 'Check new'}
+				{/if}
+			</button>
+			<button
+				type="button"
+				onclick={onClearAllFilters}
+				disabled={!hasActiveFilters || !onClearAllFilters}
+				class={`${quickActionClass(theme)} min-h-11 py-2 disabled:opacity-40`}
+			>
+				<Eraser class="h-3.5 w-3.5" />
+				Clear filters
+			</button>
+		</div>
+	</div>
+
 	<!-- Desktop: quick-actions bar -->
 	<div class={`hidden items-center gap-1.5 border-t px-4 py-2 lg:flex ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
 		{#if hasSemanticSearch}

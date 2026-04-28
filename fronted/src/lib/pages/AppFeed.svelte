@@ -85,6 +85,26 @@
 		}, 2500);
 	}
 
+	function friendlyIngestError(error: unknown): string {
+		const msg = error instanceof Error ? error.message : String(error);
+		if (/\bAPI 429\b/.test(msg)) {
+			return 'You’re syncing too often. Wait about a minute, then try again.';
+		}
+		return 'Couldn’t fetch new articles from the web. Your feed below shows what’s already saved — try again shortly.';
+	}
+
+	function friendlyListError(error: unknown): string {
+		const msg = error instanceof Error ? error.message : String(error);
+		if (/\bAPI 429\b/.test(msg)) {
+			return 'Too many requests. Wait a minute and try again.';
+		}
+		return 'Couldn’t refresh the feed from the server. Check your connection and try again.';
+	}
+
+	function clearFetchError() {
+		fetchError = null;
+	}
+
 	$effect(() => {
 		if (searchQuery.trim().length > 2) {
 			searchingSemantic = true;
@@ -260,10 +280,10 @@
 		startPolling();
 	}
 
-	async function fetchFirstPage() {
+	async function fetchFirstPage(options?: { skipClearError?: boolean }) {
 		loading = allArticles.length === 0;
 		syncIndicator = true;
-		fetchError = null;
+		if (!options?.skipClearError) fetchError = null;
 		try {
 			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
 			allArticles = articleRes.articles;
@@ -273,7 +293,7 @@
 			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
 		} catch (error) {
 			console.error('Fetch failed', error);
-			fetchError = error instanceof Error ? error.message : 'Failed to load articles.';
+			fetchError = friendlyListError(error);
 		} finally {
 			loading = false;
 			syncIndicator = false;
@@ -440,7 +460,7 @@
 			trendingArticles = res.articles;
 		} catch (error) {
 			console.error('Fetch trending failed', error);
-			fetchError = error instanceof Error ? error.message : 'Failed to load trending articles.';
+			fetchError = friendlyListError(error);
 		} finally {
 			loading = false;
 			syncIndicator = false;
@@ -511,14 +531,17 @@
 		analytics.syncSources(activeCategory);
 		syncIndicator = true;
 		fetchError = null;
+		let ingestWarning: string | null = null;
 		try {
 			await api.triggerRefresh(activeCategory);
 			if (activeCategory === 'GitHub') activeSource = 'GitHub';
-			await fetchFirstPage();
 		} catch (error) {
-			console.error('Refresh failed', error);
-			fetchError = error instanceof Error ? error.message : 'Failed to refresh feed.';
-			syncIndicator = false;
+			console.error('Ingest failed', error);
+			ingestWarning = friendlyIngestError(error);
+		}
+		await fetchFirstPage({ skipClearError: !!ingestWarning });
+		if (ingestWarning && !fetchError) {
+			fetchError = ingestWarning;
 		}
 	}
 
@@ -645,8 +668,20 @@
 		<div class={`min-w-0 overflow-hidden ${selectedArticle || showDigestView ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
 			<div class={`glass-panel flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0b0b0b]/40' : 'bg-white/50'}`}>
 				{#if fetchError}
-					<div class={`mx-3 mt-3 rounded-xl border px-3 py-2 text-xs ${theme === 'dark' ? 'border-red-400/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'}`}>
-						{fetchError}
+					<div class={`mx-3 mt-3 flex flex-col gap-2 rounded-xl border px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between ${theme === 'dark' ? 'border-amber-400/35 bg-amber-500/10 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>
+						<p class="min-w-0 flex-1 leading-relaxed">{fetchError}</p>
+						<div class="flex shrink-0 gap-2">
+							<button
+								type="button"
+								onclick={() => manualRefresh()}
+								class={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold ${theme === 'dark' ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-amber-900/90 text-white hover:bg-amber-900'}`}
+							>Retry sync</button>
+							<button
+								type="button"
+								onclick={clearFetchError}
+								class={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${theme === 'dark' ? 'text-amber-200/80 hover:text-white' : 'text-amber-900/80 hover:text-amber-950'}`}
+							>Dismiss</button>
+						</div>
 					</div>
 				{/if}
 				{#if uiNotice}

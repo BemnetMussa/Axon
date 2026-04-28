@@ -48,6 +48,8 @@ Axon fetches signals, classifies them into five categories (**AI**, **Signal**, 
 - **PWA** — installable on mobile, works offline for cached content
 - **Responsive** — full-width desktop layout, mobile-optimized with bottom nav
 
+**Scheduler note:** Auto-ingestion uses APScheduler inside the API process. It only runs while that process is **continuously up**—deploy the backend on an always-on host (e.g. a container or VM), not a model that cold-stops between requests, or the 4-hour job will not fire reliably. Set `INGEST_INTERVAL_HOURS` in the API environment to change the cadence (default `4`).
+
 ---
 
 ## Quick Start

@@ -96,6 +96,9 @@ async def scheduled_ingest():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # Scheduled ingest only runs while this process is alive. Use a long-lived
+    # host (container/VM), not a serverless cold-start model, or the interval
+    # will not fire reliably. Override cadence with env INGEST_INTERVAL_HOURS.
     interval_hours = int(os.getenv("INGEST_INTERVAL_HOURS", "4"))
     scheduler.add_job(
         scheduled_ingest,
