@@ -239,6 +239,7 @@ async def hunt_github_trending(client: httpx.AsyncClient):
             ("stars:>200 topic:machine-learning", "AI"),
             ("stars:>100 language:Python topic:ai", "Momentum"),
             ("stars:>50 sort:updated", "Momentum"),
+            ("stars:>10", "Momentum"), # Maximum fallback
         ]
         for q, cat in fallback_queries:
             batch = await search_github(q, cat)

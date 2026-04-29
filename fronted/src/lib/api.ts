@@ -133,6 +133,20 @@ export const api = {
     generateDigest: async (): Promise<{ status: string; digest?: string; detail?: string }> => {
         const res = await fetch(`${BASE_URL}/digests/generate`, { method: 'POST' });
         return jsonOrThrow<{ status: string; digest?: string; detail?: string }>(res);
+    },
+    
+    submitFeedback: async (rating: number, comment?: string): Promise<{ status: string }> => {
+        const res = await fetch(`${BASE_URL}/feedback`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rating, comment })
+        });
+        return jsonOrThrow<{ status: string }>(res);
+    },
+
+    getHealth: async (): Promise<any> => {
+        const res = await fetch(`${BASE_URL}/health`);
+        return res.json();
     }
 };
 

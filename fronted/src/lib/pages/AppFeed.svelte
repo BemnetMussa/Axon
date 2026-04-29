@@ -46,6 +46,7 @@
 	let newArticleIds = $state<Set<number>>(new Set());
 	let readArticleIds = $state<Set<number>>(new Set());
 	let feedScrollArea = $state<HTMLDivElement | undefined>();
+    let pendingNewArticlesCount = $state(0);
 
 	const SAVED_KEY = 'axon_saved_signals';
 	const SEEN_KEY = 'axon_seen_articles';
@@ -327,6 +328,7 @@
 
 			if (freshArticles.length > 0) {
 				scrollFeedToTop();
+                pendingNewArticlesCount = 0;
 			}
 		} catch {
 			// silent — user still has cached data
@@ -341,7 +343,9 @@
 			if (!latestId) return;
 			try {
 				const count = await api.countNewSince(latestId);
-				if (count > 0) await backgroundRevalidate();
+				if (count > 0) {
+                    pendingNewArticlesCount = count;
+                }
 			} catch {
 				/* silent */
 			}
@@ -416,12 +420,6 @@
 
 		if (id === 'Trending') {
 			await fetchTrendingPage();
-		} else {
-			setTimeout(() => {
-				if (filtered.length === 0) {
-					manualRefresh();
-				}
-			}, 10);
 		}
 	}
 
@@ -527,23 +525,6 @@
 		}
 	}
 
-	async function manualRefresh() {
-		analytics.syncSources(activeCategory);
-		syncIndicator = true;
-		fetchError = null;
-		let ingestWarning: string | null = null;
-		try {
-			await api.triggerRefresh(activeCategory);
-			if (activeCategory === 'GitHub') activeSource = 'GitHub';
-		} catch (error) {
-			console.error('Ingest failed', error);
-			ingestWarning = friendlyIngestError(error);
-		}
-		await fetchFirstPage({ skipClearError: !!ingestWarning });
-		if (ingestWarning && !fetchError) {
-			fetchError = ingestWarning;
-		}
-	}
 
 	async function loadMore() {
 		if (loadingMore || loadMoreLock || !hasMore || !nextCursor) return;
@@ -673,11 +654,6 @@
 						<div class="flex shrink-0 gap-2">
 							<button
 								type="button"
-								onclick={() => manualRefresh()}
-								class={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold ${theme === 'dark' ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-amber-900/90 text-white hover:bg-amber-900'}`}
-							>Retry sync</button>
-							<button
-								type="button"
 								onclick={clearFetchError}
 								class={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${theme === 'dark' ? 'text-amber-200/80 hover:text-white' : 'text-amber-900/80 hover:text-amber-950'}`}
 							>Dismiss</button>
@@ -689,6 +665,21 @@
 						{uiNotice}
 					</div>
 				{/if}
+                
+                {#if pendingNewArticlesCount > 0}
+                    <div class="flex justify-center mt-3 absolute left-0 right-0 z-20 pointer-events-none">
+                        <button
+                            onclick={() => backgroundRevalidate()}
+                            class={`pointer-events-auto flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] font-bold shadow-xl transition-all hover:scale-105 active:scale-95 ${theme === 'dark' ? 'bg-blue-600 border-blue-400 text-white shadow-blue-500/20' : 'bg-zinc-900 border-zinc-700 text-white shadow-black/20'}`}
+                        >
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                <span class="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
+                            </span>
+                            {pendingNewArticlesCount} new signals detected
+                        </button>
+                    </div>
+                {/if}
 				<FeedPanel
 					title={currentTitle}
 					articles={filtered}
@@ -719,7 +710,6 @@
 				onArticleOpen={openArticle}
 				onArticleOpenWithChat={openArticleWithChat}
 				onToggleSave={toggleSave}
-					onSyncSources={manualRefresh}
 					onShowDigest={showDigest}
 					onLoadMore={loadMore}
 					onCheckNew={checkForNew}

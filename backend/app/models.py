@@ -39,3 +39,10 @@ class SavedArticle(SQLModel, table=True):
     article_id: int = Field(primary_key=True, index=True)
     saved_at: datetime = Field(default_factory=datetime.utcnow) # type: ignore
 
+class Feedback(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: str = Field(index=True)
+    rating: int = Field(ge=1, le=5)
+    comment: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow) # type: ignore
+

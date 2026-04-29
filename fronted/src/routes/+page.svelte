@@ -61,7 +61,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 
 		<div class="mt-8 flex w-full max-w-sm flex-col items-center gap-3">
 			<a href="/signup" class="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#5B8CFF] px-6 text-sm font-semibold text-[#0B0F17] transition-colors hover:bg-[#4A78EA]">
-				Get today's brief
+				Start for free
 				<ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
 			</a>
 			<button class="group inline-flex items-center gap-2 text-sm font-medium text-[#7B8497] transition-colors hover:text-[#A3ADBF]">
@@ -246,10 +246,10 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 					Join thousands of elite builders who use AXON to stay ahead of the curve without sacrificing their time.
 				</p>
 				<a href="/signup" class="inline-flex h-12 items-center justify-center gap-3 rounded-xl bg-[#5B8CFF] px-8 text-base font-semibold text-[#0B0F17] transition-colors hover:bg-[#4A78EA]">
-					Get today's brief
+					Join for free
 					<ArrowRight class="h-5 w-5" />
 				</a>
-				<p class="mt-6 text-sm text-[#7B8497]">No credit card required. Unsubscribe anytime.</p>
+				<p class="mt-6 text-sm text-[#7B8497]">100% Free. No credit card required. Unsubscribe anytime.</p>
 			</div>
 		</div>
 	</section>

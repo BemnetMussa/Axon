@@ -2,7 +2,9 @@
 	import { MessageSquare, Moon, Sun, Zap, Sparkles, LogOut, TrendingUp } from 'lucide-svelte';
 	import { authClient } from '$lib/auth-client';
 	import type { NavItem } from '$lib/ui';
-	import type { Trend } from '$lib/api';
+	import { onMount, onDestroy } from 'svelte';
+	import { api, type Trend } from '$lib/api';
+	import FeedbackModal from '../feedback/FeedbackModal.svelte';
 
 	type Props = {
 		navigation: NavItem[];
@@ -25,32 +27,31 @@
 		theme, newSignalCount = 0, onNavigate, onShowSaved, onShowDigest, onToggleTheme, onTopicSearch
 	}: Props = $props();
 
-	let showFeedbackForm = $state(false);
-	let feedbackText = $state('');
-	let feedbackSent = $state(false);
+	let showFeedbackModal = $state(false);
+	let lastSynced = $state<string | null>(null);
+    let healthPollTimer: any;
+
 	let dark = $derived(theme === 'dark');
 	let topSources = $derived(Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]).slice(0, 6));
 	let activeModeLabel = $derived(showSavedOnly ? 'Saved' : (activeCategory ?? 'Frontier'));
 
-	function openFeedback() {
-		showFeedbackForm = !showFeedbackForm;
-		feedbackSent = false;
-		feedbackText = '';
-	}
+	async function updateHealth() {
+        try {
+            const health = await api.getHealth();
+            lastSynced = health.last_scheduled_ingest?.relative || null;
+        } catch {
+            /* silent */
+        }
+    }
 
-	function submitFeedback() {
-		if (!feedbackText.trim()) return;
-		const title = encodeURIComponent(`Feedback: ${feedbackText.slice(0, 60)}`);
-		const body = encodeURIComponent(feedbackText);
-		window.open(
-			`https://github.com/bemnetmussa/axon/issues/new?title=${title}&body=${body}&labels=feedback`,
-			'_blank',
-			'noopener,noreferrer'
-		);
-		feedbackSent = true;
-		feedbackText = '';
-		setTimeout(() => { showFeedbackForm = false; feedbackSent = false; }, 2000);
-	}
+	onMount(() => {
+        updateHealth();
+        healthPollTimer = setInterval(updateHealth, 60000); // Check health every min
+    });
+
+    onDestroy(() => {
+        if (healthPollTimer) clearInterval(healthPollTimer);
+    });
 
 	function navItemClass(active: boolean) {
 		if (active && dark) return 'bg-white/[0.06] text-white';
@@ -195,35 +196,21 @@
 			{/if}
 		</button>
 
-		{#if showFeedbackForm}
-			<div class={`rounded-md border p-2.5 ${dark ? 'border-white/[0.06] bg-white/[0.02]' : 'border-zinc-200 bg-zinc-50'}`}>
-				{#if feedbackSent}
-					<p class="text-center text-[11px] text-emerald-500">Opening GitHub — thanks!</p>
-				{:else}
-					<textarea
-						bind:value={feedbackText}
-						placeholder="What's on your mind?"
-						rows={3}
-						class={`mb-2 w-full resize-none rounded bg-transparent text-[11px] leading-relaxed outline-none ${dark ? 'text-zinc-300 placeholder:text-zinc-600' : 'text-zinc-700 placeholder:text-zinc-400'}`}
-					></textarea>
-					<div class="flex items-center justify-between">
-						<button onclick={() => (showFeedbackForm = false)} class="text-[10px] font-semibold text-zinc-500">Cancel</button>
-						<button
-							onclick={submitFeedback}
-							disabled={!feedbackText.trim()}
-							class={`rounded-md px-2.5 py-1 text-[10px] font-bold transition-opacity disabled:opacity-30 ${dark ? 'bg-white text-black' : 'bg-black text-white'}`}
-						>Submit</button>
-					</div>
-				{/if}
-			</div>
-		{:else}
-			<button
-				onclick={openFeedback}
-				class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-zinc-600 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`}
-			>
-				<MessageSquare class="h-4 w-4 shrink-0" />
-				<span class="text-[10px] font-semibold">Feedback</span>
-			</button>
-		{/if}
+		<button
+			onclick={() => showFeedbackModal = true}
+			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-zinc-600 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`}
+		>
+			<MessageSquare class="h-4 w-4 shrink-0" />
+			<span class="text-[10px] font-semibold">Feedback</span>
+		</button>
+        
+        {#if lastSynced}
+            <div class="px-3 py-1 flex items-center gap-2">
+                <div class="h-1 w-1 rounded-full bg-emerald-500"></div>
+                <span class={`text-[9px] font-medium ${dark ? 'text-zinc-700' : 'text-zinc-400'}`}>Synced {lastSynced}</span>
+            </div>
+        {/if}
 	</div>
 </nav>
+
+<FeedbackModal bind:show={showFeedbackModal} {theme} />

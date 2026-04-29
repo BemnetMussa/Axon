@@ -22,7 +22,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.core.database import init_db, get_session, get_script_session
-from app.models import Article, Trend, Digest, SavedArticle
+from app.models import Article, Trend, Digest, SavedArticle, Feedback
 from app.services.fetcher import ingest_intelligence
 from app.services.analyzer import (
     analyze_articles,
@@ -526,6 +526,19 @@ def get_rss_feed(session: Session = Depends(get_session)):
     xml.append('</channel></rss>')
     
     return Response(content="\n".join(xml), media_type="application/rss+xml")
+    
+@app.post("/feedback")
+@limiter.limit("5/hour")
+def submit_feedback(request: Request, feedback: Feedback, session: Session = Depends(get_session)):
+    user_id = request.headers.get("X-Axon-User-Id")
+    if not user_id:
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    
+    feedback.user_id = user_id
+    feedback.created_at = datetime.utcnow()
+    session.add(feedback)
+    session.commit()
+    return {"status": "success"}
 
 @app.get("/")
 def root():
@@ -543,6 +556,20 @@ def health():
     next_run = None
     if job and job.next_run_time:
         next_run = job.next_run_time.isoformat()
+    last_ingest_relative = None
+    if _last_ingest_at_utc:
+        try:
+            last_dt = datetime.fromisoformat(_last_ingest_at_utc)
+            delta = datetime.now(timezone.utc) - last_dt
+            if delta.total_seconds() < 60:
+                last_ingest_relative = "just now"
+            elif delta.total_seconds() < 3600:
+                last_ingest_relative = f"{int(delta.total_seconds() // 60)}m ago"
+            else:
+                last_ingest_relative = f"{int(delta.total_seconds() // 3600)}h ago"
+        except Exception:
+            pass
+
     return {
         "status": "ok",
         "service": "axon-api",
@@ -556,6 +583,7 @@ def health():
             "at_utc": _last_ingest_at_utc,
             "ok": _last_ingest_ok,
             "detail": _last_ingest_detail or None,
+            "relative": last_ingest_relative,
         },
         "hints": {
             "always_on": "APScheduler only fires while this process stays running.",
