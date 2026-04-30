@@ -70,5 +70,14 @@ export const auth = betterAuth({
 			clientSecret: googleClientSecret,
 		},
 	},
+	session: {
+		expiresIn: 60 * 60 * 24 * 14, // 14 days
+		updateAge: 60 * 60 * 24, // 1 day
+	},
+	advanced: {
+		crossSubDomainCookies: {
+			enabled: true,
+		},
+	},
 	plugins: [sveltekitCookies(getRequestEvent)],
 });

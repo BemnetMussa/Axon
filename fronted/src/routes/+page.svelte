@@ -20,8 +20,8 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 	<header class="fixed left-0 right-0 top-5 z-50 mx-auto w-full max-w-6xl px-4 sm:px-8">
 		<div class="flex items-center justify-between rounded-2xl border border-[#242E43] bg-[#121826]/80 px-4 py-3 backdrop-blur-xl sm:px-5">
 			<div class="flex items-center gap-3 group cursor-pointer">
-				<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5B8CFF] text-[#0B0F17] transition-transform group-hover:scale-105">
-					<Zap class="h-4 w-4 fill-current text-[#0B0F17]" />
+				<div class="flex h-8 w-8 items-center justify-center rounded-md bg-white text-black transition-transform group-hover:scale-105">
+					<Zap class="h-4 w-4 fill-current " />
 				</div>
 				<span class="text-sm font-semibold uppercase tracking-[0.2em] text-[#E8ECF4]">Axon</span>
 			</div>
@@ -30,7 +30,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 				<a href="/login" class="hidden text-sm font-medium text-[#A3ADBF] transition-colors hover:text-[#E8ECF4] sm:block">
 					Sign in
 				</a>
-				<a href="/signup" class="group inline-flex items-center gap-2 rounded-xl bg-[#5B8CFF] px-4 py-2 text-sm font-semibold text-[#0B0F17] transition-colors hover:bg-[#4A78EA]">
+				<a href="/signup" class="group inline-flex items-center gap-2 rounded-md bg-white text-black px-4 py-2 text-sm font-semibold  transition-colors hover:bg-gray-200">
 					<span class="relative z-10 flex items-center gap-2">
 						Get today's brief <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
 					</span>
@@ -60,7 +60,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 		</p>
 
 		<div class="mt-8 flex w-full max-w-sm flex-col items-center gap-3">
-			<a href="/signup" class="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#5B8CFF] px-6 text-sm font-semibold text-[#0B0F17] transition-colors hover:bg-[#4A78EA]">
+			<a href="/signup" class="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-white text-black px-6 text-sm font-semibold  transition-colors hover:bg-gray-200">
 				Start for free
 				<ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
 			</a>
@@ -200,7 +200,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 		<div class="mx-auto max-w-2xl rounded-2xl border border-[#242E43] bg-[#121826] p-7 text-left sm:p-9">
 			<div class="mb-8 flex items-center justify-between border-b border-[#242E43] pb-6">
 				<div class="flex items-center gap-3">
-					<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5B8CFF] text-[#0B0F17]">
+					<div class="flex h-10 w-10 items-center justify-center rounded-md bg-white text-black">
 						<Zap class="h-5 w-5 fill-current" />
 					</div>
 					<div>
@@ -245,7 +245,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 				<p class="mx-auto mb-10 max-w-xl text-base leading-7 text-[#A3ADBF] sm:text-lg">
 					Join thousands of elite builders who use AXON to stay ahead of the curve without sacrificing their time.
 				</p>
-				<a href="/signup" class="inline-flex h-12 items-center justify-center gap-3 rounded-xl bg-[#5B8CFF] px-8 text-base font-semibold text-[#0B0F17] transition-colors hover:bg-[#4A78EA]">
+				<a href="/signup" class="inline-flex h-12 items-center justify-center gap-3 rounded-md bg-white text-black px-8 text-base font-semibold  transition-colors hover:bg-gray-200">
 					Join for free
 					<ArrowRight class="h-5 w-5" />
 				</a>

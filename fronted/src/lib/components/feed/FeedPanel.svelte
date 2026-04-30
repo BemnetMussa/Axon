@@ -247,12 +247,10 @@
 		onwheel={handleWheel}
 	>
 		{#if loading && articles.length === 0}
-			<div class="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-				<div class={`h-6 w-6 animate-spin rounded-full border-2 border-t-transparent ${dark ? 'border-zinc-600' : 'border-zinc-300'}`}></div>
-				<div>
-					<p class={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Syncing feed</p>
-					<p class="mt-1 text-[13px] text-zinc-500">Gathering the latest signals…</p>
-				</div>
+			<div class="flex h-full flex-col gap-4 px-3.5 py-4 sm:px-4">
+				{#each [1, 2, 3, 4, 5] as _}
+					<div class={`h-36 w-full animate-pulse rounded-xl ${dark ? 'bg-white/5' : 'bg-black/5'}`}></div>
+				{/each}
 			</div>
 		{:else if articles.length === 0}
 			<div class="flex h-full items-center justify-center px-6 text-center">

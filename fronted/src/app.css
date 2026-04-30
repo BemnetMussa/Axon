@@ -15,6 +15,7 @@ html, body {
   background: #0a0a0a;
   color: #e5e5e5;
   font-family: var(--font-sans);
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
