@@ -21,7 +21,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 		<div class="flex items-center justify-between rounded-2xl border border-[#242E43] bg-[#121826]/80 px-4 py-3 backdrop-blur-xl sm:px-5">
 			<div class="flex items-center gap-3 group cursor-pointer">
 				<div class="flex h-8 w-8 items-center justify-center rounded-md bg-white text-black transition-transform group-hover:scale-105">
-					<Zap class="h-4 w-4 fill-current " />
+					<Zap class="h-4 w-4 fill-current" />
 				</div>
 				<span class="text-sm font-semibold uppercase tracking-[0.2em] text-[#E8ECF4]">Axon</span>
 			</div>
@@ -61,7 +61,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 
 		<div class="mt-8 flex w-full max-w-sm flex-col items-center gap-3">
 			<a href="/signup" class="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-white text-black px-6 text-sm font-semibold  transition-colors hover:bg-gray-200">
-				Start for free
+				Get today's brief
 				<ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
 			</a>
 			<button class="group inline-flex items-center gap-2 text-sm font-medium text-[#7B8497] transition-colors hover:text-[#A3ADBF]">
