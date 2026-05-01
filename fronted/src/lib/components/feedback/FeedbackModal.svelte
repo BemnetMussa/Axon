@@ -51,14 +51,14 @@
     >
         <!-- Modal -->
         <div 
-            class={`relative w-full max-w-md overflow-hidden rounded-[2rem] border shadow-2xl transition-all ${theme === 'dark' ? 'border-white/10 bg-[#0F1522]/95 text-white shadow-blue-500/10' : 'border-zinc-200 bg-white/95 text-zinc-900 shadow-xl'}`}
+            class={`relative w-full max-w-md overflow-hidden rounded-[2rem] border shadow-2xl transition-all ${theme === 'dark' ? 'border-white/10 bg-[#0B0F17]/95 text-white shadow-black/20' : 'border-zinc-200 bg-white/95 text-zinc-900 shadow-xl'}`}
             transition:fly={{ y: 20, duration: 300, delay: 100 }}
             onclick={(e) => e.stopPropagation()}
         >
             <div class="p-8">
                 <div class="flex items-center justify-between mb-8">
                     <div class="flex items-center gap-3">
-                        <div class={`flex h-10 w-10 items-center justify-center rounded-xl ${theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+                        <div class={`flex h-10 w-10 items-center justify-center rounded-xl ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-black/10 text-black'}`}>
                             <Sparkles class="h-5 w-5" />
                         </div>
                         <h2 class="text-xl font-bold">Feedback</h2>
@@ -107,7 +107,7 @@
                                 <textarea
                                     bind:value={comment}
                                     placeholder="Tell us what you think..."
-                                    class={`w-full rounded-2xl border p-4 text-sm min-h-[120px] outline-none transition-all resize-none ${theme === 'dark' ? 'bg-[#0B0F17]/50 border-white/10 focus:border-blue-500/50 text-white placeholder:text-zinc-600' : 'bg-zinc-50 border-zinc-200 focus:border-blue-500/50 text-zinc-900 placeholder:text-zinc-400'}`}
+                                    class={`w-full rounded-2xl border p-4 text-sm min-h-[120px] outline-none transition-all resize-none ${theme === 'dark' ? 'bg-[#0B0F17]/50 border-white/10 focus:border-white/30 text-white placeholder:text-zinc-600' : 'bg-zinc-50 border-zinc-200 focus:border-black/30 text-zinc-900 placeholder:text-zinc-400'}`}
                                 ></textarea>
                                 <MessageSquare class={`absolute right-4 bottom-4 h-4 w-4 ${theme === 'dark' ? 'text-zinc-700' : 'text-zinc-300'}`} />
                             </div>
@@ -120,7 +120,7 @@
                         <button 
                             onclick={handleSubmit}
                             disabled={submitting}
-                            class={`w-full group inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 font-bold text-white transition-all hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-blue-500/20`}
+                            class={`w-full group inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 font-bold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-lg ${theme === 'dark' ? 'bg-black text-white hover:bg-zinc-800 shadow-black/10' : 'bg-white text-black hover:bg-zinc-200 shadow-black/20'}`}
                         >
                             {#if submitting}
                                 <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>

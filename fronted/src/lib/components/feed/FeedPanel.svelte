@@ -40,7 +40,7 @@
 		onArticleOpen: (article: Article) => void;
 		onArticleOpenWithChat: (article: Article, starterQuestion: string) => void;
 		onToggleSave: (id: number) => void;
-		onSyncSources: () => void;
+		onSyncSources?: () => void;
 		onShowDigest: () => void;
 		onLoadMore: () => void;
 		onCheckNew?: () => Promise<boolean>;

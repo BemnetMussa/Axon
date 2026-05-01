@@ -33,8 +33,8 @@
 			color: 'text-violet-400',
 			darkBg: 'bg-violet-500/15',
 			lightBg: 'bg-violet-50',
-			title: 'Digest — the weekly brief',
-			body: 'Axon writes a structured weekly synthesis of everything that mattered. Generate one any time from the Digest tab.',
+			title: 'Weekly Digest — the weekly brief',
+			body: 'Axon writes a structured weekly synthesis of everything that mattered. Generate one any time from the Weekly Digest tab.',
 		},
 	];
 

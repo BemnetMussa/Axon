@@ -10,7 +10,7 @@
 		syncIndicator: boolean;
 		theme: 'dark' | 'light';
 		onSearchChange: (value: string) => void;
-		onSyncSources: () => void;
+		onSyncSources?: () => void;
 		onOpenFilters?: () => void;
 		hasActiveFilters?: boolean;
 		hasNewSignals?: boolean;
@@ -148,22 +148,7 @@
 			</span>
 		{/if}
 
-		<!-- Sync sources = full ingest from web -->
-		<button
-			type="button"
-			onclick={onSyncSources}
-			title="Fetch fresh articles from all sources"
-			class={quickActionClass(theme, syncIndicator)}
-		>
-			{#if syncIndicator}
-				<RefreshCw class="h-3 w-3 animate-spin" />
-				Syncing sources…
-			{:else}
-				<Download class="h-3 w-3" />
-				Sync sources
-			{/if}
-		</button>
-
+		
 		<!-- Check new = fast DB poll -->
 		<button
 			type="button"

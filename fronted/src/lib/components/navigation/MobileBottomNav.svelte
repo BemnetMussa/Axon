@@ -81,7 +81,7 @@
 				}`}
 			>
 				<Sparkles class="h-5 w-5 shrink-0" />
-				<span class="text-[13px] font-semibold">Digest</span>
+				<span class="text-[13px] font-semibold">Weekly Digest</span>
 			</button>
 
 			<div class={`my-2 h-px ${dark ? 'bg-white/[0.06]' : 'bg-zinc-100'}`}></div>
@@ -132,7 +132,7 @@
 		class={`flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-3.5 transition-colors ${tabColor(showDigestView)}`}
 	>
 		<Sparkles class="h-[22px] w-[22px] shrink-0" />
-		<span class="truncate text-[10px] font-bold leading-none">Digest</span>
+		<span class="truncate text-[10px] font-bold leading-none">Weekly Digest</span>
 	</button>
 
 	<!-- More -->

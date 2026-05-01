@@ -724,7 +724,6 @@
 				onToggleSave={toggleSave}
 					onShowDigest={showDigest}
 					onLoadMore={loadMore}
-                                        onSyncSources={fetchFirstPage}
 					onCheckNew={checkForNew}
 					bind:scrollArea={feedScrollArea}
 				/>
@@ -744,7 +743,7 @@
 							>
 								←
 							</button>
-							<span class={`text-[13px] font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Digest</span>
+							<span class={`text-[13px] font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Weekly Digest</span>
 						</div>
 
 						<div class="mx-auto w-full max-w-3xl px-5 pt-8 pb-12 sm:px-10 sm:pt-12">
@@ -754,7 +753,7 @@
 									<p class={`text-[12px] font-semibold ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Loading digest…</p>
 								</div>
 							{:else if digestContent}
-								<h1 class={`mb-2 text-2xl font-bold sm:text-4xl ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Digest</h1>
+								<h1 class={`mb-2 text-2xl font-bold sm:text-4xl ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Weekly Digest</h1>
 								<p class={`mb-10 text-[12px] sm:text-sm ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
 									Synthesized {digestContent.created_at ? new Date(digestContent.created_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'recently'}
 								</p>
