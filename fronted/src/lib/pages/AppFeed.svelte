@@ -712,6 +712,7 @@
 				onToggleSave={toggleSave}
 					onShowDigest={showDigest}
 					onLoadMore={loadMore}
+                                        onSyncSources={fetchFirstPage}
 					onCheckNew={checkForNew}
 					bind:scrollArea={feedScrollArea}
 				/>
