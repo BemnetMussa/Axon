@@ -345,14 +345,18 @@
 	function startPolling() {
 		pollTimer = setInterval(async () => {
 			const latestId = feedCache.latestId();
-			if (!latestId) re// Check if we should auto-insert based on scroll
-                    const isAtTop = feedScrollArea ? feedScrollArea.scrollTop < 20 : true;
-                    if (isAtTop) {
-                        await backgroundRevalidate();
-                    } else {
-                        pendingNewArticlesCount = count;
-                    }
-                }
+			if (!latestId) return;
+			try {
+				const count = await api.countNewSince(latestId);
+				if (count > 0) {
+					// Check if we should auto-insert based on scroll
+					const isAtTop = feedScrollArea ? feedScrollArea.scrollTop < 20 : true;
+					if (isAtTop) {
+						await backgroundRevalidate();
+					} else {
+						pendingNewArticlesCount = count;
+					}
+				}
 			} catch {
 				/* silent */
 			}
@@ -361,11 +365,7 @@
 
 	function scrollFeedToTop() {
 		feedScrollArea?.scrollTo({ top: 0, behavior: 'smooth' });
-        pendingNewArticlesCount = 0
-	}
-
-	function scrollFeedToTop() {
-		feedScrollArea?.scrollTo({ top: 0, behavior: 'smooth' });
+		pendingNewArticlesCount = 0;
 	}
 
 	async function checkForNew(): Promise<boolean> {
