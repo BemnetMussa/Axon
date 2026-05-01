@@ -216,8 +216,8 @@ async def hunt_github_trending(client: httpx.AsyncClient):
     month_ago = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
 
     queries = [
-        (f"pushed:>{week_ago} stars:>500", "Momentum"),
-        (f"created:>{month_ago} stars:>500 topic:ai", "AI"),
+        (f"pushed:>{week_ago} stars:>30", "Momentum"),
+        (f"created:>{month_ago} stars:>20 topic:ai", "AI"),
     ]
 
     results: list[list[dict]] = []
@@ -233,13 +233,13 @@ async def hunt_github_trending(client: httpx.AsyncClient):
                 signals.append(item)
                 seen_urls.add(item["url"])
 
-    # Fallback if primary queries returned nothing (strict stars/date)
+    # Fallback if primary queries returned nothing
     if not signals:
         fallback_queries = [
-            ("stars:>200 topic:machine-learning", "AI"),
-            ("stars:>100 language:Python topic:ai", "Momentum"),
-            ("stars:>50 sort:updated", "Momentum"),
-            ("stars:>10", "Momentum"), # Maximum fallback
+            ("stars:>50 topic:machine-learning", "AI"),
+            ("stars:>30 language:Python topic:ai", "Momentum"),
+            ("stars:>15 sort:updated", "Momentum"),
+            ("stars:>10", "Momentum"),
         ]
         for q, cat in fallback_queries:
             batch = await search_github(q, cat)
