@@ -724,7 +724,6 @@
 				onToggleSave={toggleSave}
 					onShowDigest={showDigest}
 					onLoadMore={loadMore}
-					onCheckNew={checkForNew}
 					bind:scrollArea={feedScrollArea}
 				/>
 			</div>

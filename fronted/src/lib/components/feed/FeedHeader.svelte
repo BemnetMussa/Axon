@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { RefreshCw, Search, Zap, LogOut, SlidersHorizontal, BellDot, Eraser, Download } from 'lucide-svelte';
+	import { Search, Zap, LogOut, SlidersHorizontal } from 'lucide-svelte';
 	import { authClient } from '$lib/auth-client';
 	import { inputClass, iconButtonClass, quickActionClass } from '$lib/ui-styles';
 
@@ -10,33 +10,17 @@
 		syncIndicator: boolean;
 		theme: 'dark' | 'light';
 		onSearchChange: (value: string) => void;
-		onSyncSources?: () => void;
 		onOpenFilters?: () => void;
 		hasActiveFilters?: boolean;
-		hasNewSignals?: boolean;
-		onCheckNew?: () => Promise<boolean>;
-		onClearAllFilters?: () => void;
 		hasSemanticSearch?: boolean;
 	};
 
 	let {
-		title, articleCount, searchQuery, syncIndicator, theme, onSearchChange, onSyncSources,
-		onOpenFilters, hasActiveFilters = false, hasNewSignals = false, onCheckNew,
-		onClearAllFilters, hasSemanticSearch = false
+		title, articleCount, searchQuery, syncIndicator, theme, onSearchChange,
+		onOpenFilters, hasActiveFilters = false, hasSemanticSearch = false
 	}: Props = $props();
 
 	let dark = $derived(theme === 'dark');
-	let checkingNew = $state(false);
-
-	async function checkNewNow() {
-		if (!onCheckNew || checkingNew) return;
-		checkingNew = true;
-		try {
-			await onCheckNew();
-		} finally {
-			checkingNew = false;
-		}
-	}
 </script>
 
 <header class={`sticky top-0 z-20 min-w-0 overflow-hidden border-b backdrop-blur-xl ${dark ? 'border-white/[0.04] bg-[#0b0b0b]/90' : 'border-zinc-100 bg-white/90'}`}>
@@ -104,41 +88,6 @@
 		{/if}
 	</div>
 
-	<!-- Mobile: same quick actions as desktop (touch-friendly) -->
-	<div class={`lg:hidden border-t px-4 py-2.5 sm:px-5 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
-		<p class={`mb-2 text-[9px] font-bold uppercase tracking-wider ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Feed actions</p>
-		<div class="flex flex-wrap items-stretch gap-2">
-			{#if hasSemanticSearch}
-				<span class={`inline-flex items-center rounded-full px-2 py-1.5 text-[10px] font-semibold ${dark ? 'bg-violet-500/15 text-violet-300' : 'bg-violet-100 text-violet-700'}`}>
-					Semantic search
-				</span>
-			{/if}
-			<button
-				type="button"
-				onclick={checkNewNow}
-				disabled={checkingNew || !onCheckNew}
-				title="Load newest articles already in the database"
-				class={`${quickActionClass(theme, hasNewSignals)} min-h-11 py-2 disabled:opacity-50`}
-			>
-				{#if checkingNew}
-					<RefreshCw class="h-3.5 w-3.5 animate-spin" />
-					Checking…
-				{:else}
-					<BellDot class={`h-3.5 w-3.5 ${hasNewSignals ? (dark ? 'text-emerald-400' : 'text-emerald-600') : ''}`} />
-					{hasNewSignals ? 'New signals' : 'Check new'}
-				{/if}
-			</button>
-			<button
-				type="button"
-				onclick={onClearAllFilters}
-				disabled={!hasActiveFilters || !onClearAllFilters}
-				class={`${quickActionClass(theme)} min-h-11 py-2 disabled:opacity-40`}
-			>
-				<Eraser class="h-3.5 w-3.5" />
-				Clear filters
-			</button>
-		</div>
-	</div>
 
 	<!-- Desktop: quick-actions bar -->
 	<div class={`hidden items-center gap-1.5 border-t px-4 py-2 lg:flex ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
@@ -149,32 +98,5 @@
 		{/if}
 
 		
-		<!-- Check new = fast DB poll -->
-		<button
-			type="button"
-			onclick={checkNewNow}
-			disabled={checkingNew || !onCheckNew}
-			title="Check if new articles arrived in the database"
-			class={`${quickActionClass(theme, hasNewSignals)} disabled:opacity-50`}
-		>
-			{#if checkingNew}
-				<RefreshCw class="h-3 w-3 animate-spin" />
-				Checking…
-			{:else}
-				<BellDot class={`h-3 w-3 ${hasNewSignals ? (dark ? 'text-emerald-400' : 'text-emerald-600') : ''}`} />
-				{hasNewSignals ? 'New signals' : 'Check new'}
-			{/if}
-		</button>
-
-		<!-- Clear filters -->
-		<button
-			type="button"
-			onclick={onClearAllFilters}
-			disabled={!hasActiveFilters || !onClearAllFilters}
-			class={`${quickActionClass(theme)} disabled:opacity-40`}
-		>
-			<Eraser class="h-3 w-3" />
-			Clear filters
-		</button>
 	</div>
 </header>

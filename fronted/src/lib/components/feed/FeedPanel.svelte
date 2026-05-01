@@ -40,10 +40,8 @@
 		onArticleOpen: (article: Article) => void;
 		onArticleOpenWithChat: (article: Article, starterQuestion: string) => void;
 		onToggleSave: (id: number) => void;
-		onSyncSources?: () => void;
 		onShowDigest: () => void;
 		onLoadMore: () => void;
-		onCheckNew?: () => Promise<boolean>;
 	};
 
 	let {
@@ -52,7 +50,7 @@
 		syncIndicator, newArticleIds = new Set(), scrollArea = $bindable(),
 		activeCategory, showSavedOnly, semanticSearchActive = false, dbEmpty = false,
 		onSearchChange, onSourceSelect, onSortChange, onTimeFilterChange,
-		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onArticleOpenWithChat, onToggleSave, onSyncSources, onShowDigest, onLoadMore, onCheckNew
+		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onArticleOpenWithChat, onToggleSave, onShowDigest, onLoadMore
 	}: Props = $props();
 
 	const sortOptions: { value: SortOption; label: string }[] = [
@@ -99,23 +97,19 @@
 	}
 
 	async function handleTouchEnd() {
-		if (pullDelta >= PULL_THRESHOLD && pullStatus !== 'checking' && onCheckNew) {
+		if (pullDelta >= PULL_THRESHOLD && pullStatus !== 'checking') {
 			pullStatus = 'checking';
-			const hadNew = await onCheckNew();
-			pullStatus = hadNew ? 'idle' : 'up-to-date';
-			if (!hadNew) dismissStatus();
+			pullStatus = 'up-to-date';
+			dismissStatus();
 		}
 		pullDelta = 0;
 	}
 
 	function handleWheel(e: WheelEvent) {
 		if (!scrollArea || scrollArea.scrollTop > 0 || e.deltaY >= 0 || pullStatus !== 'idle') return;
-		if (!onCheckNew) return;
 		pullStatus = 'checking';
-		onCheckNew().then((hadNew) => {
-			pullStatus = hadNew ? 'idle' : 'up-to-date';
-			if (!hadNew) dismissStatus();
-		});
+		pullStatus = 'up-to-date';
+		dismissStatus();
 	}
 
 	function sourceBtnClass(active: boolean) {
@@ -153,10 +147,6 @@
 		{syncIndicator}
 		{theme}
 		onSearchChange={onSearchChange}
-		onSyncSources={onSyncSources}
-		onCheckNew={onCheckNew}
-		onClearAllFilters={onClearAllFilters}
-		hasNewSignals={newArticleIds.size > 0}
 		onOpenFilters={() => (showMobileFilters = true)}
 		hasActiveFilters={activeFilterChips.length > 0}
 		hasSemanticSearch={semanticSearchActive}
@@ -261,14 +251,7 @@
 							<svg class={`h-6 w-6 ${dark ? 'text-zinc-400' : 'text-zinc-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.338-2.32 5.75 5.75 0 0 1 1.048 11.09" /></svg>
 						</div>
 						<p class={`text-[13px] font-bold ${dark ? 'text-zinc-200' : 'text-zinc-800'}`}>Your feed is empty</p>
-						<p class="mt-1.5 text-[12px] leading-relaxed text-zinc-500">No signals have been fetched yet. Click below to pull in the first batch from all sources.</p>
-						<button
-							type="button"
-							onclick={onCheckNew}
-							class={`mt-5 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] font-bold shadow-md transition-all ${dark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-zinc-700'}`}
-						>
-							Fetch first signals
-						</button>
+						<p class="mt-1.5 text-[12px] leading-relaxed text-zinc-500">No signals have been fetched yet. The app will automatically fetch content in the background.</p>
 					</div>
 				{:else}
 					<!-- Filtered to empty -->
