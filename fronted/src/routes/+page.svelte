@@ -123,7 +123,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 					<div class="mb-6 inline-flex w-max items-center gap-2 rounded-full border border-[#33415C] bg-[#0F1522] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#7B8497]">
 						<span class="h-1.5 w-1.5 rounded-full bg-[#5B8CFF]"></span> Phase 2: Synthesis
 					</div>
-					<h3 class="mb-6 text-3xl font-semibold tracking-tight text-[#E8ECF4] sm:text-4xl">Grok filters the noise.</h3>
+					<h3 class="mb-6 text-3xl font-semibold tracking-tight text-[#E8ECF4] sm:text-4xl">Axon filters the noise.</h3>
 					<p class="mb-8 text-base leading-7 text-[#A3ADBF] sm:text-lg">
 						99% of the internet is distraction. We pipe thousands of daily signals through a custom <strong class="font-semibold text-[#E8ECF4]">Grok AI engine</strong> to extract raw value.
 					</p>

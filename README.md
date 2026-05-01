@@ -1,56 +1,100 @@
 <div align="center">
+  <img src="fronted/static/images/hero.png" alt="Axon Banner" width="800" style="border-radius: 1rem; margin-bottom: 2rem;">
   <h1>⚡ Axon v1.0.0 ⚡</h1>
-  <p><b>The Official Launch Release</b></p>
-  <p>An open-source intelligence feed for builders, founders, and researchers.</p>
+  <p><b>The Official Launch Release: "The Bleeding Edge, Summarized."</b></p>
+  <p>An open-source OSINT intelligence feed for founders and elite builders.</p>
+  
+  <p>
+    <a href="https://axon-phi-ruby.vercel.app"><b>Explore Live Demo →</b></a>
+  </p>
 </div>
 
-Axon continuously scans technical sources — ArXiv, Hacker News, GitHub, Reddit, Product Hunt, expert blogs, and AI lab announcements — filters out noise, and presents what matters through a sleek, native-feeling web interface with AI-powered analysis.
+Axon continuously scans the frontier of technical discourse — ArXiv, Hacker News, GitHub, Reddit, and elite AI labs — distilling the global firehose into a high-density, 3-minute daily brief.
 
-Instead of checking dozens of sites every day, you open Axon. Get the bleeding edge, summarized.
-
-**[🚀 Try the Live Demo →](https://axon-phi-ruby.vercel.app)**
+Built to solve information overload, Axon filters out the noise (no tutorials, no fluff) and surfaces the raw nodes where technology is being built, debated, and shipped.
 
 ---
 
-## How It Works
+## 🛠️ Performance-First Architecture
 
-```
-Sources (HN, ArXiv, GitHub, Reddit, Lobsters, Product Hunt, TechCrunch,
-         The Verge, Ars Technica, AI labs, expert blogs)
-    │
-    ▼
-Ingestion ── fetcher.py pulls from APIs/RSS, deduplicates, filters noise
-    │
-    ▼
-Analysis ── analyzer.py classifies into categories, generates AI insights via Groq
-    │
-    ▼
-PostgreSQL ── articles + trends tables
-    │
-    ▼
-FastAPI ── REST API with cursor-based pagination, content extraction, chat
-    │
-    ▼
-SvelteKit Web UI ── feed / reader / AI chat / dark & light mode / PWA
+Axon is split into a high-performance Python ingestion engine and a reactive SvelteKit interface:
+
+```mermaid
+graph TD
+    Sources[HN, ArXiv, GitHub, Reddit, AI Labs, Expert Blogs] -->|Fetcher| Ingestion[FastAPI Ingestion Engine]
+    Ingestion -->|Groq LLaMA 3.3| Analysis[AI Analyzer: Classification & Insights]
+    Analysis -->|PostgreSQL| Storage[(Database & Cache)]
+    Storage -->|REST API| UI[SvelteKit Web Dashboard]
+    UI -->|PWA| Mobile[Native-feel Mobile App]
+    UI -->|Chat| AI[Article-Scoped Q&A]
 ```
 
-Axon fetches signals, classifies them into five categories (**AI**, **Signal**, **Momentum**, **Discovery**, **Concerns**), generates a two-paragraph AI insight for each, and serves them through a responsive web dashboard where you can read, save, search, share, and chat with any article.
+### Core Stack
+- **Frontend**: SvelteKit 5 (Runes), Tailwind CSS 4, Lucide Icons.
+- **Backend**: FastAPI, SQLModel, PostgreSQL.
+- **Intelligence**: Groq (LLaMA 3.3 70B) for instant, 0-latency summaries and Q&A.
+- **Auth**: Better-Auth with cross-subdomain session persistence.
 
 ---
 
-## Features
+## ✨ v1.0.0 Launch Features
 
-- **Auto-ingestion** — background scheduler fetches new signals every 4 hours (configurable)
-- **AI insights** — every article gets a concise two-paragraph summary via Groq
-- **Article chat** — ask questions about any article, powered by LLaMA 3.3 70B
-- **Cloud Persistence** — authenticated user saves are seamlessly synced to the database
-- **Trending Feed** — HackerNews-style algorithmic sorting bubbles up the most engaging content
-- **Content extraction** — fetches full article text on demand using readability-lxml
-- **Infinite scroll** — cursor-based pagination loads articles as you scroll
-- **Share** — native share sheet on mobile, clipboard copy on desktop
-- **Dark / Light mode** — toggle in sidebar, persisted to localStorage
-- **PWA** — installable on mobile, works offline for cached content
-- **Responsive** — full-width desktop layout, mobile-optimized with bottom nav
+- **⚡ Real-time Signal Tracking** — Background ingestion every 4 hours via APScheduler.
+- **🧠 Zero-Latency AI Insights** — Every signal gets a dense, two-paragraph context summary.
+- **💬 Article-Scoped Chat** — Chat directly with any research paper or technical blog.
+- **📱 PWA & Mobile-First** — Installable on iOS/Android with a gesture-based UI and native navigation.
+- **🔍 Content Extraction** — Full-text extraction logic that bypasses paywalls and noise.
+- **✨ Sleek Minimalist UI** — High-contrast monochrome theme with pulsing skeleton loaders and fluid animations.
+- **💾 Cloud Sync** — Authenticated saves and reading history synced across devices.
+- **📈 Global Trends** — Live tracking of moving keywords and momentum across all tech sub-cultures.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone & Setup
+```bash
+git clone https://github.com/bemnetmussa/axon.git
+cd axon
+```
+
+### 2. Backend (FastAPI)
+```bash
+cd backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env # Add your GROQ_API_KEY
+uvicorn app.main:app --reload
+```
+
+### 3. Frontend (SvelteKit)
+```bash
+cd fronted
+npm install
+npm run dev
+```
+
+---
+
+## 📂 Project Structure
+
+- `backend/app/` — FastAPI core, ingestion engine, and AI analysis pipelines.
+- `fronted/src/` — SvelteKit application, design system, and auth-client.
+- `fronted/static/` — PWA assets and brand identity.
+- `scripts/` — Automated environment setup and deployment helpers.
+
+---
+
+## 🤝 Contributing
+
+We love builders. Check out `CONTRIBUTING.md` to get started.
+
+**[Live Demo](https://axon-phi-ruby.vercel.app)** • **[Documentation](https://github.com/bemnetmussa/axon/wiki)** • **[License](LICENSE)**
+
+---
+<div align="center">
+  <sub>Built by elites, for elites. © 2026 AXON OSINT.</sub>
+</div>
 
 **Scheduler note:** Auto-ingestion uses APScheduler inside the API process. It only runs while that process is **continuously up**—deploy the backend on an always-on host (e.g. a container or VM), not a model that cold-stops between requests, or the 4-hour job will not fire reliably. Set `INGEST_INTERVAL_HOURS` in the API environment to change the cadence (default `4`).
 
