@@ -62,6 +62,7 @@
 	let sources = $derived([...new Set(allArticles.map((a) => a.source))].sort());
 	let sourceCounts = $derived.by(() => {
 		const counts: Record<string, number> = {};
+		// Using allArticles ensuring we count from the full session set
 		allArticles.forEach((a) => {
 			counts[a.source] = (counts[a.source] || 0) + 1;
 		});
@@ -282,12 +283,21 @@
 	}
 
 	async function fetchFirstPage(options?: { skipClearError?: boolean }) {
-		loading = allArticles.length === 0;
 		syncIndicator = true;
 		if (!options?.skipClearError) fetchError = null;
 		try {
 			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
-			allArticles = articleRes.articles;
+			
+			// Prepend instead of replace to avoid "disappearing" data
+			const existingIds = new Set(allArticles.map(a => a.id));
+			const fresh = articleRes.articles.filter(a => !existingIds.has(a.id));
+			
+			if (fresh.length > 0) {
+				allArticles = [...fresh, ...allArticles];
+			} else if (allArticles.length === 0) {
+				allArticles = articleRes.articles;
+			}
+			
 			nextCursor = articleRes.next_cursor;
 			hasMore = articleRes.has_more;
 			trends = trendData;
@@ -310,26 +320,21 @@
 			const freshArticles = articleRes.articles.filter((a) => !existingIds.has(a.id));
 
 			if (freshArticles.length > 0) {
-				const seen = loadSeenIds();
-				const brandNew = freshArticles.filter((a) => !seen.has(a.id));
-				if (brandNew.length > 0) {
-					newArticleIds = new Set([...newArticleIds, ...brandNew.map((a) => a.id)]);
+				const isAtTop = feedScrollArea ? feedScrollArea.scrollTop < 20 : true;
+				
+				if (isAtTop) {
+					allArticles = [...freshArticles, ...allArticles];
+					pendingNewArticlesCount = 0;
+					newArticleIds = new Set([...newArticleIds, ...freshArticles.map(a => a.id)]);
+				} else {
+					pendingNewArticlesCount += freshArticles.length;
+					// Add them to the array so they are there, but we'll show the bubble
+					allArticles = [...freshArticles, ...allArticles];
 				}
 			}
 
-			const freshIds = new Set(articleRes.articles.map((a) => a.id));
-			const kept = allArticles.filter((a) => !freshIds.has(a.id));
-			allArticles = [...articleRes.articles, ...kept];
-
-			nextCursor = articleRes.next_cursor;
-			hasMore = articleRes.has_more;
 			trends = trendData;
 			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
-
-			if (freshArticles.length > 0) {
-				scrollFeedToTop();
-                pendingNewArticlesCount = 0;
-			}
 		} catch {
 			// silent — user still has cached data
 		} finally {
@@ -340,16 +345,23 @@
 	function startPolling() {
 		pollTimer = setInterval(async () => {
 			const latestId = feedCache.latestId();
-			if (!latestId) return;
-			try {
-				const count = await api.countNewSince(latestId);
-				if (count > 0) {
-                    pendingNewArticlesCount = count;
+			if (!latestId) re// Check if we should auto-insert based on scroll
+                    const isAtTop = feedScrollArea ? feedScrollArea.scrollTop < 20 : true;
+                    if (isAtTop) {
+                        await backgroundRevalidate();
+                    } else {
+                        pendingNewArticlesCount = count;
+                    }
                 }
 			} catch {
 				/* silent */
 			}
 		}, POLL_INTERVAL_MS);
+	}
+
+	function scrollFeedToTop() {
+		feedScrollArea?.scrollTo({ top: 0, behavior: 'smooth' });
+        pendingNewArticlesCount = 0
 	}
 
 	function scrollFeedToTop() {
@@ -662,14 +674,14 @@
 				{/if}
 				{#if uiNotice}
 					<div class={`mx-3 mt-3 rounded-xl border px-3 py-2 text-xs ${theme === 'dark' ? 'border-amber-400/40 bg-amber-500/10 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
-						{uiNotice}
-					</div>
-				{/if}
-                
-                {#if pendingNewArticlesCount > 0}
-                    <div class="flex justify-center mt-3 absolute left-0 right-0 z-20 pointer-events-none">
-                        <button
-                            onclick={() => backgroundRevalidate()}
+						{uiNotice}scrollFeedToTop}
+                            class={`pointer-events-auto flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] font-bold shadow-xl transition-all hover:scale-105 active:scale-95 ${theme === 'dark' ? 'bg-white text-black border-white' : 'bg-zinc-900 border-zinc-700 text-white shadow-black/20'}`}
+                        >
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span class="relative inline-flex h-2 w-2 rounded-full bg-blue-500"></span>
+                            </span>
+                            {pendingNewArticlesCount} new signals detection
                             class={`pointer-events-auto flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] font-bold shadow-xl transition-all hover:scale-105 active:scale-95 ${theme === 'dark' ? 'bg-blue-600 border-blue-400 text-white shadow-blue-500/20' : 'bg-zinc-900 border-zinc-700 text-white shadow-black/20'}`}
                         >
                             <span class="relative flex h-2 w-2">

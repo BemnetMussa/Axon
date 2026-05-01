@@ -115,20 +115,6 @@
 			{/if}
 			<button
 				type="button"
-				onclick={onSyncSources}
-				title="Fetch fresh articles from the web (all sources)"
-				class={`${quickActionClass(theme, syncIndicator)} min-h-11 py-2`}
-			>
-				{#if syncIndicator}
-					<RefreshCw class="h-3.5 w-3.5 animate-spin" />
-					Syncing…
-				{:else}
-					<Download class="h-3.5 w-3.5" />
-					Sync web sources
-				{/if}
-			</button>
-			<button
-				type="button"
 				onclick={checkNewNow}
 				disabled={checkingNew || !onCheckNew}
 				title="Load newest articles already in the database"

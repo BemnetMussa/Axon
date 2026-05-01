@@ -32,7 +32,15 @@
     let healthPollTimer: any;
 
 	let dark = $derived(theme === 'dark');
-	let topSources = $derived(Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]).slice(0, 6));
+	let topSources = $derived.by(() => {
+		// Calculate top sources from whatever articles we have in memory
+		// This keeps it stable even when scrolling down
+		const counts: Record<string, number> = {};
+		sourceCounts && Object.entries(sourceCounts).forEach(([src, count]) => {
+			counts[src] = count;
+		});
+		return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+	});
 	let activeModeLabel = $derived(showSavedOnly ? 'Saved' : (activeCategory ?? 'Frontier'));
 
 	async function updateHealth() {

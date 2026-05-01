@@ -264,7 +264,7 @@
 						<p class="mt-1.5 text-[12px] leading-relaxed text-zinc-500">No signals have been fetched yet. Click below to pull in the first batch from all sources.</p>
 						<button
 							type="button"
-							onclick={onSyncSources}
+							onclick={onCheckNew}
 							class={`mt-5 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] font-bold shadow-md transition-all ${dark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-zinc-700'}`}
 						>
 							Fetch first signals
