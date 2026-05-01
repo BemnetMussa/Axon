@@ -1,10 +1,14 @@
- # Axon v2
+<div align="center">
+  <h1>⚡ Axon v1.0.0 ⚡</h1>
+  <p><b>The Official Launch Release</b></p>
+  <p>An open-source intelligence feed for builders, founders, and researchers.</p>
+</div>
 
-**An open-source intelligence feed for builders.** Axon continuously scans technical sources — ArXiv, Hacker News, GitHub, Reddit, Product Hunt, expert blogs, and AI lab announcements — filters out noise, and presents what matters through a clean web interface with AI-powered analysis.
+Axon continuously scans technical sources — ArXiv, Hacker News, GitHub, Reddit, Product Hunt, expert blogs, and AI lab announcements — filters out noise, and presents what matters through a sleek, native-feeling web interface with AI-powered analysis.
 
-Instead of checking dozens of sites every day, you open Axon.
+Instead of checking dozens of sites every day, you open Axon. Get the bleeding edge, summarized.
 
-**[Live Demo →](https://axon-phi-ruby.vercel.app)**
+**[🚀 Try the Live Demo →](https://axon-phi-ruby.vercel.app)**
 
 ---
 

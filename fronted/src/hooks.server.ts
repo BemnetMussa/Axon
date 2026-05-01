@@ -23,3 +23,4 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	return svelteKitHandler({ event, resolve, auth, building });
 };
+
