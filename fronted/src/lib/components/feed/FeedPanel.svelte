@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ArrowDownUp, Loader2, Check, Clock, X } from 'lucide-svelte';
-	import type { Article } from '$lib/api';
+	import { api, type Article } from '$lib/api';
 	import ArticleCard from '$lib/components/feed/ArticleCard.svelte';
 	import FeedHeader from '$lib/components/feed/FeedHeader.svelte';
 	import { chipButtonClass } from '$lib/ui-styles';
@@ -99,7 +99,12 @@
 	async function handleTouchEnd() {
 		if (pullDelta >= PULL_THRESHOLD && pullStatus !== 'checking') {
 			pullStatus = 'checking';
-			pullStatus = 'up-to-date';
+			try {
+				await api.triggerRefresh(activeSource);
+				pullStatus = 'up-to-date';
+			} catch (e) {
+				pullStatus = 'idle';
+			}
 			dismissStatus();
 		}
 		pullDelta = 0;
@@ -108,8 +113,13 @@
 	function handleWheel(e: WheelEvent) {
 		if (!scrollArea || scrollArea.scrollTop > 0 || e.deltaY >= 0 || pullStatus !== 'idle') return;
 		pullStatus = 'checking';
-		pullStatus = 'up-to-date';
-		dismissStatus();
+		api.triggerRefresh(activeSource).then(() => {
+			pullStatus = 'up-to-date';
+			dismissStatus();
+		}).catch(() => {
+			pullStatus = 'idle';
+			dismissStatus();
+		});
 	}
 
 	function sourceBtnClass(active: boolean) {
