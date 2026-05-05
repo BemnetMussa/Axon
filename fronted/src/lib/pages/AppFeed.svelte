@@ -311,6 +311,25 @@
 		}
 	}
 
+	async function refreshNewArticles() {
+		// Lightweight fetch that only prepends new articles to the top
+		try {
+			const res = await api.getArticles();
+			const existingIds = new Set(allArticles.map((a) => a.id));
+			const fresh = res.articles.filter((a) => !existingIds.has(a.id));
+
+			if (fresh.length > 0) {
+				// Prepend to top - no full refresh, just adds new ones
+				allArticles = [...fresh, ...allArticles];
+				newArticleIds = new Set([...newArticleIds, ...fresh.map(a => a.id)]);
+				feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+			}
+			return fresh.length;
+		} catch {
+			return 0;
+		}
+	}
+
 	async function backgroundRevalidate() {
 		syncIndicator = true;
 		try {
@@ -724,6 +743,7 @@
 				onToggleSave={toggleSave}
 					onShowDigest={showDigest}
 					onLoadMore={loadMore}
+					onRefresh={refreshNewArticles}
 					bind:scrollArea={feedScrollArea}
 				/>
 			</div>

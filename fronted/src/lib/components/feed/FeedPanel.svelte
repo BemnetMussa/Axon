@@ -42,6 +42,7 @@
 		onToggleSave: (id: number) => void;
 		onShowDigest: () => void;
 		onLoadMore: () => void;
+		onRefresh?: () => Promise<void>;
 	};
 
 	let {
@@ -50,7 +51,7 @@
 		syncIndicator, newArticleIds = new Set(), scrollArea = $bindable(),
 		activeCategory, showSavedOnly, semanticSearchActive = false, dbEmpty = false,
 		onSearchChange, onSourceSelect, onSortChange, onTimeFilterChange,
-		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onArticleOpenWithChat, onToggleSave, onShowDigest, onLoadMore
+		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onArticleOpenWithChat, onToggleSave, onShowDigest, onLoadMore, onRefresh
 	}: Props = $props();
 
 	const sortOptions: { value: SortOption; label: string }[] = [
@@ -101,6 +102,7 @@
 			pullStatus = 'checking';
 			try {
 				await api.triggerRefresh(activeSource);
+				if (onRefresh) await onRefresh();
 				pullStatus = 'up-to-date';
 			} catch (e) {
 				pullStatus = 'idle';
@@ -113,7 +115,8 @@
 	function handleWheel(e: WheelEvent) {
 		if (!scrollArea || scrollArea.scrollTop > 0 || e.deltaY >= 0 || pullStatus !== 'idle') return;
 		pullStatus = 'checking';
-		api.triggerRefresh(activeSource).then(() => {
+		api.triggerRefresh(activeSource).then(async () => {
+			if (onRefresh) await onRefresh();
 			pullStatus = 'up-to-date';
 			dismissStatus();
 		}).catch(() => {

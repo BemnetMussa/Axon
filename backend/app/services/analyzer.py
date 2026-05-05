@@ -179,30 +179,35 @@ def update_trends(session: Session, articles: list[Article]):
 
 
 def generate_insight(title: str, content: str, retries: int = 2) -> str:
-    """Two-paragraph insight with retry on rate limit."""
+    """Substack-style concise article summary - 3-5 paragraphs, well-written, comprehensive."""
     if not client.api_key:
         return "AI analysis offline."
 
-    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:1000]
+    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:2000]
 
-    prompt = f"""You are a Lead Intelligence Analyst. Provide a sharp, technical narrative for a technical founder.
+    prompt = f"""You are an expert technology writer for a premium newsletter. Write a compelling article summary that stands on its own.
 
-Rules:
-1. Write exactly 2 cohesive paragraphs.
-2. The first paragraph should explain *what* the signal is (the technical reality).
-3. The second paragraph should explain *why* it matters and what is interesting/strategic about it.
-4. Be direct, dense, and tactical. No conversational filler or "In this article...".
-5. No bolding, headers, or lists. Just plain text paragraphs.
+Your task: Transform the source material into a well-written, concise article (3-5 paragraphs, 400-600 words total) that captures the essence without being a dry summary.
+
+Writing style:
+- Open with the core insight or hook - why this matters now
+- Explain the technical or strategic substance in clear, engaging prose
+- Contextualize within broader trends or market dynamics
+- Close with the implication - what this means for builders and investors
+- Write like a Substack essay: smart, readable, substantive
+- No "In this article..." or "The author discusses..." - just tell the story directly
+- No bullet points, headers, or bold text. Flowing paragraphs only.
+- Be opinionated and analytical, not neutral and descriptive
 
 Title: {title}
-Content: {clean_content}"""
+Source material: {clean_content}"""
 
     for attempt in range(retries + 1):
         try:
             content_res = _call_groq_with_fallback(
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=250,
-                temperature=0.4,
+                max_tokens=600,
+                temperature=0.5,
             )
             return content_res.replace("**", "").replace("*", "")
         except Exception as e:
