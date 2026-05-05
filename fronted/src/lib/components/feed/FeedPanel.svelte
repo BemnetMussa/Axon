@@ -101,9 +101,15 @@
 		if (pullDelta >= PULL_THRESHOLD && pullStatus !== 'checking') {
 			pullStatus = 'checking';
 			try {
-				await api.triggerRefresh(activeSource);
-				if (onRefresh) await onRefresh();
-				pullStatus = 'up-to-date';
+				const result = await api.triggerRefresh(activeSource);
+				if (result.status === 'success' && result.new_articles > 0) {
+					if (onRefresh) await onRefresh();
+					pullStatus = 'up-to-date';
+				} else if (result.status === 'skipped') {
+					pullStatus = 'up-to-date';
+				} else {
+					pullStatus = 'up-to-date';
+				}
 			} catch (e) {
 				pullStatus = 'idle';
 			}
@@ -115,8 +121,10 @@
 	function handleWheel(e: WheelEvent) {
 		if (!scrollArea || scrollArea.scrollTop > 0 || e.deltaY >= 0 || pullStatus !== 'idle') return;
 		pullStatus = 'checking';
-		api.triggerRefresh(activeSource).then(async () => {
-			if (onRefresh) await onRefresh();
+		api.triggerRefresh(activeSource).then(async (result) => {
+			if (result.status === 'success' && result.new_articles > 0) {
+				if (onRefresh) await onRefresh();
+			}
 			pullStatus = 'up-to-date';
 			dismissStatus();
 		}).catch(() => {

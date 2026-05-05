@@ -91,9 +91,11 @@ export const api = {
         if (contextId) {
             url += `?context_id=${encodeURIComponent(contextId === 'GitHub' ? 'GitHub' : contextId)}`;
         }
-        await failIfNotOk(await fetch(url, { method: 'POST' }));
+        const res = await failIfNotOk(await fetch(url, { method: 'POST' }));
+        const data = await res.json();
         // Fire analysis in the background — never blocks the UI or causes a visible error
         fetch(`${BASE_URL}/analyze`, { method: 'POST' }).catch(() => {});
+        return data;
     },
 
     trackView: async (id: number) => {

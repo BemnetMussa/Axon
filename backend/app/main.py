@@ -188,7 +188,21 @@ async def require_internal_auth(request: Request, call_next):
 @app.post("/ingest")
 @limiter.limit("5/hour")
 async def trigger_ingestion(request: Request, context_id: str | None = Query(default=None), session: Session = Depends(get_session)):
+    global _last_ingest_at_utc
+    
+    # Global cooldown: skip if ingest happened within 4 hours (unless context-specific)
+    if not context_id and _last_ingest_at_utc:
+        last_dt = datetime.fromisoformat(_last_ingest_at_utc)
+        hours_since = (datetime.now(timezone.utc) - last_dt).total_seconds() / 3600
+        if hours_since < _scheduler_interval_hours:
+            return {
+                "status": "skipped",
+                "reason": f"Last ingest was {hours_since:.1f}h ago. Cooldown: {_scheduler_interval_hours}h",
+                "new_articles": 0
+            }
+    
     count = await ingest_intelligence(session, context_id)
+    _last_ingest_at_utc = datetime.now(timezone.utc).isoformat()
     return {"status": "success", "new_articles": count}
 
 
