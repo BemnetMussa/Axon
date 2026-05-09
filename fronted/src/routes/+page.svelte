@@ -80,7 +80,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 					<Users class="h-3 w-3 text-[#A3ADBF]" />
 				</div>
 			</div>
-			<p>Joined by <span class="font-semibold text-[#E8ECF4]">2,400+</span> elite builders</p>
+			<p>Join the <span class="font-semibold text-[#E8ECF4]">open-source</span> community of elite builders</p>
 		</div>
 	</section>
 
@@ -132,7 +132,8 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 						{#each [
 							{ title: 'Deduplication', desc: 'Merges 50 articles about the same launch into one core update.' },
 							{ title: 'Technical Extraction', desc: 'Pulls out actual benchmark numbers, not marketing fluff.' },
-							{ title: 'Actionable Insights', desc: 'Tells you exactly what you need to change in your codebase.' }
+							{ title: 'Actionable Insights', desc: 'Tells you exactly what you need to change in your codebase.' },
+							{ title: 'Article-Scoped Chat', desc: 'Interrogate any research paper directly with the LLaMA 3.3 integration.' }
 						] as feature}
 							<div class="flex gap-4">
 								<div class="mt-1 flex-shrink-0">
