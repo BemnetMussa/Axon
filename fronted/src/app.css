@@ -12,7 +12,7 @@ html, body {
   width: 100%;
   margin: 0;
   padding: 0;
-  background: #0a0a0a;
+  background: #0b0b0b;
   color: #e5e5e5;
   font-family: var(--font-sans);
   font-size: 16px;
@@ -25,7 +25,8 @@ body {
   overscroll-behavior-y: none;
 }
 
-*, *::before, *::after {
+/* Global transitions for specific UI elements instead of everything */
+.transition-theme {
   transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
               border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
               color 0.5s cubic-bezier(0.4, 0, 0.2, 1);

@@ -203,11 +203,9 @@
 				)
 			) + 10;
 
-		// Overlay in the CURRENT theme's color — starts covering the entire page.
-		// The new theme is applied underneath it, then the overlay shrinks away
-		// (iris-close) to reveal the new look. This avoids the "two colors visible
-		// at once" problem of the growing-circle approach.
-		const currentBg = theme === 'dark' ? '#070707' : '#f8fafc';
+		// Overlay in the NEW theme's color — starts at size 0 and grows to cover the page.
+		// This is a "growing iris" reveal.
+		const nextBg = nextTheme === 'dark' ? '#0b0b0b' : '#ffffff';
 		const overlay = document.createElement('div');
 		overlay.style.cssText = [
 			'position:fixed',
@@ -216,26 +214,24 @@
 			`width:${maxR * 2}px`,
 			`height:${maxR * 2}px`,
 			'border-radius:50%',
-			'transform:translate(-50%,-50%) scale(1.05)', // 5 % buffer for sub-pixel gaps
-			`background:${currentBg}`,
+			'transform:translate(-50%,-50%) scale(0)',
+			`background:${nextBg}`,
 			'z-index:99999',
 			'pointer-events:none',
 			'will-change:transform',
 		].join(';');
 		document.body.appendChild(overlay);
 
-		// Apply the new theme immediately — completely hidden under the overlay
-		applyTheme(nextTheme);
-
-		// Wait two animation frames so Svelte reconciles + paints the new theme
-		// before we start revealing it. Without this the shrink can start before
-		// the DOM reflects the new theme and you get a flash of the old state.
+		// Wait for next frame to start growth
 		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
-				overlay.style.transition = 'transform 0.46s cubic-bezier(0.4, 0, 0.2, 1)';
-				overlay.style.transform = 'translate(-50%,-50%) scale(0)';
-				overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
-			});
+			overlay.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+			overlay.style.transform = 'translate(-50%,-50%) scale(1)';
+			
+			overlay.addEventListener('transitionend', () => {
+				// Apply the new theme only after the animation covers the screen
+				applyTheme(nextTheme);
+				overlay.remove();
+			}, { once: true });
 		});
 	}
 
@@ -848,7 +844,6 @@
 	}
 	:global(html) {
 		background: #0b0b0b;
-		transition: background-color 0.3s;
 	}
 	:global(html.light) {
 		background: #ffffff;
