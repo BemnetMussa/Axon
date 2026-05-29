@@ -63,7 +63,7 @@
 	}
 </script>
 
-<article class={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border px-3.5 py-3.5 transition-all duration-200 sm:px-4 sm:py-4 ${cardClass()}`}>
+<article class={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border px-3.5 py-3.5 transition-all duration-300 active:scale-[0.98] sm:px-4 sm:py-4 ${cardClass()}`}>
 	<!-- Full-card open button (behind everything) -->
 	<button type="button" onclick={handleOpen} class="absolute inset-0 rounded-xl" aria-label={`Open ${article.title}`}></button>
 

@@ -17,6 +17,13 @@
 	%sveltekit.head%
 	<!-- PostHog analytics — activate by setting VITE_POSTHOG_KEY in your .env -->
 	<script>
+		// Setup theme immediately to prevent flash
+		(function() {
+			var theme = localStorage.getItem('axon_theme');
+			if (theme === 'light') {
+				document.documentElement.classList.add('light');
+			}
+		})();
 		(function() {
 			var key = '%vite.env.VITE_POSTHOG_KEY%';
 			if (!key || key === '%vite.env.VITE_POSTHOG_KEY%' || key === 'undefined') return;

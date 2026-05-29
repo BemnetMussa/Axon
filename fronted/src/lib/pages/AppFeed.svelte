@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { marked } from 'marked';
+	import { fly } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 	import { api, feedCache, type Article, type Trend } from '$lib/api';
 	import FeedPanel from '$lib/components/feed/FeedPanel.svelte';
 	import DesktopSidebar from '$lib/components/navigation/DesktopSidebar.svelte';
@@ -222,16 +224,25 @@
 		].join(';');
 		document.body.appendChild(overlay);
 
+		// Force a reflow so the browser acknowledges the starting state (scale: 0)
+		overlay.getBoundingClientRect();
+
 		// Wait for next frame to start growth
 		requestAnimationFrame(() => {
 			overlay.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
 			overlay.style.transform = 'translate(-50%,-50%) scale(1)';
 			
-			overlay.addEventListener('transitionend', () => {
-				// Apply the new theme only after the animation covers the screen
+			// Fallback timeout in case transitionend fails to fire
+			let fired = false;
+			const cleanup = () => {
+				if (fired) return;
+				fired = true;
 				applyTheme(nextTheme);
 				overlay.remove();
-			}, { once: true });
+			};
+			
+			overlay.addEventListener('transitionend', cleanup, { once: true });
+			setTimeout(cleanup, 550); // Fallback exactly when transition should end
 		});
 	}
 
@@ -746,7 +757,7 @@
 		</div>
 
 		{#if selectedArticle || showDigestView}
-			<div class={`glass-panel absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a]/50 lg:border-white/[0.04]' : 'bg-white/60 lg:border-zinc-200'}`}>
+			<div transition:fly={{ x: 50, duration: 400, easing: quintOut }} class={`glass-panel absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a]/50 lg:border-white/[0.04]' : 'bg-white/60 lg:border-zinc-200'}`}>
 				{#if showDigestView}
 					<div class="flex h-full w-full flex-col overflow-y-auto pb-24 lg:pb-0">
 						<!-- sticky back header on mobile -->
@@ -889,7 +900,7 @@
 		-webkit-backdrop-filter: blur(16px);
 	}
 	:global(.app-bg) {
-		animation: appGradientDrift 22s ease-in-out infinite alternate;
+		/* Background animations removed due to heavy scroll lag */
 	}
 	:global(.app-bg::before),
 	:global(.app-bg::after) {
@@ -902,38 +913,20 @@
 		background-image:
 			linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.1) 45%, transparent 70%),
 			repeating-linear-gradient(90deg, transparent 0 42px, rgba(255,255,255,0.08) 43px 44px, transparent 45px 90px);
-		opacity: 0.3;
-		animation: appLinesPulse 7s ease-in-out infinite alternate;
-		will-change: transform, opacity;
+		opacity: 0.2;
 	}
 	:global(.app-bg::after) {
 		background:
 			radial-gradient(circle at 18% 34%, rgba(255,255,255,0.18) 0 2px, transparent 3px),
 			radial-gradient(circle at 74% 62%, rgba(255,255,255,0.15) 0 2px, transparent 3px),
 			radial-gradient(circle at 50% 18%, rgba(255,255,255,0.12) 0 1.5px, transparent 2.5px);
-		opacity: 0.2;
-		animation: appStarsTwinkle 5.5s ease-in-out infinite;
-		will-change: opacity;
-	}
-	@keyframes appGradientDrift {
-		0% { transform: translate3d(0, 0, 0) scale(1); }
-		100% { transform: translate3d(0, -25px, 0) scale(1.03); }
-	}
-	@keyframes appLinesPulse {
-		0% { opacity: 0.2; transform: translate3d(-15px, 0, 0); }
-		100% { opacity: 0.45; transform: translate3d(15px, 0, 0); }
-	}
-	@keyframes appStarsTwinkle {
-		0%, 100% { opacity: 0.15; }
-		50% { opacity: 0.4; }
+		opacity: 0.15;
 	}
 	@media (prefers-reduced-motion: reduce) {
-		:global(.app-bg) {
-			animation: none;
-		}
+		:global(.app-bg),
 		:global(.app-bg::before),
 		:global(.app-bg::after) {
-			animation: none;
+			display: none;
 		}
 	}
 </style>
