@@ -32,7 +32,7 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 				</a>
 				<a href="/signup" class="group inline-flex items-center gap-2 rounded-md bg-white text-black px-4 py-2 text-sm font-semibold  transition-colors hover:bg-gray-200">
 					<span class="relative z-10 flex items-center gap-2">
-						Get today's brief <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+						Open the live feed <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
 					</span>
 				</a>
 			</div>
@@ -56,12 +56,12 @@ import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 		</h1>
 		
 		<p class="mt-6 max-w-2xl text-base font-normal leading-7 text-[#A3ADBF] sm:text-lg">
-			Built for founders and anyone who wants to stay ahead, AXON turns <span class="text-[#E8ECF4]">AI, tech, research, and GitHub signals</span> into a 3-minute daily brief so you don't need to juggle 50 sites.
+			Built for founders and anyone who wants to stay ahead, AXON turns <span class="text-[#E8ECF4]">AI, tech, research, and GitHub signals</span> into a 3-minute read so you don't need to juggle 50 sites.
 		</p>
 
 		<div class="mt-8 flex w-full max-w-sm flex-col items-center gap-3">
 			<a href="/signup" class="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-white text-black px-6 text-sm font-semibold  transition-colors hover:bg-gray-200">
-				Get today's brief
+				Open the live feed
 				<ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
 			</a>
 			<button class="group inline-flex items-center gap-2 text-sm font-medium text-[#7B8497] transition-colors hover:text-[#A3ADBF]">

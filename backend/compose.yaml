@@ -2,14 +2,17 @@ services:
   web:
     build: .
     container_name: axon_backend
-    command: gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+    command: gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --workers 2 --timeout 120
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     depends_on:
       - db
+    env_file:
+      - .env
     environment:
+      # Overrides .env so the container talks to the `db` service, not localhost.
       - DATABASE_URL=postgresql://axon:axon123@db:5432/axon_db
 
   db:

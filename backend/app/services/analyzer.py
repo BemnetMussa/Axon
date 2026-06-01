@@ -3,7 +3,7 @@ import os
 import re
 import time
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from groq import Groq
 from sqlmodel import Session, select, col
 from app.models import Article, Trend, Digest
@@ -168,13 +168,17 @@ def update_trends(session: Session, articles: list[Article]):
     keywords = [w for w in words if w not in stop_words]
     counts = Counter(keywords)
 
+    today = date.today()
     for word, count in counts.most_common(15):
-        existing = session.exec(select(Trend).where(Trend.keyword == word)).first()
+        # Upsert per (keyword, day) so /trends can compare today vs yesterday velocity.
+        existing = session.exec(
+            select(Trend).where(Trend.keyword == word, Trend.trend_date == today)
+        ).first()
         if existing:
             existing.count += count
             session.add(existing)
         else:
-            session.add(Trend(keyword=word, count=count))
+            session.add(Trend(keyword=word, count=count, trend_date=today))
     session.commit()
 
 
