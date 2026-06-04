@@ -4,9 +4,6 @@
 	import ArticleCard from '$lib/components/feed/ArticleCard.svelte';
 	import FeedHeader from '$lib/components/feed/FeedHeader.svelte';
 	import { chipButtonClass } from '$lib/ui-styles';
-	import { flip } from 'svelte/animate';
-	import { fly, fade } from 'svelte/transition';
-	import { quintOut } from 'svelte/easing';
 
 	type SortOption = 'date' | 'engagement' | 'views';
 	type TimeFilter = 'all' | 'today' | 'week' | 'month';
@@ -294,12 +291,7 @@
 			</div>
 		{:else}
 			<div class="flex w-full min-w-0 max-w-full flex-col gap-0.5 overflow-hidden px-2 py-2 sm:px-3 sm:py-3">
-				{#each articles as article, i (article.id)}
-				<div 
-					animate:flip={{ duration: 300, easing: quintOut }} 
-					in:fly={{ y: 20, duration: 400, delay: Math.min(i * 30, 400), easing: quintOut }} 
-					out:fade={{ duration: 200 }}
-				>
+				{#each articles as article (article.id)}
 					<ArticleCard
 						{article}
 						selected={selectedArticleId === article.id}
@@ -311,7 +303,6 @@
 						onOpenWithChat={onArticleOpenWithChat}
 						onToggleSave={onToggleSave}
 					/>
-				</div>
 				{/each}
 			</div>
 			{#if loadingMore}
