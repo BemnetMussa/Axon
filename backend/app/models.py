@@ -1,9 +1,13 @@
 # backend/app/models.py
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 from sqlmodel import Field, SQLModel
 from sqlalchemy import Column
 from pgvector.sqlalchemy import Vector
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 class Article(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -25,7 +29,7 @@ class Article(SQLModel, table=True):
     
 class Digest(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow) # type: ignore
+    created_at: datetime = Field(default_factory=_utcnow)
     content: str
     
 class Trend(SQLModel, table=True):
@@ -37,12 +41,12 @@ class Trend(SQLModel, table=True):
 class SavedArticle(SQLModel, table=True):
     user_id: str = Field(primary_key=True, index=True)
     article_id: int = Field(primary_key=True, index=True)
-    saved_at: datetime = Field(default_factory=datetime.utcnow) # type: ignore
+    saved_at: datetime = Field(default_factory=_utcnow)
 
 class Feedback(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: str = Field(index=True)
     rating: int = Field(ge=1, le=5)
     comment: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow) # type: ignore
+    created_at: datetime = Field(default_factory=_utcnow)
 

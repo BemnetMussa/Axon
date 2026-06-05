@@ -91,7 +91,10 @@ async def scheduled_ingest():
         count = await ingest_intelligence(session)
         if count > 0:
             try:
-                analyzed = analyze_articles(session)
+                # analyze_articles is blocking (sync Groq calls + time.sleep between
+                # batches). Run it off the event loop so the API stays responsive
+                # while the scheduled analysis runs.
+                analyzed = await asyncio.to_thread(analyze_articles, session)
             except Exception as ae:
                 print(f"AXON SCHEDULER: analyze after ingest failed: {ae}")
                 analyzed = 0
@@ -232,7 +235,11 @@ def read_articles(
     cursor: int | None = Query(default=None),
     session: Session = Depends(get_session),
 ):
-    query = select(Article).order_by(col(Article.published_date).desc())
+    # Order by id (insertion order) so the cursor — which is an id — stays
+    # consistent with the sort. Ordering by published_date while paging on id
+    # skips/duplicates rows, since articles are inserted in shuffled order and
+    # id order does not match date order.
+    query = select(Article).order_by(col(Article.id).desc())
     if cursor is not None:
         query = query.where(col(Article.id) < cursor)
     query = query.limit(limit)
@@ -254,7 +261,7 @@ def get_trending_articles(
     # Hot algorithmic sort: views / ((hours_since_published + 2)^1.8)
     # Since we might be using SQLite or Postgres and cross-compatibility is hard with math,
     # we'll fetch recent articles and compute the score, then sort and return.
-    cutoff = datetime.utcnow() - timedelta(days=7)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
     query = select(Article).where(col(Article.published_date) >= cutoff)
     recent_articles = session.exec(query).all()
     
@@ -437,7 +444,7 @@ def track_view(article_id: int, session: Session = Depends(get_session)):
     stmt = (
         update(Article)
         .where(Article.id == article_id)
-        .values(views=Article.views + 1, last_viewed=datetime.utcnow())
+        .values(views=Article.views + 1, last_viewed=datetime.now(timezone.utc))
     )
     session.execute(stmt)
     session.commit()

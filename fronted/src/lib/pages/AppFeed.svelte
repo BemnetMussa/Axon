@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { marked } from 'marked';
+	import { fly } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 	import { api, feedCache, type Article, type Trend } from '$lib/api';
 	import FeedPanel from '$lib/components/feed/FeedPanel.svelte';
 	import DesktopSidebar from '$lib/components/navigation/DesktopSidebar.svelte';
@@ -222,16 +224,25 @@
 		].join(';');
 		document.body.appendChild(overlay);
 
+		// Force a reflow so the browser acknowledges the starting state (scale: 0)
+		overlay.getBoundingClientRect();
+
 		// Wait for next frame to start growth
 		requestAnimationFrame(() => {
 			overlay.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
 			overlay.style.transform = 'translate(-50%,-50%) scale(1)';
 			
-			overlay.addEventListener('transitionend', () => {
-				// Apply the new theme only after the animation covers the screen
+			// Fallback timeout in case transitionend fails to fire
+			let fired = false;
+			const cleanup = () => {
+				if (fired) return;
+				fired = true;
 				applyTheme(nextTheme);
 				overlay.remove();
-			}, { once: true });
+			};
+			
+			overlay.addEventListener('transitionend', cleanup, { once: true });
+			setTimeout(cleanup, 550); // Fallback exactly when transition should end
 		});
 	}
 
@@ -674,7 +685,7 @@
 
 	<div class="relative flex min-w-0 flex-1 overflow-hidden lg:rounded-2xl lg:border lg:border-white/5">
 		<div class={`min-w-0 overflow-hidden ${selectedArticle || showDigestView ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
-			<div class={`glass-panel flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0b0b0b]/40' : 'bg-white/50'}`}>
+			<div class={`flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0b0b0b]' : 'bg-white'}`}>
 				{#if fetchError}
 					<div class={`mx-3 mt-3 flex flex-col gap-2 rounded-xl border px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between ${theme === 'dark' ? 'border-amber-400/35 bg-amber-500/10 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>
 						<p class="min-w-0 flex-1 leading-relaxed">{fetchError}</p>
@@ -746,11 +757,11 @@
 		</div>
 
 		{#if selectedArticle || showDigestView}
-			<div class={`glass-panel absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a]/50 lg:border-white/[0.04]' : 'bg-white/60 lg:border-zinc-200'}`}>
+			<div transition:fly={{ x: 50, duration: 400, easing: quintOut }} class={`absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a] lg:border-white/[0.04]' : 'bg-white lg:border-zinc-200'}`}>
 				{#if showDigestView}
 					<div class="flex h-full w-full flex-col overflow-y-auto pb-24 lg:pb-0">
 						<!-- sticky back header on mobile -->
-						<div class={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 py-3 backdrop-blur-xl sm:px-6 ${theme === 'dark' ? 'border-white/[0.05] bg-[#0a0a0a]/90' : 'border-zinc-100 bg-white/90'}`}>
+						<div class={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 py-3 sm:px-6 ${theme === 'dark' ? 'border-white/[0.05] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}>
 							<button
 								onclick={() => (showDigestView = false)}
 								class={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-all sm:h-8 sm:w-8 sm:rounded-md ${theme === 'dark' ? 'border-white/[0.06] text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700'}`}
@@ -884,56 +895,8 @@
 		text-decoration: underline;
 		text-underline-offset: 2px;
 	}
-	:global(.glass-panel) {
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
-	}
-	:global(.app-bg) {
-		animation: appGradientDrift 22s ease-in-out infinite alternate;
-	}
-	:global(.app-bg::before),
-	:global(.app-bg::after) {
-		content: '';
-		position: absolute;
-		inset: 0;
-		pointer-events: none;
-	}
-	:global(.app-bg::before) {
-		background-image:
-			linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.1) 45%, transparent 70%),
-			repeating-linear-gradient(90deg, transparent 0 42px, rgba(255,255,255,0.08) 43px 44px, transparent 45px 90px);
-		opacity: 0.3;
-		animation: appLinesPulse 7s ease-in-out infinite alternate;
-		will-change: transform, opacity;
-	}
-	:global(.app-bg::after) {
-		background:
-			radial-gradient(circle at 18% 34%, rgba(255,255,255,0.18) 0 2px, transparent 3px),
-			radial-gradient(circle at 74% 62%, rgba(255,255,255,0.15) 0 2px, transparent 3px),
-			radial-gradient(circle at 50% 18%, rgba(255,255,255,0.12) 0 1.5px, transparent 2.5px);
-		opacity: 0.2;
-		animation: appStarsTwinkle 5.5s ease-in-out infinite;
-		will-change: opacity;
-	}
-	@keyframes appGradientDrift {
-		0% { transform: translate3d(0, 0, 0) scale(1); }
-		100% { transform: translate3d(0, -25px, 0) scale(1.03); }
-	}
-	@keyframes appLinesPulse {
-		0% { opacity: 0.2; transform: translate3d(-15px, 0, 0); }
-		100% { opacity: 0.45; transform: translate3d(15px, 0, 0); }
-	}
-	@keyframes appStarsTwinkle {
-		0%, 100% { opacity: 0.15; }
-		50% { opacity: 0.4; }
-	}
-	@media (prefers-reduced-motion: reduce) {
-		:global(.app-bg) {
-			animation: none;
-		}
-		:global(.app-bg::before),
-		:global(.app-bg::after) {
-			animation: none;
-		}
-	}
+	/* backdrop-filter removed: it re-blurred the whole feed/reader region on
+	   every scroll frame (and was nested under blurred sticky headers), which
+	   was the main source of scroll jank. Panels now use near-solid backgrounds
+	   that look the same but cost nothing to composite. */
 </style>

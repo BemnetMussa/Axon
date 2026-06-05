@@ -292,17 +292,17 @@
 		{:else}
 			<div class="flex w-full min-w-0 max-w-full flex-col gap-0.5 overflow-hidden px-2 py-2 sm:px-3 sm:py-3">
 				{#each articles as article (article.id)}
-				<ArticleCard
-					{article}
-					selected={selectedArticleId === article.id}
-					isSaved={savedArticleIds.includes(article.id)}
-					isNew={newArticleIds.has(article.id)}
-					isRead={readArticleIds.has(article.id)}
-					{theme}
-					onOpen={onArticleOpen}
-					onOpenWithChat={onArticleOpenWithChat}
-					onToggleSave={onToggleSave}
-				/>
+					<ArticleCard
+						{article}
+						selected={selectedArticleId === article.id}
+						isSaved={savedArticleIds.includes(article.id)}
+						isNew={newArticleIds.has(article.id)}
+						isRead={readArticleIds.has(article.id)}
+						{theme}
+						onOpen={onArticleOpen}
+						onOpenWithChat={onArticleOpenWithChat}
+						onToggleSave={onToggleSave}
+					/>
 				{/each}
 			</div>
 			{#if loadingMore}

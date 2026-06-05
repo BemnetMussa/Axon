@@ -3,7 +3,7 @@ import os
 import re
 import time
 from collections import Counter
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, timezone, date
 from groq import Groq
 from sqlmodel import Session, select, col
 from app.models import Article, Trend, Digest
@@ -18,7 +18,6 @@ _embed_model_instance = None
 def get_embed_model():
     global _embed_model_instance
     if _embed_model_instance is None:
-        import os
         from fastembed import TextEmbedding
         # Vercel requires writing to /tmp
         cache_dir = os.path.join("/tmp", "fastembed_cache")
@@ -78,7 +77,7 @@ def classify_article(title: str, url: str, source: str) -> str:
         "open source", "self-hosted", "self hosted",
     }
     tool_names = {
-        "vllm", "mlx", "unsloth", "llama.cpp", "ollama", "ollama",
+        "vllm", "mlx", "unsloth", "llama.cpp", "ollama",
         "pytorch", "tensorflow", "langchain", "llamaindex", "gradio",
         "streamlit", "cursor", "v0", "bolt", "replit",
     }
@@ -168,9 +167,11 @@ def update_trends(session: Session, articles: list[Article]):
     keywords = [w for w in words if w not in stop_words]
     counts = Counter(keywords)
 
+    # Upsert into TODAY's row per keyword. Scoping by (keyword, trend_date) is
+    # what lets /trends compute day-over-day velocity — without it, every keyword
+    # keeps incrementing its first-ever row and a new daily row is never created.
     today = date.today()
     for word, count in counts.most_common(15):
-        # Upsert per (keyword, day) so /trends can compare today vs yesterday velocity.
         existing = session.exec(
             select(Trend).where(Trend.keyword == word, Trend.trend_date == today)
         ).first()
@@ -268,16 +269,15 @@ def analyze_articles(session: Session):
             article.category = classify_article(article.title, article.url, article.source)
             article.insight = generate_insight(article.title, article.content_snippet or "")
             article.is_processed = True
-            
-            # Generate semantic embedding for the vector search
-            if article.insight:
-                model = get_embed_model()
-                embed_text = f"{article.title} {article.insight}"
-                embeddings = list(model.embed([embed_text]))
-                if embeddings:
-                    article.embedding = embeddings[0].tolist()
-                    
             session.add(article)
+
+        # Embed the whole batch in a single fastembed call rather than one per article.
+        to_embed = [(a, f"{a.title} {a.insight}") for a in batch if a.insight]
+        if to_embed:
+            vectors = list(get_embed_model().embed([text for _, text in to_embed]))
+            for (article, _), vector in zip(to_embed, vectors):
+                article.embedding = vector.tolist()
+                session.add(article)
 
         session.commit()
         processed = min(i + BATCH_SIZE, total)
@@ -426,7 +426,7 @@ This week shows strong momentum across {top_categories}. The highest concentrati
 
 
 def generate_weekly_digest(session: Session) -> str | None:
-    one_week_ago = datetime.utcnow() - timedelta(days=7)
+    one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
     top_articles = session.exec(
         select(Article)
         .where(col(Article.published_date) >= one_week_ago)

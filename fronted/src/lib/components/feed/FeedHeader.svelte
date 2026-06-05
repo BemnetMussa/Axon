@@ -23,7 +23,7 @@
 	let dark = $derived(theme === 'dark');
 </script>
 
-<header class={`sticky top-0 z-20 min-w-0 overflow-hidden border-b backdrop-blur-xl ${dark ? 'border-white/[0.04] bg-[#0b0b0b]/90' : 'border-zinc-100 bg-white/90'}`}>
+<header class={`sticky top-0 z-20 min-w-0 overflow-hidden border-b ${dark ? 'border-white/[0.04] bg-[#0b0b0b]' : 'border-zinc-100 bg-white'}`}>
 	<!-- top bar: logo (mobile) / title (desktop) + search + actions -->
 	<div class="flex min-w-0 items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5">
 		<!-- Mobile brand mark -->

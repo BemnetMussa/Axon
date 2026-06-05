@@ -80,7 +80,7 @@
 	class={`relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${dark ? 'bg-[#0a0a0a]' : 'bg-white/95'}`}
 	transition:fly={{ x: 60, duration: 300, opacity: 0 }}
 >
-	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2 sm:gap-3 sm:px-5 sm:py-2.5 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]/92' : 'border-zinc-100 bg-white/92'} backdrop-blur-xl`}>
+	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2 sm:gap-3 sm:px-5 sm:py-2.5 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}>
 		<button
 			onclick={onBack}
 			class={`flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 transition-colors sm:gap-2 sm:px-2 ${dark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-black'}`}
