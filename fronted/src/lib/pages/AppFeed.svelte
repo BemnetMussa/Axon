@@ -331,9 +331,8 @@
 				newArticleIds = new Set([...newArticleIds, ...fresh.map(a => a.id)]);
 				feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
 			}
-			return fresh.length;
 		} catch {
-			return 0;
+			// New-article fetch is best-effort; ignore failures
 		}
 	}
 
