@@ -7,7 +7,7 @@ import html
 import random
 from datetime import datetime, timedelta, timezone
 from time import mktime
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col
 from app.models import Article
 from dotenv import load_dotenv
 
@@ -526,7 +526,14 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
         # Shuffle broadly prevents the earlier sources from dominating the max limits every run
         random.shuffle(raw_signals)
 
-        all_existing_urls = set(session.exec(select(Article.url)).all())
+        # Only check the URLs we actually fetched against the DB, instead of
+        # loading every existing URL into memory (which grows unbounded).
+        candidate_urls = {s.get("url") for s in raw_signals if s.get("url")}
+        all_existing_urls = (
+            set(session.exec(select(Article.url).where(col(Article.url).in_(candidate_urls))).all())
+            if candidate_urls
+            else set()
+        )
         final: list[dict] = []
         seen: set[str] = set()
         source_counts: dict[str, int] = {}
