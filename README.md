@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="fronted/static/images/hero.png" alt="Axon Banner" width="800" style="border-radius: 1rem; margin-bottom: 2rem;">
   <h1>⚡ Axon v1.0.0 ⚡</h1>
   <p><b>The Official Launch Release: "The Bleeding Edge, Summarized."</b></p>
   <p>An open-source OSINT intelligence feed for founders and elite builders.</p>
@@ -119,7 +118,7 @@ The SvelteKit app can trigger your **hosted FastAPI** on a schedule so ingest st
 
 1. Add **`CRON_SECRET`** in the Vercel project (Settings → Environment Variables). Use a long random string. Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` to your route.
 2. Ensure **`INTERNAL_API_URL`**, **`AXON_INTERNAL_SECRET`**, and (optional) **`CRON_INGEST_USER_ID`** are set on Vercel so the serverless function can call `POST {INTERNAL_API_URL}/ingest`.
-3. [`fronted/vercel.json`](fronted/vercel.json) defines `GET /api/cron/ingest` every **4 hours** (UTC cron: `0 */4 * * *`). Adjust the schedule if needed.
+3. [`fronted/vercel.json`](fronted/vercel.json) defines `GET /api/cron/ingest` once per day at **00:00 UTC** (`0 0 * * *`). Vercel's Hobby tier only permits daily cron — upgrade to Pro if you need a faster cadence (e.g. `0 */4 * * *`). The backend's APScheduler still runs every 4h on the always-on host regardless.
 4. **Avoid double ingest:** if your API already runs APScheduler 24/7, you do **not** need Vercel cron—pick one. If you use **only** Vercel cron for ingest, set **`DISABLE_SCHEDULER=1`** on the API.
 
 **Custom domain on Vercel:** update `BETTER_AUTH_URL`, OAuth redirect URIs, and `CORS_ALLOWED_ORIGINS` on the API to match `https://yourdomain.com`.

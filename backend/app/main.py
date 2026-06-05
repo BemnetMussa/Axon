@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
-from fastapi import FastAPI, Depends, Query, Response
+from fastapi import FastAPI, Depends, Query, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -343,7 +343,7 @@ def count_since(
 async def get_article_content(article_id: int, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
-        return {"error": "Not found"}
+        raise HTTPException(status_code=404, detail="Article not found")
 
     if article.full_content:
         return {"content": article.full_content}
@@ -384,7 +384,7 @@ def search_semantic(query: str, session: Session = Depends(get_session)):
 def get_brief(article_id: int, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
-        return {"error": "Not found"}
+        raise HTTPException(status_code=404, detail="Article not found")
     brief = generate_deep_brief(article.title, article.content_snippet or "")
     return {"title": article.title, "brief": brief}
 
@@ -393,12 +393,17 @@ class ChatRequest(BaseModel):
     question: str
 
 
+class FeedbackRequest(BaseModel):
+    rating: int
+    comment: str | None = None
+
+
 @app.get("/articles/{article_id}/suggestions")
 @limiter.limit("30/minute")
 def article_chat_suggestions(request: Request, article_id: int, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
-        return {"error": "Not found", "suggestions": []}
+        raise HTTPException(status_code=404, detail="Article not found")
     # Serve from cache if fresh — avoids expensive LLM call on every article open
     cached = _get_cached_suggestions(article_id)
     if cached:
@@ -419,7 +424,7 @@ def article_chat_suggestions(request: Request, article_id: int, session: Session
 def article_chat(request: Request, article_id: int, req: ChatRequest, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
-        return {"error": "Not found"}
+        raise HTTPException(status_code=404, detail="Article not found")
     content = article.full_content or article.content_snippet or ""
     answer = chat_about_article(
         title=article.title,
@@ -550,14 +555,20 @@ def get_rss_feed(session: Session = Depends(get_session)):
     
 @app.post("/feedback")
 @limiter.limit("5/hour")
-def submit_feedback(request: Request, feedback: Feedback, session: Session = Depends(get_session)):
+def submit_feedback(request: Request, payload: FeedbackRequest, session: Session = Depends(get_session)):
     user_id = request.headers.get("X-Axon-User-Id")
     if not user_id:
         return JSONResponse({"detail": "Unauthorized"}, status_code=401)
-    
-    feedback.user_id = user_id
-    feedback.created_at = datetime.now(timezone.utc)
-    session.add(feedback)
+    if not (1 <= payload.rating <= 5):
+        raise HTTPException(status_code=422, detail="rating must be between 1 and 5")
+
+    entry = Feedback(
+        user_id=user_id,
+        rating=payload.rating,
+        comment=payload.comment,
+        created_at=datetime.now(timezone.utc),
+    )
+    session.add(entry)
     session.commit()
     return {"status": "success"}
 
