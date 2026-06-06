@@ -182,67 +182,27 @@
 		localStorage.setItem(THEME_KEY, t);
 	}
 
-	function toggleTheme(e: MouseEvent) {
+	let themeAnimTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function toggleTheme() {
 		const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
-		// Respect reduced-motion — instant switch, no overlay
+		// Respect reduced-motion — instant switch, no transition.
 		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
 			applyTheme(nextTheme);
 			return;
 		}
 
-		const el = e.currentTarget as HTMLElement;
-		const rect = el.getBoundingClientRect();
-		const ox = rect.left + rect.width / 2;
-		const oy = rect.top + rect.height / 2;
-
-		// Radius just large enough to cover every viewport corner from the origin
-		const maxR =
-			Math.ceil(
-				Math.hypot(
-					Math.max(ox, window.innerWidth - ox),
-					Math.max(oy, window.innerHeight - oy)
-				)
-			) + 10;
-
-		// Overlay in the NEW theme's color — starts at size 0 and grows to cover the page.
-		// This is a "growing iris" reveal.
-		const nextBg = nextTheme === 'dark' ? '#0b0b0b' : '#ffffff';
-		const overlay = document.createElement('div');
-		overlay.style.cssText = [
-			'position:fixed',
-			`top:${oy}px`,
-			`left:${ox}px`,
-			`width:${maxR * 2}px`,
-			`height:${maxR * 2}px`,
-			'border-radius:50%',
-			'transform:translate(-50%,-50%) scale(0)',
-			`background:${nextBg}`,
-			'z-index:99999',
-			'pointer-events:none',
-			'will-change:transform',
-		].join(';');
-		document.body.appendChild(overlay);
-
-		// Force a reflow so the browser acknowledges the starting state (scale: 0)
-		overlay.getBoundingClientRect();
-
-		// Wait for next frame to start growth
+		// Smooth color cross-fade instead of an opaque overlay: enable a one-shot
+		// global color transition, flip the theme on the next frame so the browser
+		// animates between palettes, then drop the transition so it never touches
+		// hovers or scrolling afterwards. Content stays visible — no white/black flash.
+		const root = document.documentElement;
+		if (themeAnimTimer) clearTimeout(themeAnimTimer);
+		root.classList.add('theme-transition');
 		requestAnimationFrame(() => {
-			overlay.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
-			overlay.style.transform = 'translate(-50%,-50%) scale(1)';
-			
-			// Fallback timeout in case transitionend fails to fire
-			let fired = false;
-			const cleanup = () => {
-				if (fired) return;
-				fired = true;
-				applyTheme(nextTheme);
-				overlay.remove();
-			};
-			
-			overlay.addEventListener('transitionend', cleanup, { once: true });
-			setTimeout(cleanup, 550); // Fallback exactly when transition should end
+			applyTheme(nextTheme);
+			themeAnimTimer = setTimeout(() => root.classList.remove('theme-transition'), 320);
 		});
 	}
 
@@ -851,6 +811,18 @@
 <style>
 	:global(body) {
 		overflow: hidden;
+	}
+	/* One-shot cross-fade applied only while toggling theme (added/removed in JS).
+	   Animates the color palette so the switch fades instead of flashing white/black.
+	   Scoped to the toggle window so it never affects hover/scroll repaints. */
+	:global(html.theme-transition),
+	:global(html.theme-transition *) {
+		transition:
+			background-color 0.3s ease,
+			color 0.3s ease,
+			border-color 0.3s ease,
+			fill 0.3s ease,
+			stroke 0.3s ease !important;
 	}
 	:global(html) {
 		background: #0b0b0b;
