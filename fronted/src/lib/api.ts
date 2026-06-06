@@ -91,7 +91,7 @@ export const api = {
         if (contextId) {
             url += `?context_id=${encodeURIComponent(contextId === 'GitHub' ? 'GitHub' : contextId)}`;
         }
-        const data = await jsonOrThrow<{ status?: string }>(await fetch(url, { method: 'POST' }));
+        const data = await jsonOrThrow<{ status?: string; new_articles?: number }>(await fetch(url, { method: 'POST' }));
         // Fire analysis in the background — never blocks the UI or causes a visible error
         fetch(`${BASE_URL}/analyze`, { method: 'POST' }).catch(() => {});
         return data;

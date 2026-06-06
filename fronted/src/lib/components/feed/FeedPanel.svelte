@@ -2,6 +2,7 @@
 	import { ArrowDownUp, Loader2, Check, Clock, X } from 'lucide-svelte';
 	import { api, type Article } from '$lib/api';
 	import ArticleCard from '$lib/components/feed/ArticleCard.svelte';
+	import VirtualFeed from '$lib/components/feed/VirtualFeed.svelte';
 	import FeedHeader from '$lib/components/feed/FeedHeader.svelte';
 	import { chipButtonClass } from '$lib/ui-styles';
 
@@ -290,20 +291,22 @@
 				{/if}
 			</div>
 		{:else}
-			<div class="flex w-full min-w-0 max-w-full flex-col gap-0.5 overflow-hidden px-2 py-2 sm:px-3 sm:py-3">
-				{#each articles as article (article.id)}
-					<ArticleCard
-						{article}
-						selected={selectedArticleId === article.id}
-						isSaved={savedArticleIds.includes(article.id)}
-						isNew={newArticleIds.has(article.id)}
-						isRead={readArticleIds.has(article.id)}
-						{theme}
-						onOpen={onArticleOpen}
-						onOpenWithChat={onArticleOpenWithChat}
-						onToggleSave={onToggleSave}
-					/>
-				{/each}
+			<div class="w-full min-w-0 max-w-full overflow-hidden px-2 sm:px-3">
+				<VirtualFeed items={articles} scrollEl={scrollArea}>
+					{#snippet item(article)}
+						<ArticleCard
+							{article}
+							selected={selectedArticleId === article.id}
+							isSaved={savedArticleIds.includes(article.id)}
+							isNew={newArticleIds.has(article.id)}
+							isRead={readArticleIds.has(article.id)}
+							{theme}
+							onOpen={onArticleOpen}
+							onOpenWithChat={onArticleOpenWithChat}
+							onToggleSave={onToggleSave}
+						/>
+					{/snippet}
+				</VirtualFeed>
 			</div>
 			{#if loadingMore}
 				<div class="flex justify-center py-4">
