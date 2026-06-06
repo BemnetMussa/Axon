@@ -103,7 +103,7 @@
 			pullStatus = 'checking';
 			try {
 				const result = await api.triggerRefresh(activeSource);
-				if (result.status === 'success' && result.new_articles > 0) {
+				if (result.status === 'success' && (result.new_articles ?? 0) > 0) {
 					if (onRefresh) await onRefresh();
 					pullStatus = 'up-to-date';
 				} else if (result.status === 'skipped') {
@@ -123,7 +123,7 @@
 		if (!scrollArea || scrollArea.scrollTop > 0 || e.deltaY >= 0 || pullStatus !== 'idle') return;
 		pullStatus = 'checking';
 		api.triggerRefresh(activeSource).then(async (result) => {
-			if (result.status === 'success' && result.new_articles > 0) {
+			if (result.status === 'success' && (result.new_articles ?? 0) > 0) {
 				if (onRefresh) await onRefresh();
 			}
 			pullStatus = 'up-to-date';
