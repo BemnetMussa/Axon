@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ArrowDownUp, Loader2, Check, Clock, X } from 'lucide-svelte';
-	import { api, type Article } from '$lib/api';
+	import { type Article } from '$lib/api';
 	import ArticleCard from '$lib/components/feed/ArticleCard.svelte';
 	import VirtualFeed from '$lib/components/feed/VirtualFeed.svelte';
 	import FeedHeader from '$lib/components/feed/FeedHeader.svelte';
@@ -98,22 +98,19 @@
 		pullDelta = e.touches[0].clientY - touchStartY;
 	}
 
+	// A user refresh only READS the latest articles from the database — it never
+	// triggers a scrape. Ingestion is owned by the backend scheduler (every 6h)
+	// and the Vercel cron; pulling to refresh just surfaces whatever's already in
+	// the DB, and shows "up to date" when there's nothing new.
 	async function handleTouchEnd() {
 		if (pullDelta >= PULL_THRESHOLD && pullStatus !== 'checking') {
 			pullStatus = 'checking';
 			try {
-				const result = await api.triggerRefresh(activeSource);
-				if (result.status === 'success' && (result.new_articles ?? 0) > 0) {
-					if (onRefresh) await onRefresh();
-					pullStatus = 'up-to-date';
-				} else if (result.status === 'skipped') {
-					pullStatus = 'up-to-date';
-				} else {
-					pullStatus = 'up-to-date';
-				}
+				if (onRefresh) await onRefresh();
 			} catch (e) {
-				pullStatus = 'idle';
+				/* best-effort */
 			}
+			pullStatus = 'up-to-date';
 			dismissStatus();
 		}
 		pullDelta = 0;
@@ -122,10 +119,7 @@
 	function handleWheel(e: WheelEvent) {
 		if (!scrollArea || scrollArea.scrollTop > 0 || e.deltaY >= 0 || pullStatus !== 'idle') return;
 		pullStatus = 'checking';
-		api.triggerRefresh(activeSource).then(async (result) => {
-			if (result.status === 'success' && (result.new_articles ?? 0) > 0) {
-				if (onRefresh) await onRefresh();
-			}
+		Promise.resolve(onRefresh?.()).then(() => {
 			pullStatus = 'up-to-date';
 			dismissStatus();
 		}).catch(() => {
