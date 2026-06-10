@@ -38,7 +38,7 @@ from app.services.extractor import extract_article_content
 scheduler = AsyncIOScheduler()
 
 # Scheduler observability (updated by scheduled_ingest)
-_scheduler_interval_hours = 4
+_scheduler_interval_hours = 6
 _last_ingest_at_utc: str | None = None
 _last_ingest_ok: bool | None = None
 _last_ingest_detail: str = ""
@@ -122,7 +122,7 @@ async def lifespan(app: FastAPI):
     # host (container/VM), not a serverless cold-start model, or the interval
     # will not fire reliably. Override cadence with env INGEST_INTERVAL_HOURS.
     # Set DISABLE_SCHEDULER=1 if you trigger ingest only via Vercel Cron (see README).
-    _scheduler_interval_hours = int(os.getenv("INGEST_INTERVAL_HOURS", "4"))
+    _scheduler_interval_hours = int(os.getenv("INGEST_INTERVAL_HOURS", "6"))
     disable_sched = os.getenv("DISABLE_SCHEDULER", "").lower() in ("1", "true", "yes")
     if not disable_sched:
         scheduler.add_job(

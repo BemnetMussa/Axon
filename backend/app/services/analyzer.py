@@ -159,13 +159,33 @@ def update_trends(session: Session, articles: list[Article]):
         "than", "them", "they", "does", "each", "over", "only", "such",
         "some", "very", "would", "could", "should", "there", "their",
         "your", "based", "first", "most", "other", "after", "before",
+        # structural / markup noise from RSS HTML and GitHub stat snippets
+        "href", "https", "http", "www", "amp", "span", "class", "rel",
+        "feed", "posts", "atom", "html", "nbsp", "target", "blank",
+        "stars", "forks", "issues", "points", "comments", "producthunt",
     }
-    all_text = " ".join(
-        f"{a.title} {a.content_snippet or ''}" for a in articles
-    ).lower()
-    words = re.findall(r"\b[a-z]{4,}\b", all_text)
-    keywords = [w for w in words if w not in stop_words]
-    counts = Counter(keywords)
+    # Count unigrams AND bigrams, per-article (so phrases don't span article
+    # boundaries). Bigrams like "language model" are far more informative than a
+    # bare "model", so they get a 2x weight and a min-frequency gate to beat the
+    # generic single-word noise.
+    unigrams: Counter = Counter()
+    bigrams: Counter = Counter()
+    for a in articles:
+        text = f"{a.title} {a.content_snippet or ''}"
+        text = re.sub(r"<[^>]+>", " ", text)            # strip HTML tags
+        text = re.sub(r"http\S+|www\.\S+", " ", text)   # strip URLs
+        words = re.findall(r"\b[a-z]{4,}\b", text.lower())
+        kept = [w for w in words if w not in stop_words]
+        unigrams.update(kept)
+        for w1, w2 in zip(kept, kept[1:]):
+            bigrams[f"{w1} {w2}"] += 1
+
+    counts: Counter = Counter()
+    for kw, c in unigrams.items():
+        counts[kw] += c
+    for kw, c in bigrams.items():
+        if c >= 2:  # drop one-off phrase noise
+            counts[kw] += c * 2
 
     # Upsert into TODAY's row per keyword. Scoping by (keyword, trend_date) is
     # what lets /trends compute day-over-day velocity — without it, every keyword
@@ -266,7 +286,7 @@ def analyze_articles(session: Session):
     for i in range(0, total, BATCH_SIZE):
         batch = articles[i:i + BATCH_SIZE]
         for article in batch:
-            article.category = classify_article(article.title, article.url, article.source)
+            # Category is already set once at ingest (see fetcher.classify_article).
             # Prefer the hydrated full body; fall back to the RSS snippet.
             source_text = article.full_content or article.content_snippet or ""
             article.insight = generate_insight(article.title, source_text)

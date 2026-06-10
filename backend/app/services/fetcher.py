@@ -10,6 +10,7 @@ from time import mktime
 from sqlmodel import Session, select, col
 from app.models import Article
 from app.services.extractor import extract_article_content
+from app.services.analyzer import classify_article
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -579,6 +580,35 @@ def _score_signals(signals: list[dict]) -> None:
         s["score"] = round(weight * (0.55 * norm_eng + 0.45 * recency), 5)
 
 
+# Title-overlap threshold for treating two cross-source items as the same story.
+DEDUP_JACCARD = 0.6
+_DEDUP_STOP = {
+    "the", "a", "an", "and", "or", "for", "with", "new", "how", "why",
+    "this", "that", "from", "via", "your", "you", "are", "now", "its",
+}
+
+
+def _title_fingerprint(title: str) -> set[str]:
+    """Significant word set of a title, for near-duplicate comparison."""
+    toks = re.findall(r"[a-z0-9]+", (title or "").lower())
+    return {t for t in toks if len(t) > 2 and t not in _DEDUP_STOP}
+
+
+def _is_near_dup(tokens: set[str], source: str, accepted: list[tuple[str, set[str]]]) -> bool:
+    """True if `tokens` strongly overlaps an already-accepted item from a
+    DIFFERENT source (the 'same story syndicated across feeds' case). Same-source
+    overlap is left alone — those are usually genuinely distinct posts."""
+    if not tokens:
+        return False
+    for src, prev in accepted:
+        if src == source or not prev:
+            continue
+        union = len(tokens | prev)
+        if union and len(tokens & prev) / union >= DEDUP_JACCARD:
+            return True
+    return False
+
+
 async def _hydrate_full_content(client: httpx.AsyncClient, articles: list[dict]) -> None:
     """Fetch readable body text for selected articles in place (best-effort).
 
@@ -654,6 +684,7 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
         final: list[dict] = []
         seen: set[str] = set()
         source_counts: dict[str, int] = {}
+        accepted_fingerprints: list[tuple[str, set[str]]] = []
 
         for sig in raw_signals:
             url = sig.get("url")
@@ -664,6 +695,11 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
             fluff_key = sig.get("fluff_key")
             if not is_gold(url, sig["title"], engagement, source, fluff_text=fluff_key):
                 continue
+            # Collapse the same story arriving from multiple feeds in one run.
+            # raw_signals is score-sorted, so the highest-scored copy is kept.
+            tokens = _title_fingerprint(sig.get("title", ""))
+            if _is_near_dup(tokens, source, accepted_fingerprints):
+                continue
             source_counts[source] = source_counts.get(source, 0) + 1
             if source_counts[source] > MAX_PER_SOURCE:
                 continue
@@ -671,6 +707,7 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
                 break
             final.append(sig)
             seen.add(url)
+            accepted_fingerprints.append((source, tokens))
 
         if not final:
             return 0
@@ -681,6 +718,10 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
 
         added = 0
         for sig in final:
+            # Classify ONCE, here, as the single source of truth. (The analyzer
+            # no longer re-classifies — the per-hunter category hints were only
+            # ever a fallback and used to get silently overwritten downstream.)
+            category = classify_article(sig["title"], sig["url"], sig["source"])
             article = Article(
                 title=sig["title"],
                 url=sig["url"],
@@ -688,7 +729,7 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
                 published_date=sig.get("published", _now()),
                 content_snippet=sig.get("snippet", ""),
                 full_content=sig.get("full_content"),
-                category=sig.get("category", "General"),
+                category=category,
                 likes=sig.get("likes", 0),
                 engagement_score=sig.get("score", 0.0),
             )
