@@ -290,7 +290,7 @@ All routes are defined in `main.py`. Grouped by purpose:
 ### Ingestion & analysis (operational)
 | Method | Route | Notes |
 |---|---|---|
-| POST | `/ingest` | Run a fetch. 5/hour, 4-hour global cooldown unless `context_id` given |
+| POST | `/ingest` | Run a fetch. **Ops/cron only — not user-facing.** 5/hour, 6-hour global cooldown unless `context_id` given |
 | POST | `/analyze` | Run the AI analysis pass over unprocessed articles |
 | POST | `/retry-insights` | Re-generate failed/empty insights |
 
@@ -365,6 +365,13 @@ are per-user. A `429` returns a friendly message + `Retry-After: 60`.
   deployments.
 - `INGEST_RUN_ON_STARTUP=1` queues one ingest immediately on boot.
 - Scheduler status (running?, last-ingest time, ok/fail, detail) is exposed on `/health`.
+
+**Read vs. ingest separation (important).** Ingestion — the only thing that hits external
+sites — is owned exclusively by the scheduler (and the Vercel cron). A **user refreshing
+the feed never triggers a scrape**: pull-to-refresh just reads the latest rows from
+Postgres (`GET /articles` / `GET /articles/count-since`) and shows "up to date" when
+nothing is new. This keeps user actions cheap and O(1), decouples them from slow
+third-party APIs, and means the feed scales with reads, not with outbound fetches.
 
 ---
 
