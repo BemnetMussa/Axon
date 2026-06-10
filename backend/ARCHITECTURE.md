@@ -127,6 +127,7 @@ of source. The backend speaks three "languages":
 | Function | Sources |
 |---|---|
 | `hunt_ai_labs` | OpenAI, DeepMind, Google AI, HuggingFace |
+| `hunt_anthropic` | Anthropic (via sitemap.xml — see below) |
 | `hunt_infrastructure` | NVIDIA, Together AI, Google Research |
 | `hunt_expert_blogs` | Karpathy, Simon Willison, Lilian Weng, Fast.ai, Sam Altman, BAIR |
 | `hunt_tech_news` | TechCrunch, The Verge, Ars Technica |
@@ -138,9 +139,16 @@ of source. The backend speaks three "languages":
 > mode. Each hunter now calls `_check_feed()`, which logs a warning when a feed returns
 > zero entries, so dead feeds can't disappear unnoticed again.
 
+### Special case: Anthropic (no RSS, ingested via sitemap)
+Anthropic publishes **no RSS feed** (every feed URL 404s), but its `robots.txt` allows
+crawling and its **`sitemap.xml`** lists all 224 `/news/` pages, each with a `lastmod`
+date. `hunt_anthropic` parses the sitemap, takes the newest pages, and reads `og:title` +
+meta `description` from each for a clean card — a robust feed substitute that avoids
+fragile HTML scraping.
+
 ### Sources that were removed (no working feed exists)
-Anthropic, Pinecone, Modal, and Cerebras were dropped because they are JS-rendered
-sites that publish **no RSS feed** (every known URL 404s). They were replaced with the
+Pinecone, Modal, and Cerebras were dropped — they are JS-rendered sites that publish
+**no RSS feed and no usable sitemap** (every known URL 404s). They were replaced with the
 verified-live feeds above (HuggingFace, Google AI, Google Research, Together AI, BAIR).
 
 ---
@@ -409,6 +417,8 @@ the `vector` extension exists, and syncs the schema. Semantic search uses pgvect
   longer overwrites it (§6, §8).
 - ✅ **Phrase-aware trends.** `update_trends()` now extracts bigrams from cleaned text and
   weights them above generic single words, with HTML/URL markup stripped out (§8).
+- ✅ **Anthropic source added.** Ingested via `sitemap.xml` (no RSS exists) with clean
+  titles/snippets pulled from each page's `og:title` + meta description (§5).
 
 ### Still open (candidates for the next iteration)
 1. **Cross-run / semantic dedupe.** The current near-dup check is title-based and scoped
@@ -418,9 +428,7 @@ the `vector` extension exists, and syncs the schema. Semantic search uses pgvect
    SEO repos can still appear; no reputation/quality signal beyond the name filter.
 3. **ArXiv firehose.** Latest `cs.AI`/`cs.LG` by date only — no relevance/citation
    ranking.
-4. **Anthropic has no feed.** Currently no Anthropic source (no RSS exists); would need
-   a dedicated scraper to include it.
-5. **Analysis cost/time.** A full run can be ~100 articles × Groq calls with 12s batch
+4. **Analysis cost/time.** A full run can be ~100 articles × Groq calls with 12s batch
    gaps — fine on a long-lived host, but heavy for short serverless timeouts.
 
 ---

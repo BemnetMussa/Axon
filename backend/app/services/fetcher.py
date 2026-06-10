@@ -54,7 +54,7 @@ FULL_CONTENT_CONCURRENCY = 8
 # Per-source trust weights for ranking. Higher = inherently higher-signal, which
 # matters most for RSS sources that carry no engagement number (likes == 0).
 SOURCE_WEIGHTS = {
-    "openai": 1.6, "deepmind": 1.5, "googleai": 1.4, "huggingface": 1.4,
+    "openai": 1.6, "anthropic": 1.6, "deepmind": 1.5, "googleai": 1.4, "huggingface": 1.4,
     "googleresearch": 1.3, "nvidia": 1.2, "together": 1.1,
     "karpathy": 1.5, "simonw": 1.4, "lilianweng": 1.4, "bair": 1.3,
     "altman": 1.3, "fast.ai": 1.2,
@@ -75,6 +75,15 @@ def _check_feed(name: str, entries: list) -> list:
     if not entries:
         print(f"AXON WARNING: feed '{name}' returned 0 entries (moved/dead URL?)")
     return entries
+
+
+def _parse_sitemap_date(s: str) -> datetime:
+    """Parse a sitemap <lastmod> value (date or full ISO) into tz-aware UTC."""
+    try:
+        dt = datetime.fromisoformat(s.strip().replace("Z", "+00:00"))
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return _now()
 
 
 def _parse_feed_date(entry) -> datetime:
@@ -342,9 +351,8 @@ async def hunt_product_launches(client: httpx.AsyncClient):
 # ---------------------------------------------------------------------------
 
 async def hunt_ai_labs(client: httpx.AsyncClient):
-    """RSS feeds from major AI labs and companies."""
-    # NOTE: Anthropic publishes no RSS feed (JS-rendered site, 404 on every
-    # known path) — replaced with verified-live AI-lab feeds.
+    """RSS feeds from major AI labs and companies. (Anthropic has no RSS — it's
+    handled separately via its sitemap in hunt_anthropic.)"""
     feeds = [
         ("OpenAI", "https://openai.com/news/rss.xml"),
         ("DeepMind", "https://deepmind.google/blog/rss.xml"),
@@ -370,6 +378,62 @@ async def hunt_ai_labs(client: httpx.AsyncClient):
         except Exception:
             continue
     return signals
+
+
+async def hunt_anthropic(client: httpx.AsyncClient):
+    """Anthropic publishes no RSS feed, but robots.txt allows crawling and its
+    sitemap.xml lists every /news/ page with a lastmod date. We take the newest
+    pages and read og:title + meta description from each for a clean card."""
+    try:
+        res = await client.get(
+            "https://www.anthropic.com/sitemap.xml", timeout=12.0, follow_redirects=True
+        )
+        if res.status_code != 200:
+            _check_feed("Anthropic", [])
+            return []
+        entries = re.findall(
+            r"<loc>(https://www\.anthropic\.com/news/[^<]+)</loc>\s*(?:<lastmod>([^<]+)</lastmod>)?",
+            res.text,
+        )
+        newest = sorted(
+            ((u, _parse_sitemap_date(d)) for u, d in entries if d),
+            key=lambda x: x[1],
+            reverse=True,
+        )[:8]
+        _check_feed("Anthropic", newest)
+
+        async def fetch_meta(url: str, pub: datetime):
+            try:
+                r = await client.get(url, timeout=12.0, follow_redirects=True)
+                page = r.text
+                og = re.search(
+                    r'<meta[^>]+property="og:title"[^>]+content="([^"]+)"', page, re.I
+                )
+                desc = re.search(
+                    r'<meta[^>]+name="description"[^>]+content="([^"]+)"', page, re.I
+                )
+                title = (
+                    html.unescape(og.group(1)).strip()
+                    if og
+                    else url.rstrip("/").rsplit("/", 1)[-1].replace("-", " ").title()
+                )
+                snippet = html.unescape(desc.group(1)).strip()[:400] if desc else title
+                return {
+                    "title": title,
+                    "url": url,
+                    "snippet": snippet,
+                    "source": "Anthropic",
+                    "category": "AI",
+                    "likes": 0,
+                    "published": pub,
+                }
+            except Exception:
+                return None
+
+        results = await asyncio.gather(*[fetch_meta(u, p) for u, p in newest])
+        return [r for r in results if r]
+    except Exception:
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -643,7 +707,7 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
         if context_id == "GitHub":
             tasks = [hunt_github_trending(client)]
         elif context_id == "AI":
-            tasks = [hunt_ai_labs(client), hunt_tech_news(client), hunt_infrastructure(client)]
+            tasks = [hunt_ai_labs(client), hunt_anthropic(client), hunt_tech_news(client), hunt_infrastructure(client)]
         elif context_id == "Discovery":
             tasks = [hunt_product_launches(client), hunt_hn_discussions(client)]
         elif context_id == "Signal":
@@ -655,6 +719,7 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
                 hunt_github_trending(client),
                 hunt_product_launches(client),
                 hunt_ai_labs(client),
+                hunt_anthropic(client),
                 hunt_infrastructure(client),
                 hunt_expert_blogs(client),
                 hunt_lobsters(client),
