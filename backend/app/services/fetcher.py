@@ -2,13 +2,14 @@ import os
 import httpx
 import asyncio
 import feedparser
+import math
 import re
 import html
-import random
 from datetime import datetime, timedelta, timezone
 from time import mktime
 from sqlmodel import Session, select, col
 from app.models import Article
+from app.services.extractor import extract_article_content
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,14 +17,6 @@ load_dotenv()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 # "bearer" for fine-grained PATs, "token" for classic PATs (default)
 GITHUB_AUTH_STYLE = (os.getenv("GITHUB_AUTH_STYLE") or "token").strip().lower()
-
-VIRAL_THRESHOLDS = {
-    "hackernews": 15,
-    "github": 100,
-    "reddit": 30,
-    "lobsters": 10,
-    "producthunt": 0,
-}
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -39,12 +32,48 @@ TITLE_FLUFF = {
     "roadmap", "job", "tutorial", "resume", "leetcode",
 }
 
+# Substrings that mark a GitHub repo as an evergreen "list/learning" project
+# (curated link dumps, study guides) rather than a real tool worth surfacing.
+# Checked against owner/repo only, so it won't touch other sources' titles.
+GITHUB_NAME_FLUFF = {
+    "awesome", "cheatsheet", "cheat-sheet", "free-programming",
+    "programming-books", "-books", "coding-interview", "system-design",
+    "build-your-own", "100-days", "30-days", "must-read", "curated",
+    "the-book-of", "every-programmer",
+}
+
 MAX_PER_SOURCE = 8
 MAX_TOTAL_PER_RUN = 100
+
+# How many selected articles to hydrate with full body text per run, and how
+# many of those fetches to run concurrently. Extraction skips aggregator
+# domains (GitHub/HN/ArXiv/etc.) internally — for those the snippet IS the content.
+FULL_CONTENT_CONCURRENCY = 8
+
+# Per-source trust weights for ranking. Higher = inherently higher-signal, which
+# matters most for RSS sources that carry no engagement number (likes == 0).
+SOURCE_WEIGHTS = {
+    "openai": 1.6, "deepmind": 1.5, "googleai": 1.4, "huggingface": 1.4,
+    "googleresearch": 1.3, "nvidia": 1.2, "together": 1.1,
+    "karpathy": 1.5, "simonw": 1.4, "lilianweng": 1.4, "bair": 1.3,
+    "altman": 1.3, "fast.ai": 1.2,
+    "hackernews": 1.3, "github": 1.3, "arxiv": 1.2, "lobsters": 1.2,
+    "techcrunch": 0.9, "theverge": 0.9, "arstechnica": 0.9, "producthunt": 1.0,
+}
+# Recency half-life-ish scale in hours (exp decay): ~3 days.
+RECENCY_SCALE_HOURS = 72.0
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _check_feed(name: str, entries: list) -> list:
+    """Log a warning when a curated feed returns nothing, so dead feeds stop
+    failing silently (every hunt_* swallows exceptions otherwise)."""
+    if not entries:
+        print(f"AXON WARNING: feed '{name}' returned 0 entries (moved/dead URL?)")
+    return entries
 
 
 def _parse_feed_date(entry) -> datetime:
@@ -66,11 +95,16 @@ def is_gold(
     source: str = "",
     fluff_text: str | None = None,
 ) -> bool:
-    """fluff_text: if set, TITLE_FLUFF is checked against this only (e.g. GitHub owner/repo, not description)."""
+    """fluff_text: if set, TITLE_FLUFF is checked against this only (e.g. GitHub owner/repo, not description).
+
+    Junk filters (blacklist + fluff words) always run first — a high engagement
+    count no longer buys a junk item a free pass. That bypass is exactly why
+    all-time-famous repos (developer-roadmap, awesome-*) used to sail through.
+    Traction is already enforced upstream by each hunter's query (HN front page,
+    GitHub star floors, Lobsters hottest), and final ordering is handled by
+    engagement_score, so anything clearing the junk filters is kept.
+    """
     try:
-        threshold = VIRAL_THRESHOLDS.get(source.lower(), 0)
-        if threshold and engagement >= threshold:
-            return True
         domain = url.split("/")[2].replace("www.", "")
         if any(bad in domain for bad in DOMAIN_BLACKLIST):
             return False
@@ -184,6 +218,10 @@ async def hunt_github_trending(client: httpx.AsyncClient):
             results = []
             for i in items:
                 fluff_key = i.get("full_name") or i.get("name") or ""
+                low = fluff_key.lower()
+                # Drop evergreen list/learning repos (awesome-*, *-books, etc.)
+                if any(w in low for w in GITHUB_NAME_FLUFF):
+                    continue
                 if not is_gold(
                     i["html_url"],
                     i["name"],
@@ -192,7 +230,14 @@ async def hunt_github_trending(client: httpx.AsyncClient):
                     fluff_text=fluff_key,
                 ):
                     continue
+                # Use repo creation date so recency scoring reflects how *new*
+                # the project is — a 4-day-old repo with 2k stars is real momentum.
                 pub = _now()
+                if i.get("created_at"):
+                    try:
+                        pub = datetime.fromisoformat(i["created_at"].replace("Z", "+00:00"))
+                    except Exception:
+                        pub = _now()
                 results.append({
                     "title": f"{i['name']}: {i['description'] or 'No description'}",
                     "fluff_key": fluff_key,
@@ -215,9 +260,13 @@ async def hunt_github_trending(client: httpx.AsyncClient):
     week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
     month_ago = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
 
+    # "Trending" = repos CREATED recently that already pulled real stars, not
+    # old giants that merely got a commit this week (the old pushed:> query
+    # surfaced freeCodeCamp & friends every run).
     queries = [
-        (f"pushed:>{week_ago} stars:>30", "Momentum"),
-        (f"created:>{month_ago} stars:>20 topic:ai", "AI"),
+        (f"created:>{month_ago} stars:>50", "Momentum"),
+        (f"created:>{week_ago} stars:>10", "Momentum"),
+        (f"created:>{month_ago} stars:>30 topic:ai", "AI"),
     ]
 
     results: list[list[dict]] = []
@@ -235,11 +284,12 @@ async def hunt_github_trending(client: httpx.AsyncClient):
 
     # Fallback if primary queries returned nothing
     if not signals:
+        # Progressively looser, but still creation-date scoped so we never fall
+        # back to all-time-famous repos just to fill the feed.
         fallback_queries = [
-            ("stars:>50 topic:machine-learning", "AI"),
-            ("stars:>30 language:Python topic:ai", "Momentum"),
-            ("stars:>15 sort:updated", "Momentum"),
-            ("stars:>10", "Momentum"),
+            (f"created:>{month_ago} stars:>20 topic:ai", "AI"),
+            (f"created:>{month_ago} stars:>10", "Momentum"),
+            (f"created:>{week_ago} stars:>3", "Momentum"),
         ]
         for q, cat in fallback_queries:
             batch = await search_github(q, cat)
@@ -292,16 +342,20 @@ async def hunt_product_launches(client: httpx.AsyncClient):
 
 async def hunt_ai_labs(client: httpx.AsyncClient):
     """RSS feeds from major AI labs and companies."""
+    # NOTE: Anthropic publishes no RSS feed (JS-rendered site, 404 on every
+    # known path) — replaced with verified-live AI-lab feeds.
     feeds = [
         ("OpenAI", "https://openai.com/news/rss.xml"),
         ("DeepMind", "https://deepmind.google/blog/rss.xml"),
-        ("Anthropic", "https://www.anthropic.com/index.xml"),
+        ("GoogleAI", "https://blog.google/technology/ai/rss/"),
+        ("HuggingFace", "https://huggingface.co/blog/feed.xml"),
     ]
     signals = []
     for name, url in feeds:
         try:
             res = await client.get(url, timeout=10.0, follow_redirects=True)
             feed = feedparser.parse(res.text)
+            _check_feed(name, feed.entries)
             for e in feed.entries[:8]:
                 signals.append({
                     "title": e.title,
@@ -323,17 +377,19 @@ async def hunt_ai_labs(client: httpx.AsyncClient):
 
 async def hunt_infrastructure(client: httpx.AsyncClient):
     """Blog feeds from infra/compute providers."""
+    # NOTE: Pinecone / Modal / Cerebras have no working RSS feed (all 404) —
+    # replaced with verified-live compute/infra + research feeds.
     feeds = [
         ("NVIDIA", "https://developer.nvidia.com/blog/feed/"),
-        ("Pinecone", "https://www.pinecone.io/blog/rss.xml"),
-        ("Modal", "https://modal.com/blog/rss.xml"),
-        ("Cerebras", "https://www.cerebras.net/blog/feed/"),
+        ("Together", "https://www.together.ai/blog/rss.xml"),
+        ("GoogleResearch", "https://research.google/blog/rss/"),
     ]
     signals = []
     for name, url in feeds:
         try:
-            res = await client.get(url, timeout=12.0)
+            res = await client.get(url, timeout=12.0, follow_redirects=True)
             feed = feedparser.parse(res.text)
+            _check_feed(name, feed.entries)
             for e in feed.entries[:5]:
                 signals.append({
                     "title": e.title,
@@ -358,15 +414,17 @@ async def hunt_expert_blogs(client: httpx.AsyncClient):
     experts = [
         ("Karpathy", "https://karpathy.github.io/feed.xml"),
         ("SimonW", "https://simonwillison.net/atom/everything/"),
-        ("LilianWeng", "https://lilianweng.github.io/feed.xml"),
-        ("Fast.ai", "https://www.fast.ai/posts/index.xml"),
-        ("Altman", "https://blog.samaltman.com/rss"),
+        ("LilianWeng", "https://lilianweng.github.io/index.xml"),
+        ("Fast.ai", "https://www.fast.ai/index.xml"),
+        ("Altman", "https://blog.samaltman.com/posts.atom"),
+        ("BAIR", "https://bair.berkeley.edu/blog/feed.xml"),
     ]
     signals = []
     for name, url in experts:
         try:
-            res = await client.get(url, timeout=12.0)
+            res = await client.get(url, timeout=12.0, follow_redirects=True)
             feed = feedparser.parse(res.text)
+            _check_feed(name, feed.entries)
             for e in feed.entries[:3]:
                 signals.append({
                     "title": e.title,
@@ -490,6 +548,62 @@ async def hunt_tech_news(client: httpx.AsyncClient):
 
 
 # ===========================================================================
+# SCORING & ENRICHMENT
+# ===========================================================================
+
+def _score_signals(signals: list[dict]) -> None:
+    """Attach an engagement_score to each signal in place.
+
+    score = source_weight * (0.55 * engagement + 0.45 * recency)
+      - engagement: likes normalized *within its own source* across this run,
+        so GitHub stars (thousands) and HN points (hundreds) compare fairly,
+        and pure-RSS sources (likes == 0) simply lean on recency + weight.
+      - recency: exponential decay on article age (~3-day scale).
+    """
+    now = _now()
+    max_by_source: dict[str, int] = {}
+    for s in signals:
+        src = s["source"].lower()
+        max_by_source[src] = max(max_by_source.get(src, 0), s.get("likes", 0) or 0)
+
+    for s in signals:
+        src = s["source"].lower()
+        smax = max_by_source.get(src, 0)
+        norm_eng = (s.get("likes", 0) or 0) / smax if smax > 0 else 0.0
+
+        pub = s.get("published") or now
+        age_hours = max(0.0, (now - pub).total_seconds() / 3600)
+        recency = math.exp(-age_hours / RECENCY_SCALE_HOURS)
+
+        weight = SOURCE_WEIGHTS.get(src, 1.0)
+        s["score"] = round(weight * (0.55 * norm_eng + 0.45 * recency), 5)
+
+
+async def _hydrate_full_content(client: httpx.AsyncClient, articles: list[dict]) -> None:
+    """Fetch readable body text for selected articles in place (best-effort).
+
+    Aggregator domains are skipped inside extract_article_content (their snippet
+    is already the payload), so this mostly hits the blog/news long-form sources
+    whose RSS summary is too thin for a good AI insight.
+    """
+    sem = asyncio.Semaphore(FULL_CONTENT_CONCURRENCY)
+
+    async def one(sig: dict) -> None:
+        url = sig.get("url")
+        if not url:
+            return
+        async with sem:
+            try:
+                text = await extract_article_content(url)
+                if text:
+                    sig["full_content"] = text
+            except Exception:
+                pass
+
+    await asyncio.gather(*[one(s) for s in articles])
+
+
+# ===========================================================================
 # MAIN INGESTION
 # ===========================================================================
 
@@ -523,8 +637,11 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
         for batch in results:
             raw_signals.extend(batch)
 
-        # Shuffle broadly prevents the earlier sources from dominating the max limits every run
-        random.shuffle(raw_signals)
+        # Rank by computed engagement_score (normalized engagement + recency *
+        # source weight) so genuinely high-signal items win the per-source/total
+        # caps, instead of the old random.shuffle lottery.
+        _score_signals(raw_signals)
+        raw_signals.sort(key=lambda s: s.get("score", 0.0), reverse=True)
 
         # Only check the URLs we actually fetched against the DB, instead of
         # loading every existing URL into memory (which grows unbounded).
@@ -558,6 +675,10 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
         if not final:
             return 0
 
+        # Pull readable long-form text for the selected articles so the AI writes
+        # insights from the real body, not a 1-2 sentence RSS blurb.
+        await _hydrate_full_content(client, final)
+
         added = 0
         for sig in final:
             article = Article(
@@ -566,8 +687,10 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
                 source=sig["source"],
                 published_date=sig.get("published", _now()),
                 content_snippet=sig.get("snippet", ""),
+                full_content=sig.get("full_content"),
                 category=sig.get("category", "General"),
                 likes=sig.get("likes", 0),
+                engagement_score=sig.get("score", 0.0),
             )
             try:
                 session.add(article)

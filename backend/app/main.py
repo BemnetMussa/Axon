@@ -385,7 +385,7 @@ def get_brief(article_id: int, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-    brief = generate_deep_brief(article.title, article.content_snippet or "")
+    brief = generate_deep_brief(article.title, article.full_content or article.content_snippet or "")
     return {"title": article.title, "brief": brief}
 
 

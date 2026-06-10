@@ -188,7 +188,7 @@ def generate_insight(title: str, content: str, retries: int = 2) -> str:
     if not client.api_key:
         return "AI analysis offline."
 
-    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:2000]
+    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:6000]
 
     prompt = f"""You are an expert technology writer for a premium newsletter. Write a compelling article summary that stands on its own.
 
@@ -227,7 +227,7 @@ Source material: {clean_content}"""
 
 def generate_deep_brief(title: str, content: str) -> str:
     """Structured 3-part deep brief."""
-    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:2000]
+    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:6000]
 
     prompt = f"""You are a Lead Intelligence Analyst. Brief a technical founder on this signal:
 
@@ -267,7 +267,9 @@ def analyze_articles(session: Session):
         batch = articles[i:i + BATCH_SIZE]
         for article in batch:
             article.category = classify_article(article.title, article.url, article.source)
-            article.insight = generate_insight(article.title, article.content_snippet or "")
+            # Prefer the hydrated full body; fall back to the RSS snippet.
+            source_text = article.full_content or article.content_snippet or ""
+            article.insight = generate_insight(article.title, source_text)
             article.is_processed = True
             session.add(article)
 
@@ -309,7 +311,7 @@ def retry_failed_insights(session: Session):
     for i in range(0, total, BATCH_SIZE):
         batch = failed[i:i + BATCH_SIZE]
         for article in batch:
-            result = generate_insight(article.title, article.content_snippet or "")
+            result = generate_insight(article.title, article.full_content or article.content_snippet or "")
             if result:
                 article.insight = result
                 fixed += 1
