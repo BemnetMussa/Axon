@@ -48,4 +48,7 @@ COPY . .
 EXPOSE 8000
 
 # Run the application.
-CMD ["gunicorn", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120"]
+# Single worker on purpose: the in-process APScheduler must not run in more than
+# one worker, or scheduled ingestion fires N times. Shell form so ${PORT} (set by
+# Render/most PaaS) expands; falls back to 8000 for local runs.
+CMD gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --workers 1 --timeout 120
