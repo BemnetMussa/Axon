@@ -41,6 +41,12 @@ def _build_engine():
         connect_args=connect_args,
         pool_pre_ping=True,
         pool_recycle=300,
+        # Supabase's session pooler caps total clients (15 on free tier), shared
+        # across this app, better-auth, and any leftover connections. Keep our
+        # footprint small and bounded so we can't exhaust it. Tune via env.
+        pool_size=int(os.getenv("DB_POOL_SIZE", "3")),
+        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "2")),
+        pool_timeout=30,
     )
 
 
