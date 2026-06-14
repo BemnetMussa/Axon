@@ -1,6 +1,7 @@
 <script lang="ts">
     import { api } from '$lib/api';
     import { Sparkles, Star, MessageSquare, Send, X } from 'lucide-svelte';
+    import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
     import { fade, fly } from 'svelte/transition';
 
     let { show = $bindable(false), theme = 'dark' } = $props();
@@ -123,7 +124,7 @@
                             class={`w-full group inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 font-bold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-lg ${theme === 'dark' ? 'bg-black text-white hover:bg-zinc-800 shadow-black/10' : 'bg-white text-black hover:bg-zinc-200 shadow-black/20'}`}
                         >
                             {#if submitting}
-                                <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                                <SignalLoader size={16} />
                                 Sending...
                             {:else}
                                 Submit Feedback
