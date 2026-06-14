@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { marked } from 'marked';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -180,29 +180,74 @@
 		theme = t;
 		document.documentElement.classList.toggle('light', t === 'light');
 		localStorage.setItem(THEME_KEY, t);
+		// Keep the mobile browser chrome (status bar) in sync with the palette.
+		document
+			.querySelector('meta[name="theme-color"]')
+			?.setAttribute('content', t === 'light' ? '#ffffff' : '#0b0b0b');
 	}
 
-	let themeAnimTimer: ReturnType<typeof setTimeout> | null = null;
-
-	function toggleTheme() {
+	function toggleTheme(event?: MouseEvent) {
 		const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
-		// Respect reduced-motion — instant switch, no transition.
-		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		// Premium theme switch: the new palette is revealed by a circular clip-path
+		// that expands from the toggle control — the View-Transitions pattern shipped
+		// by Linear, Vercel and the Chrome team. The browser snapshots the page, we
+		// flip the palette atomically and wait for Svelte to flush the new classes,
+		// then the whole new view (gradients, shadows, panels) is GPU-composited as a
+		// single growing layer. No flash, no per-element transition cost. Falls back
+		// to an instant switch when the API is missing or reduced-motion is set.
+		const startViewTransition = (
+			document as Document & {
+				startViewTransition?: (
+					cb: () => Promise<void> | void
+				) => { ready: Promise<void> };
+			}
+		).startViewTransition?.bind(document);
+		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+		if (reduce || !startViewTransition) {
 			applyTheme(nextTheme);
 			return;
 		}
 
-		// Smooth color cross-fade instead of an opaque overlay: enable a one-shot
-		// global color transition, flip the theme on the next frame so the browser
-		// animates between palettes, then drop the transition so it never touches
-		// hovers or scrolling afterwards. Content stays visible — no white/black flash.
-		const root = document.documentElement;
-		if (themeAnimTimer) clearTimeout(themeAnimTimer);
-		root.classList.add('theme-transition');
-		requestAnimationFrame(() => {
+		// Origin of the reveal: the cursor for a real click, the control's centre for
+		// keyboard activation (which reports 0,0), otherwise the viewport centre.
+		let originX = window.innerWidth / 2;
+		let originY = window.innerHeight / 2;
+		if (event?.clientX || event?.clientY) {
+			originX = event.clientX;
+			originY = event.clientY;
+		} else if (event?.currentTarget instanceof Element) {
+			const rect = event.currentTarget.getBoundingClientRect();
+			originX = rect.left + rect.width / 2;
+			originY = rect.top + rect.height / 2;
+		}
+		// Radius that reaches the farthest viewport corner, so the circle fully covers
+		// the screen no matter where it starts.
+		const endRadius = Math.hypot(
+			Math.max(originX, window.innerWidth - originX),
+			Math.max(originY, window.innerHeight - originY)
+		);
+
+		const transition = startViewTransition(async () => {
 			applyTheme(nextTheme);
-			themeAnimTimer = setTimeout(() => root.classList.remove('theme-transition'), 320);
+			await tick();
+		});
+
+		transition.ready.then(() => {
+			document.documentElement.animate(
+				{
+					clipPath: [
+						`circle(0px at ${originX}px ${originY}px)`,
+						`circle(${endRadius}px at ${originX}px ${originY}px)`
+					]
+				},
+				{
+					duration: 450,
+					easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+					pseudoElement: '::view-transition-new(root)'
+				}
+			);
 		});
 	}
 
@@ -623,7 +668,7 @@
 	<meta name="theme-color" content={theme === 'dark' ? '#0b0b0b' : '#ffffff'} />
 </svelte:head>
 
-<div class={`relative flex h-screen overflow-hidden transition-colors duration-300 ${theme === 'dark' ? 'bg-[#070707] text-[#e4e4e7]' : 'bg-[#f8fafc] text-zinc-900'}`}>
+<div class={`relative flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-[#070707] text-[#e4e4e7]' : 'bg-[#f8fafc] text-zinc-900'}`}>
 	<div class={`app-bg pointer-events-none absolute inset-0 ${theme === 'dark' ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.045),transparent_42%)]' : 'bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.06),transparent_45%)]'}`}></div>
 	<div class="mx-auto flex h-full w-full max-w-[1500px] min-w-0 overflow-hidden px-0 lg:px-4">
 	<DesktopSidebar
@@ -812,17 +857,21 @@
 	:global(body) {
 		overflow: hidden;
 	}
-	/* One-shot cross-fade applied only while toggling theme (added/removed in JS).
-	   Animates the color palette so the switch fades instead of flashing white/black.
-	   Scoped to the toggle window so it never affects hover/scroll repaints. */
-	:global(html.theme-transition),
-	:global(html.theme-transition *) {
-		transition:
-			background-color 0.3s ease,
-			color 0.3s ease,
-			border-color 0.3s ease,
-			fill 0.3s ease,
-			stroke 0.3s ease !important;
+	/* Theme toggle uses the View Transitions API (see toggleTheme): the new palette
+	   is revealed by an expanding circular clip-path (animated in JS) radiating from
+	   the toggle control. We disable the default opacity cross-fade so the clip-path
+	   reveal is the only motion, and keep the new snapshot stacked above the old one
+	   so the growing circle paints over the previous palette. No-op without the API. */
+	:global(::view-transition-old(root)),
+	:global(::view-transition-new(root)) {
+		animation: none;
+		mix-blend-mode: normal;
+	}
+	:global(::view-transition-old(root)) {
+		z-index: 0;
+	}
+	:global(::view-transition-new(root)) {
+		z-index: 1;
 	}
 	:global(html) {
 		background: #0b0b0b;
