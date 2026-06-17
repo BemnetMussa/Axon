@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { marked } from 'marked';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -11,6 +11,7 @@
 	import { NAVIGATION, SUGGESTIONS } from '$lib/ui';
 	import { analytics } from '$lib/analytics';
 	import OnboardingOverlay from '$lib/components/onboarding/OnboardingOverlay.svelte';
+	import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
 
 	type ChatMessage = {
 		role: 'user' | 'ai';
@@ -180,30 +181,147 @@
 		theme = t;
 		document.documentElement.classList.toggle('light', t === 'light');
 		localStorage.setItem(THEME_KEY, t);
+		// Keep the mobile browser chrome (status bar) in sync with the palette.
+		document
+			.querySelector('meta[name="theme-color"]')
+			?.setAttribute('content', t === 'light' ? '#ffffff' : '#0b0b0b');
 	}
 
-	let themeAnimTimer: ReturnType<typeof setTimeout> | null = null;
+	// Lightning "signal" overlay shown for the duration of a theme toggle. `null`
+	// when idle; while switching it holds the bolt's SVG path and stroke colours.
+	// Brand motif: an axon firing an electrical impulse. The bolt is the *seam* the
+	// new palette opens from, so it's coloured as the incoming theme's lightning —
+	// white for dark mode, near-black for light mode — and rendered above the reveal.
+	let boltView = $state<{ d: string; core: string; glow: string } | null>(null);
 
-	function toggleTheme() {
+	// Jagged polyline between two points, with perpendicular jitter on the interior
+	// vertices (endpoints stay clean so the bolt meets the screen edges precisely).
+	function jaggedPath(a: { x: number; y: number }, b: { x: number; y: number }) {
+		const dx = b.x - a.x;
+		const dy = b.y - a.y;
+		const len = Math.hypot(dx, dy) || 1;
+		const nx = -dy / len;
+		const ny = dx / len;
+		const segments = 12;
+		const spread = Math.min(64, len * 0.045);
+		let d = `M ${a.x.toFixed(1)} ${a.y.toFixed(1)}`;
+		for (let i = 1; i < segments; i++) {
+			const t = i / segments;
+			const j = (Math.random() - 0.5) * spread;
+			d += ` L ${(a.x + dx * t + nx * j).toFixed(1)} ${(a.y + dy * t + ny * j).toFixed(1)}`;
+		}
+		return `${d} L ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+	}
+
+	function toggleTheme(event?: MouseEvent) {
 		const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
-		// Respect reduced-motion — instant switch, no transition.
-		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		// Brand "signal" theme switch: a jagged lightning bolt spans the diagonal
+		// through the cursor (out to the top-right and bottom-left), and the new
+		// palette "opens up" from that bolt — a diagonal band that widens perpendicular
+		// until it fills the screen. The reveal uses the View-Transitions API (snapshot
+		// → flip palette → GPU-composite the real new UI) so there's no flash and no
+		// per-element transition cost; the bolt rides on top via `view-transition-name`
+		// so it sits on the opening seam. Reduced-motion / unsupported browsers get an
+		// instant switch with no bolt — also the photosensitivity-safe path.
+		const startViewTransition = (
+			document as Document & {
+				startViewTransition?: (
+					cb: () => Promise<void> | void
+				) => { ready: Promise<void>; finished: Promise<void> };
+			}
+		).startViewTransition?.bind(document);
+		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+		if (reduce || !startViewTransition) {
 			applyTheme(nextTheme);
 			return;
 		}
 
-		// Smooth color cross-fade instead of an opaque overlay: enable a one-shot
-		// global color transition, flip the theme on the next frame so the browser
-		// animates between palettes, then drop the transition so it never touches
-		// hovers or scrolling afterwards. Content stays visible — no white/black flash.
-		const root = document.documentElement;
-		if (themeAnimTimer) clearTimeout(themeAnimTimer);
-		root.classList.add('theme-transition');
-		requestAnimationFrame(() => {
+		// Origin: the cursor for a real click, the control's centre for keyboard
+		// activation (which reports 0,0), otherwise the viewport centre.
+		let originX = window.innerWidth / 2;
+		let originY = window.innerHeight / 2;
+		if (event?.clientX || event?.clientY) {
+			originX = event.clientX;
+			originY = event.clientY;
+		} else if (event?.currentTarget instanceof Element) {
+			const rect = event.currentTarget.getBoundingClientRect();
+			originX = rect.left + rect.width / 2;
+			originY = rect.top + rect.height / 2;
+		}
+
+		const w = window.innerWidth;
+		const h = window.innerHeight;
+		const k = Math.SQRT1_2; // cos/sin 45° — the bolt runs along slope -1
+
+		// Bolt endpoints: from the cursor, run up-and-right and down-and-left along the
+		// 45° diagonal (slope -1, so x and y change by the same amount) until each ray
+		// exits the viewport. A little padding pushes the ends just past the edge so the
+		// bolt clearly runs off the screen rather than stopping short of it.
+		const pad = 28;
+		const dTR = Math.min(w - originX, originY) + pad;
+		const dBL = Math.min(originX, h - originY) + pad;
+		const topRight = { x: originX + dTR, y: originY - dTR };
+		const bottomLeft = { x: originX - dBL, y: originY + dBL };
+		const boltPath = jaggedPath(bottomLeft, topRight);
+
+		// Core contrasts the *incoming* theme (white→dark, near-black→light) so it
+		// reads once the new palette is revealed; the glow contrasts the *old*
+		// background so the bolt stays clearly visible while it strikes and holds.
+		const core = nextTheme === 'dark' ? '#ffffff' : '#0a0a0a';
+		const glow =
+			nextTheme === 'dark' ? 'rgba(59, 130, 246, 0.65)' : 'rgba(125, 211, 252, 0.8)';
+
+		const transition = startViewTransition(async () => {
+			// Mount the bolt *inside* the callback so it lands only in the "new"
+			// snapshot (rendered on top of the reveal), not the old one.
+			boltView = { d: boltPath, core, glow };
 			applyTheme(nextTheme);
-			themeAnimTimer = setTimeout(() => root.classList.remove('theme-transition'), 320);
+			await tick();
 		});
+
+		// Open the new palette from the bolt's diagonal: a band centred on the line
+		// X+Y=const through the cursor, widening perpendicular (toward the top-left and
+		// bottom-right) until it reaches the farthest corner.
+		transition.ready
+			.then(() => {
+				const along = w + h; // generous half-length so the band always spans the diagonal
+				const ax = k * along;
+				const ay = -k * along;
+				const perpDist = (qx: number, qy: number) =>
+					Math.abs(qx + qy - (originX + originY)) * k;
+				const rMax =
+					Math.max(perpDist(0, 0), perpDist(w, 0), perpDist(w, h), perpDist(0, h)) + 4;
+				const band = (r: number) => {
+					const bx = k * r;
+					const by = k * r;
+					return (
+						`polygon(${originX + ax + bx}px ${originY + ay + by}px, ` +
+						`${originX - ax + bx}px ${originY - ay + by}px, ` +
+						`${originX - ax - bx}px ${originY - ay - by}px, ` +
+						`${originX + ax - bx}px ${originY + ay - by}px)`
+					);
+				};
+				// Hold fully closed while the bolt strikes and waits (the bolt reads on
+				// the old background via its glow), then open the band out from the
+				// bolt's line — so the reveal clearly starts *from* the lightning.
+				document.documentElement.animate(
+					[
+						{ clipPath: band(0), offset: 0, easing: 'linear' },
+						{ clipPath: band(0), offset: 0.44, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
+						{ clipPath: band(rMax), offset: 1 }
+					],
+					{ duration: 700, pseudoElement: '::view-transition-new(root)' }
+				);
+			})
+			.catch(() => {});
+
+		transition.finished
+			.finally(() => {
+				boltView = null;
+			})
+			.catch(() => {});
 	}
 
 	function finishOnboarding() {
@@ -623,8 +741,15 @@
 	<meta name="theme-color" content={theme === 'dark' ? '#0b0b0b' : '#ffffff'} />
 </svelte:head>
 
-<div class={`relative flex h-screen overflow-hidden transition-colors duration-300 ${theme === 'dark' ? 'bg-[#070707] text-[#e4e4e7]' : 'bg-[#f8fafc] text-zinc-900'}`}>
+<div class={`relative flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-[#070707] text-[#e4e4e7]' : 'bg-[#f8fafc] text-zinc-900'}`}>
 	<div class={`app-bg pointer-events-none absolute inset-0 ${theme === 'dark' ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.045),transparent_42%)]' : 'bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.06),transparent_45%)]'}`}></div>
+	{#if boltView}
+		<svg class="pointer-events-none fixed inset-0 z-[70]" width="100%" height="100%" fill="none" aria-hidden="true" style="view-transition-name: axon-bolt;">
+			<path class="bolt-glow-outer" d={boltView.d} stroke={boltView.glow} stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+			<path class="bolt-glow-inner" d={boltView.d} stroke={boltView.glow} stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+			<path d={boltView.d} stroke={boltView.core} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+		</svg>
+	{/if}
 	<div class="mx-auto flex h-full w-full max-w-[1500px] min-w-0 overflow-hidden px-0 lg:px-4">
 	<DesktopSidebar
 		navigation={NAVIGATION}
@@ -734,7 +859,7 @@
 						<div class="mx-auto w-full max-w-3xl px-5 pt-8 pb-12 sm:px-10 sm:pt-12">
 							{#if digestLoading && !digestContent}
 								<div class="flex flex-col items-center justify-center py-24 gap-3">
-									<div class="h-5 w-5 animate-spin rounded-full border-2 border-zinc-600 border-t-transparent"></div>
+									<SignalLoader size={22} class={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'} />
 									<p class={`text-[12px] font-semibold ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Loading digest…</p>
 								</div>
 							{:else if digestContent}
@@ -754,7 +879,7 @@
 										class={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-bold shadow-md transition-all disabled:opacity-60 ${theme === 'dark' ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-zinc-700'}`}
 									>
 										{#if digestLoading}
-											<div class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+											<SignalLoader size={14} />
 											Generating…
 										{:else if digestContent.content.includes('No weekly digest available')}
 											Generate first digest
@@ -812,17 +937,31 @@
 	:global(body) {
 		overflow: hidden;
 	}
-	/* One-shot cross-fade applied only while toggling theme (added/removed in JS).
-	   Animates the color palette so the switch fades instead of flashing white/black.
-	   Scoped to the toggle window so it never affects hover/scroll repaints. */
-	:global(html.theme-transition),
-	:global(html.theme-transition *) {
-		transition:
-			background-color 0.3s ease,
-			color 0.3s ease,
-			border-color 0.3s ease,
-			fill 0.3s ease,
-			stroke 0.3s ease !important;
+	/* Theme toggle uses the View Transitions API (see toggleTheme): after the bolt
+	   strikes, the new palette bursts open via a radial clip-path (animated in JS)
+	   from the strike point. We disable the default opacity cross-fade so the clip
+	   reveal is the only motion, and keep the new snapshot stacked above the old one
+	   so the growing shockwave paints over the previous palette. No-op without the
+	   API (instant switch instead). */
+	:global(::view-transition-old(root)),
+	:global(::view-transition-new(root)) {
+		animation: none;
+		mix-blend-mode: normal;
+	}
+	:global(::view-transition-old(root)) {
+		z-index: 0;
+	}
+	:global(::view-transition-new(root)) {
+		z-index: 1;
+	}
+	/* The bolt rides above the reveal as its own view-transition group, flashing in
+	   along the opening seam (see toggleTheme + .bolt-glow / @keyframes bolt-flash). */
+	:global(::view-transition-group(axon-bolt)) {
+		z-index: 2;
+	}
+	:global(::view-transition-new(axon-bolt)) {
+		animation: bolt-flash 700ms ease-out both;
+		mix-blend-mode: normal;
 	}
 	:global(html) {
 		background: #0b0b0b;

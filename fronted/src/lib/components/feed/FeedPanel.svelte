@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { ArrowDownUp, Loader2, Check, Clock, X } from 'lucide-svelte';
+	import { ArrowDownUp, Check, Clock, X } from 'lucide-svelte';
+	import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
 	import { type Article } from '$lib/api';
 	import ArticleCard from '$lib/components/feed/ArticleCard.svelte';
 	import VirtualFeed from '$lib/components/feed/VirtualFeed.svelte';
@@ -233,7 +234,7 @@
 	{#if pullStatus === 'up-to-date' || pullStatus === 'checking'}
 		<div class={`flex items-center justify-center gap-2 py-2 ${dark ? 'bg-white/[0.03]' : 'bg-zinc-50'}`}>
 			{#if pullStatus === 'checking'}
-				<Loader2 class={`h-3.5 w-3.5 animate-spin ${dark ? 'text-zinc-500' : 'text-zinc-400'}`} />
+				<SignalLoader size={14} class={dark ? 'text-zinc-500' : 'text-zinc-400'} />
 				<span class={`text-[11px] font-semibold ${dark ? 'text-zinc-400' : 'text-zinc-500'}`}>Checking...</span>
 			{:else}
 				<Check class={`h-3.5 w-3.5 ${dark ? 'text-zinc-400' : 'text-zinc-500'}`} />
@@ -304,7 +305,7 @@
 			</div>
 			{#if loadingMore}
 				<div class="flex justify-center py-4">
-					<Loader2 class="h-4 w-4 animate-spin text-zinc-500" />
+					<SignalLoader size={16} class="text-zinc-500" />
 				</div>
 			{/if}
 			{#if hasMore && !loadingMore}

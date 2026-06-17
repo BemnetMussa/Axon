@@ -56,3 +56,5 @@ vite.config.ts.timestamp-*
 
 # === Docker ===
 *.tar
+.vercel
+.env*

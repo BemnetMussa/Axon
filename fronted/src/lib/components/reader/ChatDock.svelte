@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Send, Mic, MicOff, Loader2 } from 'lucide-svelte';
+	import { Send, Mic, MicOff } from 'lucide-svelte';
+	import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
 	import { onDestroy } from 'svelte';
 	import { inputClass, panelClass, iconButtonClass } from '$lib/ui-styles';
 
@@ -71,7 +72,7 @@
 				>{tip}</button>
 			{/each}
 			{#if suggestionsLoading}
-				<Loader2 class={`h-3.5 w-3.5 shrink-0 animate-spin ${dark ? 'text-zinc-500' : 'text-zinc-400'}`} />
+				<SignalLoader size={14} class={`shrink-0 ${dark ? 'text-zinc-500' : 'text-zinc-400'}`} />
 			{/if}
 		</div>
 	{/if}

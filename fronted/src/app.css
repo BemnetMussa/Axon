@@ -38,6 +38,25 @@ body {
               color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Theme-toggle "signal" bolt overlay (built in AppFeed.toggleTheme). The bolt is a
+   jagged diagonal through the cursor that the new palette opens up from. It rides
+   above the reveal as its own view-transition group and flashes in via bolt-flash;
+   the glow copy is blurred for an electric halo. Skipped entirely under
+   reduced-motion (the bolt is never mounted in that case — see toggleTheme). */
+.bolt-glow-outer {
+  filter: blur(7px);
+}
+.bolt-glow-inner {
+  filter: blur(2px);
+}
+@keyframes bolt-flash {
+  0% { opacity: 0; }
+  8% { opacity: 1; }   /* struck fast over the old background */
+  48% { opacity: 1; }  /* held bright through the wait */
+  80% { opacity: 0; }  /* dissolves as the band opens out from it */
+  100% { opacity: 0; }
+}
+
 /* Ultra-thin scrollbars */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
