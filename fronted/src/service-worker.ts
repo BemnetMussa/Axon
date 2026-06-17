@@ -30,6 +30,13 @@ self.addEventListener('fetch', (event) => {
 
 	const url = new URL(event.request.url);
 
+	// Never let the service worker touch API calls (feed proxy + auth). These must
+	// always go straight to the network so data stays fresh — caching them here is
+	// what caused the feed to keep showing stale articles after a refresh.
+	if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) {
+		return;
+	}
+
 	if (ASSETS.includes(url.pathname)) {
 		event.respondWith(
 			caches.match(event.request).then((cached) => cached || fetch(event.request))
