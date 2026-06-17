@@ -46,7 +46,7 @@
 	<header class="fixed left-0 right-0 top-5 z-50 mx-auto w-full max-w-6xl px-4 sm:px-8">
 		<div class="flex items-center justify-between rounded-2xl border border-zinc-200 dark:border-[#242E43] bg-white/80 dark:bg-[#121826]/80 px-4 py-3 backdrop-blur-xl sm:px-5">
 			<a href="/" class="group flex items-center gap-3">
-				<div class="flex h-8 w-8 items-center justify-center rounded-md bg-black dark:bg-white text-white dark:text-black transition-transform group-hover:scale-105">
+				<div class="flex h-8 w-8 items-center justify-center rounded-md bg-black text-white transition-transform group-hover:scale-105 dark:bg-white/10 dark:ring-1 dark:ring-white/10">
 					<Zap class="h-4 w-4 fill-current" />
 				</div>
 				<span class="text-sm font-semibold uppercase tracking-[0.2em]">Axon</span>

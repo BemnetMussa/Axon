@@ -1,6 +1,7 @@
 import os
 import asyncio
 import time
+import base64
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -16,8 +17,8 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlmodel import Session, select, col
-from sqlalchemy import update, func
-from pydantic import BaseModel
+from sqlalchemy import update, func, or_, and_
+from pydantic import BaseModel, Field as PydField
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -229,28 +230,56 @@ def trigger_retry_insights(session: Session = Depends(get_session)):
 # Articles — cursor-based pagination
 # ---------------------------------------------------------------------------
 
+def _encode_cursor(article: Article) -> str:
+    """Opaque cursor carrying the keyset (published_date, id)."""
+    raw = f"{article.published_date.isoformat()}|{article.id}"
+    return base64.urlsafe_b64encode(raw.encode()).decode()
+
+
+def _decode_cursor(cursor: str) -> tuple[datetime, int]:
+    raw = base64.urlsafe_b64decode(cursor.encode()).decode()
+    date_str, id_str = raw.rsplit("|", 1)
+    return datetime.fromisoformat(date_str), int(id_str)
+
+
 @app.get("/articles")
 def read_articles(
     limit: int = Query(default=10, le=100),
-    cursor: int | None = Query(default=None),
+    cursor: str | None = Query(default=None),
     session: Session = Depends(get_session),
 ):
-    # Order by id (insertion order) so the cursor — which is an id — stays
-    # consistent with the sort. Ordering by published_date while paging on id
-    # skips/duplicates rows, since articles are inserted in shuffled order and
-    # id order does not match date order.
-    query = select(Article).order_by(col(Article.id).desc())
-    if cursor is not None:
-        query = query.where(col(Article.id) < cursor)
+    # Keyset pagination on (published_date DESC, id DESC). published_date is the
+    # primary sort so the feed reads newest-published-first; id is the unique
+    # tiebreaker (NOT NULL, unique) so rows are never skipped or duplicated when
+    # two articles share a published_date. The cursor carries both fields.
+    query = select(Article).order_by(
+        col(Article.published_date).desc(), col(Article.id).desc()
+    )
+    if cursor:
+        try:
+            c_date, c_id = _decode_cursor(cursor)
+            query = query.where(
+                or_(
+                    col(Article.published_date) < c_date,
+                    and_(
+                        col(Article.published_date) == c_date,
+                        col(Article.id) < c_id,
+                    ),
+                )
+            )
+        except Exception:
+            pass  # malformed/legacy cursor -> serve from the top
+
     query = query.limit(limit)
 
     articles = session.exec(query).all()
-    next_cursor = articles[-1].id if articles else None
+    has_more = len(articles) == limit
+    next_cursor = _encode_cursor(articles[-1]) if (articles and has_more) else None
 
     return {
         "articles": articles,
         "next_cursor": next_cursor,
-        "has_more": len(articles) == limit,
+        "has_more": has_more,
     }
 
 
@@ -362,7 +391,7 @@ async def get_article_content(article_id: int, session: Session = Depends(get_se
 # ---------------------------------------------------------------------------
 
 @app.get("/search/semantic")
-def search_semantic(query: str, session: Session = Depends(get_session)):
+def search_semantic(query: str = Query(..., min_length=1, max_length=200), session: Session = Depends(get_session)):
     model = get_embed_model()
     query_embed = list(model.embed([query]))[0].tolist()
     
@@ -390,7 +419,8 @@ def get_brief(article_id: int, session: Session = Depends(get_session)):
 
 
 class ChatRequest(BaseModel):
-    question: str
+    # Bounded so a single request can't blow up Groq token cost.
+    question: str = PydField(..., min_length=1, max_length=1000)
 
 
 class FeedbackRequest(BaseModel):

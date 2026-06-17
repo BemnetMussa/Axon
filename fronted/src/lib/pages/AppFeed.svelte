@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { marked } from 'marked';
+	import { renderMarkdown } from '$lib/markdown';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { api, feedCache, type Article, type Trend } from '$lib/api';
@@ -42,7 +42,7 @@
 	let timeFilter = $state<'all' | 'today' | 'week' | 'month'>('all');
 	let theme = $state<'dark' | 'light'>('dark');
 
-	let nextCursor = $state<number | null>(null);
+	let nextCursor = $state<string | null>(null);
 	let hasMore = $state(false);
 	let loadingMore = $state(false);
 	let loadMoreLock = $state(false);
@@ -367,26 +367,36 @@
 		startPolling();
 	}
 
+	// --- Single merge path: dedupe an incoming page against what's already
+	// --- loaded, plus one place that writes the persistent feed cache so it
+	// --- always stays consistent with the in-memory list. ---
+	function dedupeNew(incoming: Article[]): Article[] {
+		const have = new Set(allArticles.map((a) => a.id));
+		return incoming.filter((a) => !have.has(a.id));
+	}
+
+	function saveFeedCache() {
+		feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+	}
+
 	async function fetchFirstPage(options?: { skipClearError?: boolean }) {
 		syncIndicator = true;
 		if (!options?.skipClearError) fetchError = null;
 		try {
 			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
-			
+
 			// Prepend instead of replace to avoid "disappearing" data
-			const existingIds = new Set(allArticles.map(a => a.id));
-			const fresh = articleRes.articles.filter(a => !existingIds.has(a.id));
-			
+			const fresh = dedupeNew(articleRes.articles);
 			if (fresh.length > 0) {
 				allArticles = [...fresh, ...allArticles];
 			} else if (allArticles.length === 0) {
 				allArticles = articleRes.articles;
 			}
-			
+
 			nextCursor = articleRes.next_cursor;
 			hasMore = articleRes.has_more;
 			trends = trendData;
-			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+			saveFeedCache();
 		} catch (error) {
 			console.error('Fetch failed', error);
 			fetchError = friendlyListError(error);
@@ -396,22 +406,19 @@
 		}
 	}
 
-	async function refreshNewArticles() {
-		// Lightweight fetch that only prepends new articles to the top
-		try {
-			const res = await api.getArticles();
-			const existingIds = new Set(allArticles.map((a) => a.id));
-			const fresh = res.articles.filter((a) => !existingIds.has(a.id));
+	async function refreshNewArticles(): Promise<number> {
+		// Fetches page 1 and prepends any articles we don't already have. Returns
+		// the count of new ones so the UI can show real feedback, and lets errors
+		// propagate so a failed refresh shows an error instead of a fake "up to date".
+		const res = await api.getArticles();
+		const fresh = dedupeNew(res.articles);
 
-			if (fresh.length > 0) {
-				// Prepend to top - no full refresh, just adds new ones
-				allArticles = [...fresh, ...allArticles];
-				newArticleIds = new Set([...newArticleIds, ...fresh.map(a => a.id)]);
-				feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
-			}
-		} catch {
-			// New-article fetch is best-effort; ignore failures
+		if (fresh.length > 0) {
+			allArticles = [...fresh, ...allArticles];
+			newArticleIds = new Set([...newArticleIds, ...fresh.map(a => a.id)]);
+			saveFeedCache();
 		}
+		return fresh.length;
 	}
 
 	async function backgroundRevalidate() {
@@ -419,8 +426,7 @@
 		try {
 			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
 
-			const existingIds = new Set(allArticles.map((a) => a.id));
-			const freshArticles = articleRes.articles.filter((a) => !existingIds.has(a.id));
+			const freshArticles = dedupeNew(articleRes.articles);
 
 			if (freshArticles.length > 0) {
 				const isAtTop = feedScrollArea ? feedScrollArea.scrollTop < 20 : true;
@@ -437,7 +443,7 @@
 			}
 
 			trends = trendData;
-			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+			saveFeedCache();
 		} catch {
 			// silent — user still has cached data
 		} finally {
@@ -446,6 +452,7 @@
 	}
 
 	function startPolling() {
+		if (pollTimer) return;
 		pollTimer = setInterval(async () => {
 			const latestId = feedCache.latestId();
 			if (!latestId) return;
@@ -464,6 +471,21 @@
 				/* silent */
 			}
 		}, POLL_INTERVAL_MS);
+	}
+
+	// Pause polling while the tab is backgrounded (saves battery/network); on
+	// return, do an immediate freshness check before resuming the interval.
+	function handleVisibility() {
+		if (typeof document === 'undefined') return;
+		if (document.hidden) {
+			if (pollTimer) {
+				clearInterval(pollTimer);
+				pollTimer = null;
+			}
+		} else {
+			checkForNew();
+			startPolling();
+		}
 	}
 
 	function scrollFeedToTop() {
@@ -647,8 +669,7 @@
 		loadMoreLock = true;
 		try {
 			const res = await api.getArticles(nextCursor);
-			const existingIds = new Set(allArticles.map((a) => a.id));
-			const newOnes = res.articles.filter((a) => !existingIds.has(a.id));
+			const newOnes = dedupeNew(res.articles);
 			allArticles = [...allArticles, ...newOnes];
 			nextCursor = res.next_cursor;
 			hasMore = res.has_more;
@@ -730,9 +751,13 @@
 		};
 	});
 
-	onMount(load);
+	onMount(() => {
+		load();
+		document.addEventListener('visibilitychange', handleVisibility);
+	});
 	onDestroy(() => {
 		if (pollTimer) clearInterval(pollTimer);
+		document.removeEventListener('visibilitychange', handleVisibility);
 	});
 </script>
 
@@ -869,7 +894,7 @@
 								</p>
 
 								<div class={`prose max-w-none text-[14px] leading-[1.8] sm:text-[16px] ${theme === 'dark' ? 'prose-invert prose-p:text-[#d4d4d8] prose-headings:text-white' : 'prose-p:text-zinc-700 prose-headings:text-black'}`}>
-									{@html marked.parse(digestContent.content || '')}
+									{@html renderMarkdown(digestContent.content)}
 								</div>
 
 								<div class={`mt-10 flex items-center gap-3 border-t pt-6 ${theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-100'}`}>

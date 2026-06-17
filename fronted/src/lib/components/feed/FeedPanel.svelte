@@ -9,7 +9,7 @@
 
 	type SortOption = 'date' | 'engagement' | 'views';
 	type TimeFilter = 'all' | 'today' | 'week' | 'month';
-	type PullStatus = 'idle' | 'pulling' | 'checking' | 'up-to-date';
+	type PullStatus = 'idle' | 'pulling' | 'checking' | 'up-to-date' | 'new' | 'error';
 
 	type Props = {
 		title: string;
@@ -44,7 +44,7 @@
 		onToggleSave: (id: number) => void;
 		onShowDigest: () => void;
 		onLoadMore: () => void;
-		onRefresh?: () => Promise<void>;
+		onRefresh?: () => Promise<number>;
 	};
 
 	let {
@@ -71,6 +71,7 @@
 
 	let dark = $derived(theme === 'dark');
 	let pullStatus = $state<PullStatus>('idle');
+	let newCount = $state(0);
 	let showMobileFilters = $state(false);
 	let touchStartY = 0;
 	let pullDelta = 0;
@@ -100,33 +101,31 @@
 	}
 
 	// A user refresh only READS the latest articles from the database — it never
-	// triggers a scrape. Ingestion is owned by the backend scheduler (every 6h)
-	// and the Vercel cron; pulling to refresh just surfaces whatever's already in
-	// the DB, and shows "up to date" when there's nothing new.
+	// triggers a scrape. Ingestion is owned by the backend scheduler. Pulling to
+	// refresh re-fetches page 1 and reports the real outcome: how many new signals
+	// arrived, "up to date" when there are none, or an error if the fetch failed.
+	async function runRefresh() {
+		pullStatus = 'checking';
+		try {
+			const count = onRefresh ? await onRefresh() : 0;
+			newCount = count;
+			pullStatus = count > 0 ? 'new' : 'up-to-date';
+		} catch {
+			pullStatus = 'error';
+		}
+		dismissStatus();
+	}
+
 	async function handleTouchEnd() {
 		if (pullDelta >= PULL_THRESHOLD && pullStatus !== 'checking') {
-			pullStatus = 'checking';
-			try {
-				if (onRefresh) await onRefresh();
-			} catch (e) {
-				/* best-effort */
-			}
-			pullStatus = 'up-to-date';
-			dismissStatus();
+			await runRefresh();
 		}
 		pullDelta = 0;
 	}
 
 	function handleWheel(e: WheelEvent) {
 		if (!scrollArea || scrollArea.scrollTop > 0 || e.deltaY >= 0 || pullStatus !== 'idle') return;
-		pullStatus = 'checking';
-		Promise.resolve(onRefresh?.()).then(() => {
-			pullStatus = 'up-to-date';
-			dismissStatus();
-		}).catch(() => {
-			pullStatus = 'idle';
-			dismissStatus();
-		});
+		runRefresh();
 	}
 
 	function sourceBtnClass(active: boolean) {
@@ -231,11 +230,16 @@
 		{/if}
 	</div>
 
-	{#if pullStatus === 'up-to-date' || pullStatus === 'checking'}
+	{#if pullStatus !== 'idle' && pullStatus !== 'pulling'}
 		<div class={`flex items-center justify-center gap-2 py-2 ${dark ? 'bg-white/[0.03]' : 'bg-zinc-50'}`}>
 			{#if pullStatus === 'checking'}
 				<SignalLoader size={14} class={dark ? 'text-zinc-500' : 'text-zinc-400'} />
 				<span class={`text-[11px] font-semibold ${dark ? 'text-zinc-400' : 'text-zinc-500'}`}>Checking...</span>
+			{:else if pullStatus === 'new'}
+				<Check class="h-3.5 w-3.5 text-emerald-500" />
+				<span class="text-[11px] font-semibold text-emerald-500">{newCount} new {newCount === 1 ? 'signal' : 'signals'}</span>
+			{:else if pullStatus === 'error'}
+				<span class="text-[11px] font-semibold text-red-400">Couldn't refresh — check your connection</span>
 			{:else}
 				<Check class={`h-3.5 w-3.5 ${dark ? 'text-zinc-400' : 'text-zinc-500'}`} />
 				<span class={`text-[11px] font-semibold ${dark ? 'text-zinc-400' : 'text-zinc-500'}`}>You're up to date</span>
