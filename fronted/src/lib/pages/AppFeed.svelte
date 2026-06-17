@@ -396,22 +396,20 @@
 		}
 	}
 
-	async function refreshNewArticles() {
-		// Lightweight fetch that only prepends new articles to the top
-		try {
-			const res = await api.getArticles();
-			const existingIds = new Set(allArticles.map((a) => a.id));
-			const fresh = res.articles.filter((a) => !existingIds.has(a.id));
+	async function refreshNewArticles(): Promise<number> {
+		// Fetches page 1 and prepends any articles we don't already have. Returns
+		// the count of new ones so the UI can show real feedback, and lets errors
+		// propagate so a failed refresh shows an error instead of a fake "up to date".
+		const res = await api.getArticles();
+		const existingIds = new Set(allArticles.map((a) => a.id));
+		const fresh = res.articles.filter((a) => !existingIds.has(a.id));
 
-			if (fresh.length > 0) {
-				// Prepend to top - no full refresh, just adds new ones
-				allArticles = [...fresh, ...allArticles];
-				newArticleIds = new Set([...newArticleIds, ...fresh.map(a => a.id)]);
-				feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
-			}
-		} catch {
-			// New-article fetch is best-effort; ignore failures
+		if (fresh.length > 0) {
+			allArticles = [...fresh, ...allArticles];
+			newArticleIds = new Set([...newArticleIds, ...fresh.map(a => a.id)]);
+			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
 		}
+		return fresh.length;
 	}
 
 	async function backgroundRevalidate() {

@@ -56,7 +56,8 @@ export const api = {
     getArticles: async (cursor?: number | null, limit = PAGE_SIZE): Promise<ArticlesResponse> => {
         const params = new URLSearchParams({ limit: String(limit) });
         if (cursor) params.set('cursor', String(cursor));
-        const res = await fetch(`${BASE_URL}/articles?${params}`);
+        // no-store: never let the browser/HTTP cache answer the feed — always fresh.
+        const res = await fetch(`${BASE_URL}/articles?${params}`, { cache: 'no-store' });
         return jsonOrThrow<ArticlesResponse>(res);
     },
 
