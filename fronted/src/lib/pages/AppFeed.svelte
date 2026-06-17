@@ -444,6 +444,7 @@
 	}
 
 	function startPolling() {
+		if (pollTimer) return;
 		pollTimer = setInterval(async () => {
 			const latestId = feedCache.latestId();
 			if (!latestId) return;
@@ -462,6 +463,21 @@
 				/* silent */
 			}
 		}, POLL_INTERVAL_MS);
+	}
+
+	// Pause polling while the tab is backgrounded (saves battery/network); on
+	// return, do an immediate freshness check before resuming the interval.
+	function handleVisibility() {
+		if (typeof document === 'undefined') return;
+		if (document.hidden) {
+			if (pollTimer) {
+				clearInterval(pollTimer);
+				pollTimer = null;
+			}
+		} else {
+			checkForNew();
+			startPolling();
+		}
 	}
 
 	function scrollFeedToTop() {
@@ -728,9 +744,13 @@
 		};
 	});
 
-	onMount(load);
+	onMount(() => {
+		load();
+		document.addEventListener('visibilitychange', handleVisibility);
+	});
 	onDestroy(() => {
 		if (pollTimer) clearInterval(pollTimer);
+		document.removeEventListener('visibilitychange', handleVisibility);
 	});
 </script>
 
