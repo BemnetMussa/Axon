@@ -41,7 +41,7 @@ export interface Article {
 
 export interface ArticlesResponse {
     articles: Article[];
-    next_cursor: number | null;
+    next_cursor: string | null;
     has_more: boolean;
 }
 
@@ -53,9 +53,9 @@ export const api = {
         return jsonOrThrow<Trend[]>(res);
     },
 
-    getArticles: async (cursor?: number | null, limit = PAGE_SIZE): Promise<ArticlesResponse> => {
+    getArticles: async (cursor?: string | null, limit = PAGE_SIZE): Promise<ArticlesResponse> => {
         const params = new URLSearchParams({ limit: String(limit) });
-        if (cursor) params.set('cursor', String(cursor));
+        if (cursor) params.set('cursor', cursor);
         // no-store: never let the browser/HTTP cache answer the feed — always fresh.
         const res = await fetch(`${BASE_URL}/articles?${params}`, { cache: 'no-store' });
         return jsonOrThrow<ArticlesResponse>(res);
@@ -157,14 +157,16 @@ export const api = {
 // localStorage cache with TTL
 // ---------------------------------------------------------------------------
 
-const CACHE_KEY = 'axon_feed_cache';
+// v2: keyset cursor is now an opaque string (was a numeric id). Bumping the key
+// discards stale v1 caches so returning users don't carry a numeric cursor.
+const CACHE_KEY = 'axon_feed_cache_v2';
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes = "fresh"
 const STALE_TTL_MS = 30 * 60 * 1000; // 30 minutes = still usable as stale
 
 interface FeedCache {
     articles: Article[];
     trends: Trend[];
-    nextCursor: number | null;
+    nextCursor: string | null;
     hasMore: boolean;
     timestamp: number;
 }
@@ -205,7 +207,7 @@ export const feedCache = {
         return Math.max(...c.articles.map((a) => a.id));
     },
 
-    appendPage(articles: Article[], nextCursor: number | null, hasMore: boolean) {
+    appendPage(articles: Article[], nextCursor: string | null, hasMore: boolean) {
         const c = this.get();
         if (!c) return;
         const existingIds = new Set(c.articles.map((a) => a.id));

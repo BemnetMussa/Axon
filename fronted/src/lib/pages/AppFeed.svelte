@@ -42,7 +42,7 @@
 	let timeFilter = $state<'all' | 'today' | 'week' | 'month'>('all');
 	let theme = $state<'dark' | 'light'>('dark');
 
-	let nextCursor = $state<number | null>(null);
+	let nextCursor = $state<string | null>(null);
 	let hasMore = $state(false);
 	let loadingMore = $state(false);
 	let loadMoreLock = $state(false);

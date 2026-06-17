@@ -2,7 +2,7 @@
 from datetime import datetime, date, timezone
 from typing import Optional
 from sqlmodel import Field, SQLModel
-from sqlalchemy import Column
+from sqlalchemy import Column, Index
 from pgvector.sqlalchemy import Vector
 
 
@@ -10,6 +10,10 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 class Article(SQLModel, table=True):
+    # Compound index backs keyset pagination ordered by (published_date, id).
+    # Ascending btree; Postgres scans it backward for the DESC feed order.
+    __table_args__ = (Index("ix_article_pubdate_id", "published_date", "id"),)
+
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str
     url: str = Field(unique=True)
