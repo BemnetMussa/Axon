@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { marked } from 'marked';
+	import { renderMarkdown } from '$lib/markdown';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { api, feedCache, type Article, type Trend } from '$lib/api';
@@ -867,7 +867,7 @@
 								</p>
 
 								<div class={`prose max-w-none text-[14px] leading-[1.8] sm:text-[16px] ${theme === 'dark' ? 'prose-invert prose-p:text-[#d4d4d8] prose-headings:text-white' : 'prose-p:text-zinc-700 prose-headings:text-black'}`}>
-									{@html marked.parse(digestContent.content || '')}
+									{@html renderMarkdown(digestContent.content)}
 								</div>
 
 								<div class={`mt-10 flex items-center gap-3 border-t pt-6 ${theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-100'}`}>

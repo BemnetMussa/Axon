@@ -2,7 +2,7 @@
 	import { tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { ArrowLeft, ArrowUp, ExternalLink, Share2, Zap, Check } from 'lucide-svelte';
-	import { marked } from 'marked';
+	import { renderMarkdown } from '$lib/markdown';
 	import type { Article } from '$lib/api';
 	import ChatDock from '$lib/components/reader/ChatDock.svelte';
 	import { formatEngagement, getBrandColor } from '$lib/ui';
@@ -149,11 +149,11 @@
 
 			{#if dark}
 				<div class="prose prose-invert prose-sm max-w-none text-[14px] leading-7 text-zinc-300 sm:text-[15px] sm:leading-8 lg:text-[16px] lg:leading-9">
-					{@html marked.parse(article.insight || article.content_snippet || '')}
+					{@html renderMarkdown(article.insight || article.content_snippet)}
 				</div>
 			{:else}
 				<div class="prose prose-sm max-w-none text-[14px] leading-7 text-zinc-700 sm:text-[15px] sm:leading-8 lg:text-[16px] lg:leading-9">
-					{@html marked.parse(article.insight || article.content_snippet || '')}
+					{@html renderMarkdown(article.insight || article.content_snippet)}
 				</div>
 			{/if}
 
@@ -173,11 +173,11 @@
 								<div class={`min-w-0 max-w-full overflow-hidden rounded-lg rounded-bl-sm border px-4 py-3 ${dark ? 'border-white/[0.04] bg-white/[0.02]' : 'border-zinc-100 bg-zinc-50'}`}>
 									{#if dark}
 										<div class="prose prose-invert prose-sm max-w-full overflow-hidden break-words text-[13.5px] leading-7 text-zinc-300 prose-p:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-li:break-words">
-											{@html marked.parse(msg.content)}
+											{@html renderMarkdown(msg.content)}
 										</div>
 									{:else}
 										<div class="prose prose-sm max-w-full overflow-hidden break-words text-[13.5px] leading-7 text-zinc-700 prose-p:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-li:break-words">
-											{@html marked.parse(msg.content)}
+											{@html renderMarkdown(msg.content)}
 										</div>
 									{/if}
 								</div>

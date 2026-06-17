@@ -18,7 +18,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlmodel import Session, select, col
 from sqlalchemy import update, func, or_, and_
-from pydantic import BaseModel
+from pydantic import BaseModel, Field as PydField
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -391,7 +391,7 @@ async def get_article_content(article_id: int, session: Session = Depends(get_se
 # ---------------------------------------------------------------------------
 
 @app.get("/search/semantic")
-def search_semantic(query: str, session: Session = Depends(get_session)):
+def search_semantic(query: str = Query(..., min_length=1, max_length=200), session: Session = Depends(get_session)):
     model = get_embed_model()
     query_embed = list(model.embed([query]))[0].tolist()
     
@@ -419,7 +419,8 @@ def get_brief(article_id: int, session: Session = Depends(get_session)):
 
 
 class ChatRequest(BaseModel):
-    question: str
+    # Bounded so a single request can't blow up Groq token cost.
+    question: str = PydField(..., min_length=1, max_length=1000)
 
 
 class FeedbackRequest(BaseModel):
