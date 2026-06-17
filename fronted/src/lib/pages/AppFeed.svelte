@@ -367,26 +367,36 @@
 		startPolling();
 	}
 
+	// --- Single merge path: dedupe an incoming page against what's already
+	// --- loaded, plus one place that writes the persistent feed cache so it
+	// --- always stays consistent with the in-memory list. ---
+	function dedupeNew(incoming: Article[]): Article[] {
+		const have = new Set(allArticles.map((a) => a.id));
+		return incoming.filter((a) => !have.has(a.id));
+	}
+
+	function saveFeedCache() {
+		feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+	}
+
 	async function fetchFirstPage(options?: { skipClearError?: boolean }) {
 		syncIndicator = true;
 		if (!options?.skipClearError) fetchError = null;
 		try {
 			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
-			
+
 			// Prepend instead of replace to avoid "disappearing" data
-			const existingIds = new Set(allArticles.map(a => a.id));
-			const fresh = articleRes.articles.filter(a => !existingIds.has(a.id));
-			
+			const fresh = dedupeNew(articleRes.articles);
 			if (fresh.length > 0) {
 				allArticles = [...fresh, ...allArticles];
 			} else if (allArticles.length === 0) {
 				allArticles = articleRes.articles;
 			}
-			
+
 			nextCursor = articleRes.next_cursor;
 			hasMore = articleRes.has_more;
 			trends = trendData;
-			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+			saveFeedCache();
 		} catch (error) {
 			console.error('Fetch failed', error);
 			fetchError = friendlyListError(error);
@@ -401,13 +411,12 @@
 		// the count of new ones so the UI can show real feedback, and lets errors
 		// propagate so a failed refresh shows an error instead of a fake "up to date".
 		const res = await api.getArticles();
-		const existingIds = new Set(allArticles.map((a) => a.id));
-		const fresh = res.articles.filter((a) => !existingIds.has(a.id));
+		const fresh = dedupeNew(res.articles);
 
 		if (fresh.length > 0) {
 			allArticles = [...fresh, ...allArticles];
 			newArticleIds = new Set([...newArticleIds, ...fresh.map(a => a.id)]);
-			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+			saveFeedCache();
 		}
 		return fresh.length;
 	}
@@ -417,8 +426,7 @@
 		try {
 			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
 
-			const existingIds = new Set(allArticles.map((a) => a.id));
-			const freshArticles = articleRes.articles.filter((a) => !existingIds.has(a.id));
+			const freshArticles = dedupeNew(articleRes.articles);
 
 			if (freshArticles.length > 0) {
 				const isAtTop = feedScrollArea ? feedScrollArea.scrollTop < 20 : true;
@@ -435,7 +443,7 @@
 			}
 
 			trends = trendData;
-			feedCache.set({ articles: allArticles, trends, nextCursor, hasMore });
+			saveFeedCache();
 		} catch {
 			// silent — user still has cached data
 		} finally {
@@ -661,8 +669,7 @@
 		loadMoreLock = true;
 		try {
 			const res = await api.getArticles(nextCursor);
-			const existingIds = new Set(allArticles.map((a) => a.id));
-			const newOnes = res.articles.filter((a) => !existingIds.has(a.id));
+			const newOnes = dedupeNew(res.articles);
 			allArticles = [...allArticles, ...newOnes];
 			nextCursor = res.next_cursor;
 			hasMore = res.has_more;
