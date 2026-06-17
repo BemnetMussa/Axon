@@ -28,8 +28,8 @@
 	<div class="flex min-w-0 items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5">
 		<!-- Mobile brand mark -->
 		<div class="flex items-center gap-2.5 lg:hidden">
-			<div class={`flex h-7 w-7 items-center justify-center rounded-md ${dark ? 'bg-white' : 'bg-black'}`}>
-				<Zap class={`h-3.5 w-3.5 ${dark ? 'fill-black text-black' : 'fill-white text-white'}`} />
+			<div class={`flex h-7 w-7 items-center justify-center rounded-md ${dark ? 'bg-white/10 ring-1 ring-white/10' : 'bg-black'}`}>
+				<Zap class="h-3.5 w-3.5 fill-white text-white" />
 			</div>
 			<span class={`text-[13px] font-black uppercase tracking-[2px] italic ${dark ? 'text-white' : 'text-black'}`}>Axon</span>
 		</div>

@@ -72,8 +72,8 @@
 
 <nav class={`hidden w-56 shrink-0 flex-col border-r lg:flex ${dark ? 'border-white/[0.05] bg-[#0b0b0b]/90' : 'border-zinc-200 bg-white/90'} backdrop-blur-xl`}>
 	<div class="flex items-center gap-2.5 px-5 py-4">
-		<div class={`flex h-7 w-7 items-center justify-center rounded-md ${dark ? 'bg-white' : 'bg-black'} transition-colors duration-300`}>
-			<Zap class={`h-3.5 w-3.5 ${dark ? 'fill-black text-black' : 'fill-white text-white'} transition-colors duration-300`} />
+		<div class={`flex h-7 w-7 items-center justify-center rounded-md ${dark ? 'bg-white/10 ring-1 ring-white/10' : 'bg-black'} transition-colors duration-300`}>
+			<Zap class="h-3.5 w-3.5 fill-white text-white transition-colors duration-300" />
 		</div>
 		<span class={`text-[13px] font-black uppercase tracking-[2px] italic ${dark ? 'text-white' : 'text-black'} transition-colors duration-300`}>Axon</span>
 	</div>
