@@ -45,6 +45,9 @@ GITHUB_NAME_FLUFF = {
 
 MAX_PER_SOURCE = 8
 MAX_TOTAL_PER_RUN = 100
+# Only ingest genuinely recent items — a "what's happening now" feed should never
+# surface months-old posts (stale RSS, resurfaced old HN threads, etc.).
+FRESHNESS_DAYS = 30
 
 # How many selected articles to hydrate with full body text per run, and how
 # many of those fetches to run concurrently. Extraction skips aggregator
@@ -181,7 +184,9 @@ async def hunt_hn_top(client: httpx.AsyncClient):
 
 async def hunt_hn_discussions(client: httpx.AsyncClient):
     """Ask HN / Show HN — community discussions and launches."""
-    url = "https://hn.algolia.com/api/v1/search?tags=(ask_hn,show_hn)&numericFilters=num_comments>5&hitsPerPage=15"
+    # search_by_date (not relevance) so we get *current* threads — the relevance
+    # endpoint was surfacing ancient high-comment Ask HN posts (back to 2012).
+    url = "https://hn.algolia.com/api/v1/search_by_date?tags=(ask_hn,show_hn)&numericFilters=num_comments>2&hitsPerPage=15"
     try:
         res = await client.get(url, timeout=10.0)
         hits = res.json().get("hits", [])
@@ -476,13 +481,11 @@ async def hunt_infrastructure(client: httpx.AsyncClient):
 
 async def hunt_expert_blogs(client: httpx.AsyncClient):
     """RSS from top engineers and researchers."""
+    # Cut the stale, rarely-updated blogs (Karpathy/Altman/Fast.ai/BAIR/LilianWeng
+    # were months-to-a-year out of date — dead weight). Keep only consistently
+    # fresh, high-signal voices; the global FRESHNESS_DAYS gate keeps even these honest.
     experts = [
-        ("Karpathy", "https://karpathy.github.io/feed.xml"),
         ("SimonW", "https://simonwillison.net/atom/everything/"),
-        ("LilianWeng", "https://lilianweng.github.io/index.xml"),
-        ("Fast.ai", "https://www.fast.ai/index.xml"),
-        ("Altman", "https://blog.samaltman.com/posts.atom"),
-        ("BAIR", "https://bair.berkeley.edu/blog/feed.xml"),
     ]
     signals = []
     for name, url in experts:
@@ -750,6 +753,7 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
         seen: set[str] = set()
         source_counts: dict[str, int] = {}
         accepted_fingerprints: list[tuple[str, set[str]]] = []
+        freshness_cutoff = _now() - timedelta(days=FRESHNESS_DAYS)
 
         for sig in raw_signals:
             url = sig.get("url")
@@ -757,6 +761,13 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
             engagement = sig.get("likes", 0)
             if not url or url in all_existing_urls or url in seen:
                 continue
+            # Freshness gate: never let stale RSS or resurfaced old threads enter.
+            pub = sig.get("published")
+            if pub is not None:
+                if pub.tzinfo is None:
+                    pub = pub.replace(tzinfo=timezone.utc)
+                if pub < freshness_cutoff:
+                    continue
             fluff_key = sig.get("fluff_key")
             if not is_gold(url, sig["title"], engagement, source, fluff_text=fluff_key):
                 continue
