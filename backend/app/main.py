@@ -173,8 +173,9 @@ async def require_internal_auth(request: Request, call_next):
     path = request.url.path
     if path in ("/docs", "/openapi.json", "/redoc") or path.startswith("/docs"):
         return await call_next(request)
-    # Public health for uptime monitors (no internal secret)
-    if request.method == "GET" and path in ("/", "/health"):
+    # Public health for uptime monitors (no internal secret).
+    # Allow HEAD too — most monitors (Better Stack, etc.) probe with HEAD.
+    if request.method in ("GET", "HEAD") and path in ("/", "/health"):
         return await call_next(request)
     if request.method == "OPTIONS":
         return await call_next(request)
