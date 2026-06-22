@@ -623,7 +623,7 @@ def submit_feedback(request: Request, payload: FeedbackRequest, session: Session
     session.commit()
     return {"status": "success"}
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root():
     return {
         "status": "Axon is online",
@@ -632,9 +632,13 @@ def root():
     }
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
-    """Public JSON for uptime checks and debugging ingest timing (no auth)."""
+    """Public JSON for uptime checks and debugging ingest timing (no auth).
+
+    Accepts HEAD as well as GET — uptime monitors (Better Stack, etc.) probe
+    with HEAD, and a GET-only route would answer them with 405.
+    """
     job = scheduler.get_job("axon_ingest") if scheduler.running else None
     next_run = None
     if job and job.next_run_time:
