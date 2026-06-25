@@ -8,7 +8,7 @@
 	import DesktopSidebar from '$lib/components/navigation/DesktopSidebar.svelte';
 	import MobileBottomNav from '$lib/components/navigation/MobileBottomNav.svelte';
 	import ReaderPanel from '$lib/components/reader/ReaderPanel.svelte';
-	import { NAVIGATION, SUGGESTIONS } from '$lib/ui';
+	import { NAVIGATION, SECONDARY_CATEGORIES, SUGGESTIONS } from '$lib/ui';
 	import { analytics } from '$lib/analytics';
 	import OnboardingOverlay from '$lib/components/onboarding/OnboardingOverlay.svelte';
 	import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
@@ -136,13 +136,12 @@
 		if (semanticSearchResults && searchQuery.trim().length > 2) return semanticSearchResults;
 		if (activeCategory === 'Trending' && !showSavedOnly) return trendingArticles;
 
+		// The active category/GitHub tab is filtered server-side (see feedParams),
+		// so `allArticles` already holds only that tab's articles. Here we apply
+		// the lighter, client-side refinements layered on top of the loaded set.
 		let list = allArticles;
 		if (showSavedOnly) list = list.filter((a) => savedIdSet.has(a.id));
 		if (activeSource) list = list.filter((a) => a.source === activeSource);
-		if (activeCategory && activeCategory !== 'Trending') {
-			if (activeCategory === 'GitHub') list = list.filter((a) => a.source === 'GitHub');
-			else list = list.filter((a) => a.category === activeCategory);
-		}
 		if (timeFilter !== 'all') {
 			const now = Date.now();
 			const cutoff =
@@ -347,8 +346,29 @@
 
 		readArticleIds = loadReadIds();
 
-		const cached = feedCache.get();
+		await loadDefaultFeed();
 
+		startPolling();
+	}
+
+	// The active tab maps to backend filter params, so each tab is its own
+	// server-paginated feed: "Load more" pulls the next page *of that tab*, not
+	// the next page of the global feed. GitHub is a source filter; the other
+	// category tabs filter by category; Frontier/Trending carry no filter.
+	// `isDefaultFeed` gates the persistent cache + background polling, which only
+	// apply to the unfiltered Frontier feed (the invariant: activeCategory === null
+	// ⟺ allArticles holds the default feed).
+	let isDefaultFeed = $derived(activeCategory === null);
+	function feedParams(): { category: string | null; source: string | null } {
+		if (activeCategory === 'GitHub') return { category: null, source: 'GitHub' };
+		if (activeCategory && activeCategory !== 'Trending') return { category: activeCategory, source: null };
+		return { category: null, source: null };
+	}
+
+	// Loads the Frontier feed — from cache when usable (instant), otherwise the
+	// network. Used on first load and whenever we return to an unfiltered feed.
+	async function loadDefaultFeed() {
+		const cached = feedCache.get();
 		if (cached && feedCache.isUsable()) {
 			fetchError = null;
 			allArticles = cached.articles;
@@ -356,15 +376,34 @@
 			nextCursor = cached.nextCursor;
 			hasMore = cached.hasMore;
 			loading = false;
-
-			if (!feedCache.isFresh()) {
-				backgroundRevalidate();
-			}
+			if (!feedCache.isFresh()) backgroundRevalidate();
 		} else {
 			await fetchFirstPage();
 		}
+	}
 
-		startPolling();
+	// Loads page 1 of a filtered tab (category or source). No cache/poll — those
+	// are reserved for the Frontier feed.
+	async function loadCategoryFeed() {
+		loading = true;
+		syncIndicator = true;
+		fetchError = null;
+		allArticles = [];
+		nextCursor = null;
+		hasMore = false;
+		pendingNewArticlesCount = 0;
+		try {
+			const res = await api.getArticles(null, undefined, feedParams());
+			allArticles = res.articles;
+			nextCursor = res.next_cursor;
+			hasMore = res.has_more;
+		} catch (error) {
+			console.error('Fetch feed failed', error);
+			fetchError = friendlyListError(error);
+		} finally {
+			loading = false;
+			syncIndicator = false;
+		}
 	}
 
 	// --- Single merge path: dedupe an incoming page against what's already
@@ -407,21 +446,24 @@
 	}
 
 	async function refreshNewArticles(): Promise<number> {
-		// Fetches page 1 and prepends any articles we don't already have. Returns
-		// the count of new ones so the UI can show real feedback, and lets errors
-		// propagate so a failed refresh shows an error instead of a fake "up to date".
-		const res = await api.getArticles();
+		// Fetches page 1 of the *current* tab and prepends any articles we don't
+		// already have. Returns the count of new ones so the UI can show real
+		// feedback, and lets errors propagate so a failed refresh shows an error
+		// instead of a fake "up to date".
+		const res = await api.getArticles(null, undefined, feedParams());
 		const fresh = dedupeNew(res.articles);
 
 		if (fresh.length > 0) {
 			allArticles = [...fresh, ...allArticles];
 			newArticleIds = new Set([...newArticleIds, ...fresh.map(a => a.id)]);
-			saveFeedCache();
+			if (isDefaultFeed) saveFeedCache();
 		}
 		return fresh.length;
 	}
 
 	async function backgroundRevalidate() {
+		// Cache + background prepend are Frontier-only; filtered tabs fetch fresh.
+		if (!isDefaultFeed) return;
 		syncIndicator = true;
 		try {
 			const [articleRes, trendData] = await Promise.all([api.getArticles(), api.getTrends()]);
@@ -454,6 +496,9 @@
 	function startPolling() {
 		if (pollTimer) return;
 		pollTimer = setInterval(async () => {
+			// Only poll the Frontier feed — filtered tabs aren't cached and the
+			// new-signals bubble prepends into the default list.
+			if (!isDefaultFeed) return;
 			const latestId = feedCache.latestId();
 			if (!latestId) return;
 			try {
@@ -494,6 +539,7 @@
 	}
 
 	async function checkForNew(): Promise<boolean> {
+		if (!isDefaultFeed) return false;
 		const latestId = feedCache.latestId();
 		if (!latestId) return false;
 		try {
@@ -554,42 +600,57 @@
 		selectedArticle = null;
 		showSavedOnly = false;
 		showDigestView = false;
+		if (!changed) return;
 
-		if (id === 'Trending') {
-			await fetchTrendingPage();
-		}
+		// Each tab is its own server-paginated feed; (re)load page 1 for it.
+		if (id === 'Trending') await fetchTrendingPage();
+		else if (id === null) await loadDefaultFeed();
+		else await loadCategoryFeed();
+		feedScrollArea?.scrollTo({ top: 0 });
 	}
 
-	function showSavedView() {
+	async function showSavedView() {
+		// Saved filters over the broad feed, so make sure the default feed is loaded
+		// when arriving from a narrow tab.
+		const wasFiltered = activeCategory !== null;
 		showSavedOnly = true;
 		activeCategory = null;
 		activeSource = null;
 		selectedArticle = null;
 		showDigestView = false;
+		if (wasFiltered) await loadDefaultFeed();
 	}
 
 	function selectSource(source: string | null) {
 		activeSource = source;
 	}
 
-	function clearCategoryOrSaved() {
+	async function clearCategoryOrSaved() {
+		const wasFiltered = activeCategory !== null;
 		showSavedOnly = false;
 		activeCategory = null;
+		if (wasFiltered) await loadDefaultFeed();
 	}
 
-	function clearAllFilters() {
+	async function clearAllFilters() {
+		const wasFiltered = activeCategory !== null;
 		searchQuery = '';
 		activeSource = null;
 		activeCategory = null;
 		showSavedOnly = false;
 		sortBy = 'date';
 		timeFilter = 'all';
+		if (wasFiltered) await loadDefaultFeed();
 	}
 
 	async function fetchTrendingPage() {
 		loading = true;
 		syncIndicator = true;
 		fetchError = null;
+		// Trending is a fixed top-N list, not paginated — clear any leftover cursor
+		// so the "Load more" affordance doesn't appear or fire here.
+		hasMore = false;
+		nextCursor = null;
 		try {
 			const res = await api.getTrending();
 			trendingArticles = res.articles;
@@ -604,11 +665,14 @@
 
 	async function showDigest() {
 		analytics.digestOpened();
+		const wasFiltered = activeCategory !== null;
 		showDigestView = true;
 		activeCategory = null;
 		activeSource = null;
 		selectedArticle = null;
 		showSavedOnly = false;
+		// Keep the underlying feed = Frontier so closing the digest lands on it.
+		if (wasFiltered) loadDefaultFeed();
 		if (!digestContent) {
 			digestLoading = true;
 			try {
@@ -668,12 +732,14 @@
 		loadingMore = true;
 		loadMoreLock = true;
 		try {
-			const res = await api.getArticles(nextCursor);
+			// Paginate within the current tab — the cursor + filter together yield
+			// the next page *of this tab*, not the next page of the global feed.
+			const res = await api.getArticles(nextCursor, undefined, feedParams());
 			const newOnes = dedupeNew(res.articles);
 			allArticles = [...allArticles, ...newOnes];
 			nextCursor = res.next_cursor;
 			hasMore = res.has_more;
-			feedCache.appendPage(newOnes, res.next_cursor, res.has_more);
+			if (isDefaultFeed) feedCache.appendPage(newOnes, res.next_cursor, res.has_more);
 		} catch (error) {
 			console.error('Load more failed', error);
 		} finally {
@@ -848,6 +914,8 @@
 					{activeCategory}
 					{showSavedOnly}
 					{semanticSearchActive}
+					secondaryCategories={SECONDARY_CATEGORIES}
+					onCategorySelect={selectCategory}
 					onSearchChange={(value) => (searchQuery = value)}
 					onSourceSelect={selectSource}
 					onSortChange={(value) => (sortBy = value)}

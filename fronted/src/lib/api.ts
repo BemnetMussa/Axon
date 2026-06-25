@@ -53,9 +53,17 @@ export const api = {
         return jsonOrThrow<Trend[]>(res);
     },
 
-    getArticles: async (cursor?: string | null, limit = PAGE_SIZE): Promise<ArticlesResponse> => {
+    getArticles: async (
+        cursor?: string | null,
+        limit = PAGE_SIZE,
+        filter?: { category?: string | null; source?: string | null }
+    ): Promise<ArticlesResponse> => {
         const params = new URLSearchParams({ limit: String(limit) });
         if (cursor) params.set('cursor', cursor);
+        // Scope the feed to a single tab. The backend paginates within the filter,
+        // so the cursor returned here is the next page *of this tab*.
+        if (filter?.category) params.set('category', filter.category);
+        if (filter?.source) params.set('source', filter.source);
         // no-store: never let the browser/HTTP cache answer the feed — always fresh.
         const res = await fetch(`${BASE_URL}/articles?${params}`, { cache: 'no-store' });
         return jsonOrThrow<ArticlesResponse>(res);

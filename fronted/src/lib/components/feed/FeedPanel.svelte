@@ -2,6 +2,7 @@
 	import { ArrowDownUp, Check, Clock, X } from 'lucide-svelte';
 	import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
 	import { type Article } from '$lib/api';
+	import type { NavItem } from '$lib/ui';
 	import ArticleCard from '$lib/components/feed/ArticleCard.svelte';
 	import VirtualFeed from '$lib/components/feed/VirtualFeed.svelte';
 	import FeedHeader from '$lib/components/feed/FeedHeader.svelte';
@@ -33,6 +34,8 @@
 		semanticSearchActive?: boolean;
 		dbEmpty?: boolean;
 		scrollArea?: HTMLDivElement;
+		secondaryCategories?: NavItem[];
+		onCategorySelect?: (id: string | null) => void;
 		onSearchChange: (value: string) => void;
 		onSourceSelect: (source: string | null) => void;
 		onSortChange: (value: SortOption) => void;
@@ -52,6 +55,7 @@
 		hasMore, loadingMore, selectedArticleId, savedArticleIds, readArticleIds, loading,
 		syncIndicator, newArticleIds = new Set(), scrollArea = $bindable(),
 		activeCategory, showSavedOnly, semanticSearchActive = false, dbEmpty = false,
+		secondaryCategories = [], onCategorySelect,
 		onSearchChange, onSourceSelect, onSortChange, onTimeFilterChange,
 		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onArticleOpenWithChat, onToggleSave, onShowDigest, onLoadMore, onRefresh
 	}: Props = $props();
@@ -182,6 +186,24 @@
 			{/each}
 		</div>
 	</div>
+
+	{#if secondaryCategories.length > 0 && onCategorySelect}
+		<div class={`hidden border-b px-3 py-1.5 sm:px-5 sm:py-2 lg:block ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
+			<div class="no-scrollbar flex items-center gap-1 overflow-x-auto sm:gap-1.5">
+				<span class={`shrink-0 pr-1 text-[9px] font-bold uppercase tracking-wider ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Topics</span>
+				<button
+					onclick={() => onCategorySelect?.(null)}
+					class={`whitespace-nowrap rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all lg:text-[11px] ${sortBtnClass(activeCategory === null)}`}
+				>All</button>
+				{#each secondaryCategories as cat}
+					<button
+						onclick={() => onCategorySelect?.(cat.id)}
+						class={`whitespace-nowrap rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all lg:text-[11px] ${sortBtnClass(activeCategory === cat.id)}`}
+					>{cat.label}</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<div class={`hidden items-center gap-1 border-b px-3 py-1.5 sm:gap-2 sm:px-5 sm:py-2 lg:flex ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
 		<div class="flex items-center gap-0.5 sm:gap-1">
@@ -340,6 +362,16 @@
 					<X class="h-4 w-4" />
 				</button>
 			</div>
+
+			{#if secondaryCategories.length > 0 && onCategorySelect}
+				<p class={`mb-1 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Topic</p>
+				<div class="mb-3 flex flex-wrap gap-1.5">
+					<button onclick={() => { onCategorySelect?.(null); showMobileFilters = false; }} class={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${sortBtnClass(activeCategory === null)}`}>All</button>
+					{#each secondaryCategories as cat}
+						<button onclick={() => { onCategorySelect?.(cat.id); showMobileFilters = false; }} class={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${sortBtnClass(activeCategory === cat.id)}`}>{cat.label}</button>
+					{/each}
+				</div>
+			{/if}
 
 			<p class={`mb-1 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Source</p>
 			<div class="no-scrollbar mb-3 flex items-center gap-1.5 overflow-x-auto">

@@ -273,14 +273,25 @@ def _decode_cursor(cursor: str) -> tuple[int, int]:
 def read_articles(
     limit: int = Query(default=10, le=100),
     cursor: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    source: str | None = Query(default=None),
     session: Session = Depends(get_session),
 ):
     # Authority-weighted keyset pagination. Sort key = day-bucket * 100 + source
     # authority, so the feed reads "newest day first, best sources first within a
     # day", with id as the unique tiebreaker. The key is deterministic/stable so
     # cursoring never skips or duplicates rows. The cursor carries (sort_key, id).
+    #
+    # Optional `category`/`source` filters scope the feed to a single tab. They're
+    # plain WHERE clauses applied before the keyset predicate, so each tab is its
+    # own properly-paginated feed (Load More returns the next page *of that tab*,
+    # not the next page of the global feed).
     sk = _feed_sort_key()
     query = select(Article, sk.label("sk")).order_by(sk.desc(), col(Article.id).desc())
+    if category:
+        query = query.where(Article.category == category)
+    if source:
+        query = query.where(Article.source == source)
     if cursor:
         try:
             c_key, c_id = _decode_cursor(cursor)

@@ -14,13 +14,22 @@ export const SUGGESTIONS = [
 	'Why does this matter now?',
 ];
 
+// Primary tabs — kept deliberately short. A 3-minute brief reads best as a few
+// dense feeds rather than many thin ones, and each tab is server-paginated so
+// "Load more" pulls the next page *of that tab*. Narrower topics live in the
+// feed's Topics filter (SECONDARY_CATEGORIES) instead of as top-level tabs.
 export const NAVIGATION: NavItem[] = [
 	{ id: null, label: 'Frontier', icon: Home },
 	{ id: 'Trending', label: 'Trending', icon: Flame },
 	{ id: 'GitHub', label: 'GitHub', icon: Github },
+	{ id: 'Signal', label: 'Research', icon: Lightbulb },
+];
+
+// Demoted from top-level tabs into the in-feed "Topics" filter. Same category
+// ids the backend filters on, so selecting one scopes (and paginates) the feed.
+export const SECONDARY_CATEGORIES: NavItem[] = [
 	{ id: 'AI', label: 'AI & News', icon: Sparkles },
 	{ id: 'Discovery', label: 'Cool Tools', icon: Boxes },
-	{ id: 'Signal', label: 'Research', icon: Lightbulb },
 	{ id: 'Concerns', label: 'Concerns', icon: AlertTriangle },
 ];
 
