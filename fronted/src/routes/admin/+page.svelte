@@ -138,18 +138,15 @@
 
 <div class="min-h-screen bg-[#0a0a0a] text-zinc-200">
 	{#if !data.isAdmin}
-		<!-- Locked: surface the user's own ID so they can self-add to the allow-list -->
+		<!-- First-run setup only (allow-list empty). Surfaces the owner's user ID so
+		     they can configure AXON_ADMIN_USER_IDS. Once set, non-admins get a 404. -->
 		<div class="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
-			<div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-2xl">🔒</div>
-			<h1 class="text-lg font-semibold text-white">Admin only</h1>
+			<div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-2xl">🔧</div>
+			<h1 class="text-lg font-semibold text-white">Admin setup</h1>
 			<p class="mt-2 text-[13px] leading-relaxed text-zinc-500">
-				{#if data.configured}
-					This account isn't on the admin allow-list.
-				{:else}
-					The admin dashboard isn't configured yet.
-				{/if}
-				Add the ID below to <code class="rounded bg-white/[0.06] px-1 py-0.5 text-[11px] text-zinc-300">AXON_ADMIN_USER_IDS</code>
-				on <strong>both</strong> the frontend and backend, then reload.
+				The admin dashboard isn't configured yet. Add the ID below to
+				<code class="rounded bg-white/[0.06] px-1 py-0.5 text-[11px] text-zinc-300">AXON_ADMIN_USER_IDS</code>
+				on <strong>both</strong> the frontend and backend, restart the server, then reload.
 			</p>
 			<button
 				onclick={copyId}
