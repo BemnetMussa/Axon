@@ -74,6 +74,26 @@ INTERNAL_SECRET = os.getenv("AXON_INTERNAL_SECRET", "").strip()
 if not INTERNAL_SECRET:
     raise RuntimeError("Missing required env var: AXON_INTERNAL_SECRET")
 
+# Admin dashboard allow-list. Comma-separated Better-Auth user IDs that may read
+# /admin/stats. Fail closed: if unset, nobody is admin (the dashboard tells the
+# user their own ID so they can add it here on both backend + frontend).
+ADMIN_USER_IDS = {
+    uid.strip() for uid in os.getenv("AXON_ADMIN_USER_IDS", "").split(",") if uid.strip()
+}
+
+
+def require_admin(request: Request) -> None:
+    """Backstop auth for /admin/*. The internal-secret middleware already ran; this
+    additionally checks the proxied user ID against AXON_ADMIN_USER_IDS so a normal
+    logged-in user can't reach admin data through the shared /api/backend proxy."""
+    if not ADMIN_USER_IDS:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access not configured. Set AXON_ADMIN_USER_IDS on the backend.",
+        )
+    if request.headers.get("X-Axon-User-Id") not in ADMIN_USER_IDS:
+        raise HTTPException(status_code=403, detail="Forbidden: not an admin user.")
+
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
@@ -192,11 +212,12 @@ async def require_internal_auth(request: Request, call_next):
 
 @app.post("/ingest")
 @limiter.limit("5/hour")
-async def trigger_ingestion(request: Request, context_id: str | None = Query(default=None), session: Session = Depends(get_session)):
+async def trigger_ingestion(request: Request, context_id: str | None = Query(default=None), force: bool = Query(default=False), session: Session = Depends(get_session)):
     global _last_ingest_at_utc
-    
-    # Global cooldown: skip if ingest happened within 4 hours (unless context-specific)
-    if not context_id and _last_ingest_at_utc:
+
+    # Global cooldown: skip if ingest happened within the interval (unless context-
+    # specific, or force=true — the admin dashboard's "Run ingest now" sets force).
+    if not force and not context_id and _last_ingest_at_utc:
         last_dt = datetime.fromisoformat(_last_ingest_at_utc)
         hours_since = (datetime.now(timezone.utc) - last_dt).total_seconds() / 3600
         if hours_since < _scheduler_interval_hours:
@@ -643,6 +664,39 @@ def root():
     }
 
 
+def _scheduler_snapshot() -> dict:
+    job = scheduler.get_job("axon_ingest") if scheduler.running else None
+    next_run = job.next_run_time.isoformat() if (job and job.next_run_time) else None
+    return {
+        "ap_scheduler_running": scheduler.running,
+        "interval_hours": _scheduler_interval_hours,
+        "job_registered": job is not None,
+        "next_run_at_utc": next_run,
+    }
+
+
+def _last_ingest_snapshot() -> dict:
+    relative = None
+    if _last_ingest_at_utc:
+        try:
+            delta = datetime.now(timezone.utc) - datetime.fromisoformat(_last_ingest_at_utc)
+            secs = delta.total_seconds()
+            if secs < 60:
+                relative = "just now"
+            elif secs < 3600:
+                relative = f"{int(secs // 60)}m ago"
+            else:
+                relative = f"{int(secs // 3600)}h ago"
+        except Exception:
+            pass
+    return {
+        "at_utc": _last_ingest_at_utc,
+        "ok": _last_ingest_ok,
+        "detail": _last_ingest_detail or None,
+        "relative": relative,
+    }
+
+
 @app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     """Public JSON for uptime checks and debugging ingest timing (no auth).
@@ -650,42 +704,125 @@ def health():
     Accepts HEAD as well as GET — uptime monitors (Better Stack, etc.) probe
     with HEAD, and a GET-only route would answer them with 405.
     """
-    job = scheduler.get_job("axon_ingest") if scheduler.running else None
-    next_run = None
-    if job and job.next_run_time:
-        next_run = job.next_run_time.isoformat()
-    last_ingest_relative = None
-    if _last_ingest_at_utc:
-        try:
-            last_dt = datetime.fromisoformat(_last_ingest_at_utc)
-            delta = datetime.now(timezone.utc) - last_dt
-            if delta.total_seconds() < 60:
-                last_ingest_relative = "just now"
-            elif delta.total_seconds() < 3600:
-                last_ingest_relative = f"{int(delta.total_seconds() // 60)}m ago"
-            else:
-                last_ingest_relative = f"{int(delta.total_seconds() // 3600)}h ago"
-        except Exception:
-            pass
-
     return {
         "status": "ok",
         "service": "axon-api",
-        "scheduler": {
-            "ap_scheduler_running": scheduler.running,
-            "interval_hours": _scheduler_interval_hours,
-            "job_registered": job is not None,
-            "next_run_at_utc": next_run,
-        },
-        "last_scheduled_ingest": {
-            "at_utc": _last_ingest_at_utc,
-            "ok": _last_ingest_ok,
-            "detail": _last_ingest_detail or None,
-            "relative": last_ingest_relative,
-        },
+        "scheduler": _scheduler_snapshot(),
+        "last_scheduled_ingest": _last_ingest_snapshot(),
         "hints": {
             "always_on": "APScheduler only fires while this process stays running.",
             "env_INGEST_INTERVAL_HOURS": _scheduler_interval_hours,
             "vercel_cron": "Optional: Vercel Cron can POST via frontend /api/cron/ingest — see project README.",
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Admin dashboard — aggregate health for ingestion / pipeline / engagement.
+# Internal-secret middleware + require_admin (AXON_ADMIN_USER_IDS) gate this.
+# ---------------------------------------------------------------------------
+
+@app.get("/admin/stats")
+def admin_stats(request: Request, session: Session = Depends(get_session)):
+    require_admin(request)
+
+    now = datetime.now(timezone.utc)
+    day_ago = now - timedelta(hours=24)
+    week_ago = now - timedelta(days=7)
+    fortnight_ago = now - timedelta(days=14)
+
+    # insight is "missing" when null or empty — flags articles the AI step hasn't
+    # (successfully) processed yet.
+    missing_insight_pred = or_(col(Article.insight) == None, col(Article.insight) == "")  # noqa: E711
+
+    total_articles = session.exec(select(func.count()).select_from(Article)).one()
+    processed = session.exec(
+        select(func.count()).select_from(Article).where(Article.is_processed == True)  # noqa: E712
+    ).one()
+    missing_insight = session.exec(
+        select(func.count()).select_from(Article).where(missing_insight_pred)
+    ).one()
+
+    # Per-source health: volume + how stale the newest item is. A source whose
+    # latest item is many hours/days old is probably failing to fetch silently.
+    source_rows = session.exec(
+        select(
+            Article.source,
+            func.count().label("total"),
+            func.max(Article.published_date).label("latest"),
+            func.sum(case((col(Article.published_date) >= day_ago, 1), else_=0)).label("d1"),
+            func.sum(case((col(Article.published_date) >= week_ago, 1), else_=0)).label("d7"),
+            func.sum(case((missing_insight_pred, 1), else_=0)).label("missing"),
+        ).group_by(Article.source)
+    ).all()
+
+    sources = []
+    for source, total, latest, d1, d7, missing in source_rows:
+        latest_iso = None
+        hours_since = None
+        if latest is not None:
+            if latest.tzinfo is None:
+                latest = latest.replace(tzinfo=timezone.utc)
+            latest_iso = latest.isoformat()
+            hours_since = round((now - latest).total_seconds() / 3600, 1)
+        sources.append({
+            "source": source,
+            "total": int(total or 0),
+            "last_24h": int(d1 or 0),
+            "last_7d": int(d7 or 0),
+            "missing_insight": int(missing or 0),
+            "latest_published": latest_iso,
+            "hours_since_latest": hours_since,
+        })
+    # Stalest first so problems surface at the top of the table.
+    sources.sort(key=lambda s: s["hours_since_latest"] if s["hours_since_latest"] is not None else 1e9, reverse=True)
+
+    # Articles per day (last 14d) for a volume sparkline.
+    day_col = func.date(Article.published_date)
+    vol_rows = session.exec(
+        select(day_col.label("day"), func.count().label("count"))
+        .where(col(Article.published_date) >= fortnight_ago)
+        .group_by(day_col)
+        .order_by(day_col)
+    ).all()
+    daily_volume = [{"day": str(day), "count": int(count)} for day, count in vol_rows]
+
+    total_views = session.exec(select(func.coalesce(func.sum(Article.views), 0))).one()
+    total_likes = session.exec(select(func.coalesce(func.sum(Article.likes), 0))).one()
+    feedback_count = session.exec(select(func.count()).select_from(Feedback)).one()
+    avg_rating = session.exec(select(func.avg(Feedback.rating))).one()
+    recent_feedback = session.exec(
+        select(Feedback).order_by(col(Feedback.created_at).desc()).limit(8)
+    ).all()
+
+    return {
+        "generated_at": now.isoformat(),
+        "scheduler": _scheduler_snapshot(),
+        "last_scheduled_ingest": _last_ingest_snapshot(),
+        "totals": {
+            "articles": int(total_articles or 0),
+            "processed": int(processed or 0),
+            "unprocessed": int((total_articles or 0) - (processed or 0)),
+            "missing_insight": int(missing_insight or 0),
+            "trends": int(session.exec(select(func.count()).select_from(Trend)).one() or 0),
+            "digests": int(session.exec(select(func.count()).select_from(Digest)).one() or 0),
+            "feedback": int(feedback_count or 0),
+        },
+        "sources": sources,
+        "daily_volume": daily_volume,
+        "engagement": {
+            "total_views": int(total_views or 0),
+            "total_likes": int(total_likes or 0),
+            "feedback_count": int(feedback_count or 0),
+            "avg_feedback_rating": round(float(avg_rating), 2) if avg_rating is not None else None,
+            "recent_feedback": [
+                {
+                    "user": (f.user_id[:8] + "…") if f.user_id and len(f.user_id) > 8 else f.user_id,
+                    "rating": f.rating,
+                    "comment": f.comment,
+                    "created_at": f.created_at.isoformat() if f.created_at else None,
+                }
+                for f in recent_feedback
+            ],
         },
     }

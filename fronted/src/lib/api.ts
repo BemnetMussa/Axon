@@ -45,6 +45,55 @@ export interface ArticlesResponse {
     has_more: boolean;
 }
 
+// --- Admin dashboard ----------------------------------------------------------
+export interface SchedulerSnapshot {
+    ap_scheduler_running: boolean;
+    interval_hours: number;
+    job_registered: boolean;
+    next_run_at_utc: string | null;
+}
+
+export interface LastIngestSnapshot {
+    at_utc: string | null;
+    ok: boolean | null;
+    detail: string | null;
+    relative: string | null;
+}
+
+export interface SourceStat {
+    source: string;
+    total: number;
+    last_24h: number;
+    last_7d: number;
+    missing_insight: number;
+    latest_published: string | null;
+    hours_since_latest: number | null;
+}
+
+export interface AdminStats {
+    generated_at: string;
+    scheduler: SchedulerSnapshot;
+    last_scheduled_ingest: LastIngestSnapshot;
+    totals: {
+        articles: number;
+        processed: number;
+        unprocessed: number;
+        missing_insight: number;
+        trends: number;
+        digests: number;
+        feedback: number;
+    };
+    sources: SourceStat[];
+    daily_volume: { day: string; count: number }[];
+    engagement: {
+        total_views: number;
+        total_likes: number;
+        feedback_count: number;
+        avg_feedback_rating: number | null;
+        recent_feedback: { user: string | null; rating: number; comment: string | null; created_at: string | null }[];
+    };
+}
+
 const PAGE_SIZE = 10;
 
 export const api = {
@@ -157,6 +206,27 @@ export const api = {
     getHealth: async (): Promise<any> => {
         const res = await fetch(`${BASE_URL}/health`);
         return res.json();
+    },
+
+    // --- Admin dashboard ---
+    getAdminStats: async (): Promise<AdminStats> => {
+        const res = await fetch(`${BASE_URL}/admin/stats`, { cache: 'no-store' });
+        return jsonOrThrow<AdminStats>(res);
+    },
+
+    adminRunIngest: async (force = true): Promise<{ status?: string; reason?: string; new_articles?: number }> => {
+        const res = await fetch(`${BASE_URL}/ingest?force=${force}`, { method: 'POST' });
+        return jsonOrThrow(res);
+    },
+
+    adminRunAnalyze: async (): Promise<{ status?: string; processed?: number }> => {
+        const res = await fetch(`${BASE_URL}/analyze`, { method: 'POST' });
+        return jsonOrThrow(res);
+    },
+
+    adminRetryInsights: async (): Promise<{ status?: string; retried?: number }> => {
+        const res = await fetch(`${BASE_URL}/retry-insights`, { method: 'POST' });
+        return jsonOrThrow(res);
     }
 };
 
