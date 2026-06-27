@@ -93,6 +93,18 @@ export interface FetchReport {
     sources: Record<string, { raw: number; ingested: number }>;
 }
 
+export interface IngestRunRow {
+    id: number;
+    started_at: string | null;
+    finished_at: string | null;
+    trigger: string;
+    ok: boolean;
+    new_articles: number;
+    analyzed: number;
+    raw_found: number;
+    detail: string | null;
+}
+
 export interface AdminStats {
     generated_at: string;
     scheduler: SchedulerSnapshot;
@@ -100,6 +112,7 @@ export interface AdminStats {
     ai: AiStatus;
     processing: ProcessingState;
     fetch_report: FetchReport;
+    recent_runs: IngestRunRow[];
     totals: {
         articles: number;
         processed: number;

@@ -250,6 +250,39 @@
 					{/if}
 				</section>
 
+				<!-- Ingest history (persisted — survives restarts) -->
+				<section class="mb-6 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+					<h2 class="mb-3 text-[12px] font-semibold uppercase tracking-wide text-zinc-500">Ingest history <span class="font-normal normal-case text-zinc-600">· last {stats.recent_runs.length} runs</span></h2>
+					{#if stats.recent_runs.length}
+						<div class="overflow-x-auto">
+							<table class="w-full text-left text-[12px]">
+								<thead class="text-[10px] uppercase tracking-wide text-zinc-600">
+									<tr class="border-b border-white/[0.06]">
+										<th class="py-2 pr-3 font-medium">When</th>
+										<th class="py-2 pr-3 font-medium">Trigger</th>
+										<th class="py-2 pr-3 text-right font-medium">New</th>
+										<th class="py-2 pr-3 text-right font-medium">Analyzed</th>
+										<th class="py-2 pr-3 text-right font-medium">Found</th>
+										<th class="py-2 text-right font-medium">Status</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each stats.recent_runs as r}
+										<tr class="border-b border-white/[0.03]">
+											<td class="py-2 pr-3 text-zinc-400">{fmtAgo(r.started_at)}</td>
+											<td class="py-2 pr-3 text-zinc-500">{r.trigger}</td>
+											<td class="py-2 pr-3 text-right text-zinc-300">{r.new_articles}</td>
+											<td class="py-2 pr-3 text-right text-zinc-400">{r.analyzed}</td>
+											<td class="py-2 pr-3 text-right text-zinc-600">{r.raw_found}</td>
+											<td class="py-2 text-right">{#if r.ok}<span class="text-emerald-400">ok</span>{:else}<span class="text-red-400" title={r.detail ?? ''}>failed</span>{/if}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{:else}<p class="text-[12px] text-zinc-600">No runs recorded yet. They'll appear here after the next ingest.</p>{/if}
+				</section>
+
 				<!-- Volume -->
 				<section class="mb-6 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
 					<h2 class="mb-3 text-[12px] font-semibold uppercase tracking-wide text-zinc-500">Articles / day (14d)</h2>

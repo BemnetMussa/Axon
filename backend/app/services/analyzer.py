@@ -311,8 +311,13 @@ def analyze_articles(session: Session, progress=None):
             # Category is already set once at ingest (see fetcher.classify_article).
             # Prefer the hydrated full body; fall back to the RSS snippet.
             source_text = article.full_content or article.content_snippet or ""
-            article.insight = generate_insight(article.title, source_text)
-            article.is_processed = True
+            insight = generate_insight(article.title, source_text)
+            article.insight = insight
+            # Only "consume" the article when an insight actually generated. If
+            # Groq is down (empty result), leave is_processed=False so the NEXT
+            # scheduled run retries it — instead of permanently burying it as
+            # processed-with-no-insight (the cause of the stuck backlog).
+            article.is_processed = bool(insight)
             session.add(article)
 
         # Embed the whole batch in a single fastembed call rather than one per article.

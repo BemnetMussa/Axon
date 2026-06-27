@@ -2,6 +2,7 @@ import os
 import asyncio
 import time
 import base64
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -23,7 +24,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.core.database import init_db, get_session, get_script_session
-from app.models import Article, Trend, Digest, SavedArticle, Feedback
+from app.models import Article, Trend, Digest, SavedArticle, Feedback, IngestRun
 from app.services import fetcher
 from app.services.fetcher import ingest_intelligence
 from app.services.analyzer import (
@@ -172,13 +173,42 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 
+def _record_ingest_run(trigger: str, ok: bool, new_articles: int, analyzed: int,
+                       detail: str | None, started_at: datetime) -> None:
+    """Persist one ingest run so the dashboard's history survives restarts."""
+    try:
+        report = fetcher.last_fetch_report or {}
+        run = IngestRun(
+            started_at=started_at,
+            finished_at=datetime.now(timezone.utc),
+            trigger=trigger,
+            ok=ok,
+            new_articles=new_articles,
+            analyzed=analyzed,
+            raw_found=int(report.get("raw") or 0),
+            sources_json=json.dumps(report.get("sources") or {}),
+            detail=(detail or "")[:500] or None,
+        )
+        s = get_script_session()
+        try:
+            s.add(run)
+            s.commit()
+        finally:
+            s.close()
+    except Exception as e:
+        print(f"AXON: failed to record ingest run: {e}")
+
+
 async def scheduled_ingest():
     """Runs ingestion + analysis on a timer."""
     global _last_ingest_at_utc, _last_ingest_ok, _last_ingest_detail
+    started = datetime.now(timezone.utc)
+    new_count = 0
+    analyzed = 0
     session = get_script_session()
     try:
-        count = await ingest_intelligence(session)
-        if count > 0:
+        new_count = await ingest_intelligence(session)
+        if new_count > 0:
             try:
                 # analyze_articles is blocking (sync Groq calls + time.sleep between
                 # batches). Run it off the event loop so the API stays responsive
@@ -188,8 +218,8 @@ async def scheduled_ingest():
                 print(f"AXON SCHEDULER: analyze after ingest failed: {ae}")
                 analyzed = 0
             _last_ingest_ok = True
-            _last_ingest_detail = f"ingested {count} new, analyzed {analyzed} articles"
-            print(f"AXON SCHEDULER: Ingested {count}, analyzed {analyzed}")
+            _last_ingest_detail = f"ingested {new_count} new, analyzed {analyzed} articles"
+            print(f"AXON SCHEDULER: Ingested {new_count}, analyzed {analyzed}")
         else:
             _last_ingest_ok = True
             _last_ingest_detail = "no new signals (dedupe or empty run)"
@@ -201,6 +231,8 @@ async def scheduled_ingest():
     finally:
         _last_ingest_at_utc = datetime.now(timezone.utc).isoformat()
         session.close()
+        _record_ingest_run("scheduler", _last_ingest_ok or False, new_count, analyzed,
+                           _last_ingest_detail, started)
 
 
 @asynccontextmanager
@@ -295,25 +327,29 @@ async def trigger_ingestion(request: Request, context_id: str | None = Query(def
                 "new_articles": 0
             }
     
+    started = datetime.now(timezone.utc)
     count = await ingest_intelligence(session, context_id)
     _last_ingest_at_utc = datetime.now(timezone.utc).isoformat()
+    _record_ingest_run("manual", True, count, 0, f"manual ingest ({context_id or 'ALL'})", started)
     return {"status": "success", "new_articles": count}
 
 
 @app.post("/analyze")
-def trigger_analysis(session: Session = Depends(get_session)):
-    try:
-        count = analyze_articles(session)
-        return {"status": "success", "processed": count}
-    except Exception as exc:
-        print(f"[analyze] failed: {exc}")
-        return {"status": "partial", "processed": 0}
+async def trigger_analysis():
+    """Non-blocking: launches the background analyze+retry job. (Was a sync def
+    with 12s batch sleeps that could freeze the event loop for minutes.)"""
+    if _processing["running"]:
+        return {"status": "already_running"}
+    asyncio.create_task(_run_backlog())
+    return {"status": "started"}
 
 
 @app.post("/retry-insights")
-def trigger_retry_insights(session: Session = Depends(get_session)):
-    count = retry_failed_insights(session)
-    return {"status": "success", "retried": count}
+async def trigger_retry_insights():
+    if _processing["running"]:
+        return {"status": "already_running"}
+    asyncio.create_task(_run_backlog())
+    return {"status": "started"}
 
 
 # ---------------------------------------------------------------------------
@@ -865,6 +901,9 @@ def admin_stats(request: Request, session: Session = Depends(get_session)):
     recent_feedback = session.exec(
         select(Feedback).order_by(col(Feedback.created_at).desc()).limit(8)
     ).all()
+    recent_runs = session.exec(
+        select(IngestRun).order_by(col(IngestRun.started_at).desc()).limit(20)
+    ).all()
 
     return {
         "generated_at": now.isoformat(),
@@ -873,6 +912,20 @@ def admin_stats(request: Request, session: Session = Depends(get_session)):
         "ai": _groq_status(),
         "processing": _processing,
         "fetch_report": fetcher.last_fetch_report,
+        "recent_runs": [
+            {
+                "id": r.id,
+                "started_at": r.started_at.isoformat() if r.started_at else None,
+                "finished_at": r.finished_at.isoformat() if r.finished_at else None,
+                "trigger": r.trigger,
+                "ok": r.ok,
+                "new_articles": r.new_articles,
+                "analyzed": r.analyzed,
+                "raw_found": r.raw_found,
+                "detail": r.detail,
+            }
+            for r in recent_runs
+        ],
         "totals": {
             "articles": int(total_articles or 0),
             "processed": int(processed or 0),

@@ -54,3 +54,17 @@ class Feedback(SQLModel, table=True):
     comment: Optional[str] = None
     created_at: datetime = Field(default_factory=_utcnow)
 
+class IngestRun(SQLModel, table=True):
+    """One row per real ingestion run, so the admin dashboard's history survives
+    process restarts (in-memory counters reset on every Render redeploy/sleep)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    started_at: datetime = Field(default_factory=_utcnow, index=True)
+    finished_at: Optional[datetime] = None
+    trigger: str = Field(default="scheduler")  # scheduler | manual | cron
+    ok: bool = Field(default=True)
+    new_articles: int = Field(default=0)
+    analyzed: int = Field(default=0)
+    raw_found: int = Field(default=0)
+    sources_json: Optional[str] = None  # JSON {source: {raw, ingested}}
+    detail: Optional[str] = None
+
