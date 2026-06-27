@@ -70,10 +70,36 @@ export interface SourceStat {
     hours_since_latest: number | null;
 }
 
+export interface AiStatus {
+    key_present: boolean;
+    reachable: boolean;
+    error: string | null;
+}
+
+export interface ProcessingState {
+    running: boolean;
+    phase: 'analyze' | 'retry' | 'done' | null;
+    done: number;
+    total: number;
+    started_at: string | null;
+    finished_at: string | null;
+    result: string | null;
+}
+
+export interface FetchReport {
+    at: string | null;
+    raw: number;
+    ingested: number;
+    sources: Record<string, { raw: number; ingested: number }>;
+}
+
 export interface AdminStats {
     generated_at: string;
     scheduler: SchedulerSnapshot;
     last_scheduled_ingest: LastIngestSnapshot;
+    ai: AiStatus;
+    processing: ProcessingState;
+    fetch_report: FetchReport;
     totals: {
         articles: number;
         processed: number;
@@ -82,12 +108,14 @@ export interface AdminStats {
         trends: number;
         digests: number;
         feedback: number;
+        saved: number;
     };
     sources: SourceStat[];
     daily_volume: { day: string; count: number }[];
     engagement: {
         total_views: number;
-        total_likes: number;
+        total_saves: number;
+        source_score_sum: number;
         feedback_count: number;
         avg_feedback_rating: number | null;
         recent_feedback: { user: string | null; rating: number; comment: string | null; created_at: string | null }[];
@@ -226,6 +254,13 @@ export const api = {
 
     adminRetryInsights: async (): Promise<{ status?: string; retried?: number }> => {
         const res = await fetch(`${BASE_URL}/retry-insights`, { method: 'POST' });
+        return jsonOrThrow(res);
+    },
+
+    // Background drain of the unprocessed + failed-insight backlog. Returns
+    // immediately; progress shows up in getAdminStats().processing.
+    adminProcessBacklog: async (): Promise<{ status: string }> => {
+        const res = await fetch(`${BASE_URL}/admin/process`, { method: 'POST' });
         return jsonOrThrow(res);
     }
 };

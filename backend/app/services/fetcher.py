@@ -5,6 +5,7 @@ import feedparser
 import math
 import re
 import html
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from time import mktime
 from sqlmodel import Session, select, col
@@ -66,6 +67,12 @@ SOURCE_WEIGHTS = {
 }
 # Recency half-life-ish scale in hours (exp decay): ~3 days.
 RECENCY_SCALE_HOURS = 72.0
+
+# Telemetry from the most recent ingest run, surfaced on the admin dashboard so a
+# source that returns nothing (rate-limited, moved feed) is visible immediately —
+# the truth about "is this source being fetched", independent of publish dates.
+# Mutated in place by ingest_intelligence; read by the API's /admin/stats.
+last_fetch_report: dict = {"at": None, "raw": 0, "ingested": 0, "sources": {}}
 
 
 def _now() -> datetime:
@@ -784,6 +791,19 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
             final.append(sig)
             seen.add(url)
             accepted_fingerprints.append((source, tokens))
+
+        # Record what each source actually returned this run (before/after the
+        # dedupe + per-source caps), so the admin dashboard can tell "GitHub
+        # fetched 0 today" apart from "GitHub just hasn't published".
+        raw_by_source = Counter(s["source"] for s in raw_signals)
+        ingested_by_source = Counter(s["source"] for s in final)
+        last_fetch_report["at"] = _now().isoformat()
+        last_fetch_report["raw"] = len(raw_signals)
+        last_fetch_report["ingested"] = len(final)
+        last_fetch_report["sources"] = {
+            src: {"raw": raw_by_source.get(src, 0), "ingested": ingested_by_source.get(src, 0)}
+            for src in sorted(set(raw_by_source) | set(ingested_by_source))
+        }
 
         if not final:
             return 0

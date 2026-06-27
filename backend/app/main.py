@@ -24,6 +24,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from app.core.database import init_db, get_session, get_script_session
 from app.models import Article, Trend, Digest, SavedArticle, Feedback
+from app.services import fetcher
 from app.services.fetcher import ingest_intelligence
 from app.services.analyzer import (
     analyze_articles,
@@ -33,6 +34,7 @@ from app.services.analyzer import (
     generate_chat_suggestions,
     get_embed_model,
     generate_weekly_digest,
+    probe_groq,
 )
 from app.services.extractor import extract_article_content
 
@@ -93,6 +95,72 @@ def require_admin(request: Request) -> None:
         )
     if request.headers.get("X-Axon-User-Id") not in ADMIN_USER_IDS:
         raise HTTPException(status_code=403, detail="Forbidden: not an admin user.")
+
+
+# ---------------------------------------------------------------------------
+# Backlog processing — analyze + retry as a background job.
+#
+# analyze_articles / retry_failed_insights sleep 12s between batches, so running
+# them inside a request would take many minutes and time out the proxy (the
+# "Retry insights failed: API 500" you'd otherwise see). The admin "Process
+# backlog" button fires this and returns immediately; the dashboard polls
+# _processing for live progress.
+# ---------------------------------------------------------------------------
+
+_processing: dict = {
+    "running": False,
+    "phase": None,        # "analyze" | "retry" | "done"
+    "done": 0,
+    "total": 0,
+    "started_at": None,
+    "finished_at": None,
+    "result": None,
+}
+
+
+async def _run_backlog():
+    global _processing
+    _processing = {
+        "running": True,
+        "phase": "analyze",
+        "done": 0,
+        "total": 0,
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "finished_at": None,
+        "result": None,
+    }
+
+    def progress(done: int, total: int, phase: str) -> None:
+        _processing["done"] = done
+        _processing["total"] = total
+        _processing["phase"] = phase
+
+    session = get_script_session()
+    try:
+        analyzed = await asyncio.to_thread(analyze_articles, session, progress)
+        retried = await asyncio.to_thread(retry_failed_insights, session, progress)
+        _processing["result"] = f"analyzed {analyzed}, retried {retried}"
+    except Exception as e:
+        _processing["result"] = f"error: {str(e)[:300]}"
+        print(f"AXON BACKLOG ERROR: {e}")
+    finally:
+        _processing["phase"] = "done"
+        _processing["running"] = False
+        _processing["finished_at"] = datetime.now(timezone.utc).isoformat()
+        session.close()
+
+
+# Cached Groq liveness — probe at most once per 5 min so the 30s stats poll never
+# spends an LLM round-trip per refresh.
+_groq_probe_cache: dict = {"at": 0.0, "value": None}
+
+
+def _groq_status() -> dict:
+    now = time.time()
+    if _groq_probe_cache["value"] is None or now - _groq_probe_cache["at"] > 300:
+        _groq_probe_cache["value"] = probe_groq()
+        _groq_probe_cache["at"] = now
+    return _groq_probe_cache["value"]
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
@@ -788,7 +856,10 @@ def admin_stats(request: Request, session: Session = Depends(get_session)):
     daily_volume = [{"day": str(day), "count": int(count)} for day, count in vol_rows]
 
     total_views = session.exec(select(func.coalesce(func.sum(Article.views), 0))).one()
-    total_likes = session.exec(select(func.coalesce(func.sum(Article.likes), 0))).one()
+    # NOTE: Article.likes is the source's own popularity score (HN points, GitHub
+    # stars), NOT a user "like" — summing it is only meaningful as a corpus signal.
+    source_score_sum = session.exec(select(func.coalesce(func.sum(Article.likes), 0))).one()
+    saved_count = session.exec(select(func.count()).select_from(SavedArticle)).one()
     feedback_count = session.exec(select(func.count()).select_from(Feedback)).one()
     avg_rating = session.exec(select(func.avg(Feedback.rating))).one()
     recent_feedback = session.exec(
@@ -799,6 +870,9 @@ def admin_stats(request: Request, session: Session = Depends(get_session)):
         "generated_at": now.isoformat(),
         "scheduler": _scheduler_snapshot(),
         "last_scheduled_ingest": _last_ingest_snapshot(),
+        "ai": _groq_status(),
+        "processing": _processing,
+        "fetch_report": fetcher.last_fetch_report,
         "totals": {
             "articles": int(total_articles or 0),
             "processed": int(processed or 0),
@@ -807,12 +881,14 @@ def admin_stats(request: Request, session: Session = Depends(get_session)):
             "trends": int(session.exec(select(func.count()).select_from(Trend)).one() or 0),
             "digests": int(session.exec(select(func.count()).select_from(Digest)).one() or 0),
             "feedback": int(feedback_count or 0),
+            "saved": int(saved_count or 0),
         },
         "sources": sources,
         "daily_volume": daily_volume,
         "engagement": {
             "total_views": int(total_views or 0),
-            "total_likes": int(total_likes or 0),
+            "total_saves": int(saved_count or 0),
+            "source_score_sum": int(source_score_sum or 0),
             "feedback_count": int(feedback_count or 0),
             "avg_feedback_rating": round(float(avg_rating), 2) if avg_rating is not None else None,
             "recent_feedback": [
@@ -826,3 +902,14 @@ def admin_stats(request: Request, session: Session = Depends(get_session)):
             ],
         },
     }
+
+
+@app.post("/admin/process")
+async def admin_process_backlog(request: Request):
+    """Kick off background analyze + retry-insights. Returns immediately; the
+    dashboard watches `processing` in /admin/stats for progress."""
+    require_admin(request)
+    if _processing["running"]:
+        return {"status": "already_running", "processing": _processing}
+    asyncio.create_task(_run_backlog())
+    return {"status": "started"}

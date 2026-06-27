@@ -273,7 +273,27 @@ Opportunity: (What concrete product or optimization can a small team build today
         return "Intelligence gathering failed."
 
 
-def analyze_articles(session: Session):
+def probe_groq() -> dict:
+    """Cheap liveness check for the Groq key — used by the admin dashboard so a
+    rejected/expired key shows up as a red 'AI engine' light instead of silently
+    producing empty insights. Makes a 1-token call; never raises."""
+    key = os.getenv("GROQ_API_KEY") or ""
+    if not key:
+        return {"key_present": False, "reachable": False, "error": "GROQ_API_KEY is not set"}
+    try:
+        client.chat.completions.create(
+            messages=[{"role": "user", "content": "ping"}],
+            model="llama-3.3-70b-versatile",
+            max_tokens=1,
+            temperature=0,
+        )
+        return {"key_present": True, "reachable": True, "error": None}
+    except Exception as e:
+        return {"key_present": True, "reachable": False, "error": str(e)[:300]}
+
+
+def analyze_articles(session: Session, progress=None):
+    """progress: optional callable(done, total, phase) for live admin reporting."""
     articles = session.exec(
         select(Article).where(Article.is_processed == False)  # noqa: E712
     ).all()
@@ -282,6 +302,8 @@ def analyze_articles(session: Session):
 
     total = len(articles)
     print(f"AXON: Analyzing {total} articles in batches of {BATCH_SIZE}...")
+    if progress:
+        progress(0, total, "analyze")
 
     for i in range(0, total, BATCH_SIZE):
         batch = articles[i:i + BATCH_SIZE]
@@ -304,6 +326,8 @@ def analyze_articles(session: Session):
         session.commit()
         processed = min(i + BATCH_SIZE, total)
         print(f"AXON: Processed {processed}/{total}")
+        if progress:
+            progress(processed, total, "analyze")
 
         if i + BATCH_SIZE < total:
             time.sleep(BATCH_DELAY)
@@ -313,8 +337,10 @@ def analyze_articles(session: Session):
     return total
 
 
-def retry_failed_insights(session: Session):
-    """Re-generate insights for articles that failed on the first pass."""
+def retry_failed_insights(session: Session, progress=None):
+    """Re-generate insights for articles that failed on the first pass.
+
+    progress: optional callable(done, total, phase) for live admin reporting."""
     failed = session.exec(
         select(Article).where(
             Article.is_processed == True,  # noqa: E712
@@ -326,6 +352,8 @@ def retry_failed_insights(session: Session):
 
     total = len(failed)
     print(f"AXON: Retrying insights for {total} articles...")
+    if progress:
+        progress(0, total, "retry")
     fixed = 0
 
     for i in range(0, total, BATCH_SIZE):
@@ -338,6 +366,8 @@ def retry_failed_insights(session: Session):
                 session.add(article)
 
         session.commit()
+        if progress:
+            progress(min(i + BATCH_SIZE, total), total, "retry")
         if i + BATCH_SIZE < total:
             time.sleep(BATCH_DELAY)
 
