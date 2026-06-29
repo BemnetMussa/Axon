@@ -567,28 +567,55 @@ async def hunt_lobsters(client: httpx.AsyncClient):
 # ---------------------------------------------------------------------------
 
 async def hunt_arxiv(client: httpx.AsyncClient):
-    """Latest cs.AI and cs.LG papers from ArXiv."""
-    url = (
-        "https://export.arxiv.org/api/query?"
-        "search_query=cat:cs.AI+OR+cat:cs.LG&sortBy=submittedDate&max_results=12"
-    )
-    try:
-        res = await client.get(url, timeout=15.0)
-        feed = feedparser.parse(res.text)
-        return [
-            {
-                "title": e.title.replace("\n", " ").strip(),
-                "url": e.link,
-                "snippet": e.summary.replace("\n", " ").strip()[:500],
-                "source": "ArXiv",
-                "category": "Signal",
-                "likes": 0,
-                "published": _parse_feed_date(e),
-            }
-            for e in feed.entries
-        ]
-    except Exception:
-        return []
+    """Latest cs.AI and cs.LG papers from ArXiv.
+
+    Uses the RSS feeds (rss.arxiv.org), NOT the legacy export API query endpoint:
+    export.arxiv.org/api/query now returns HTTP 429 (rate-limited) for shared /
+    cloud IPs like Render's, which the old code silently swallowed as an empty
+    result — that's why ArXiv kept going stale. The RSS feeds aren't throttled.
+    """
+    feeds = [
+        "https://rss.arxiv.org/rss/cs.AI",
+        "https://rss.arxiv.org/rss/cs.LG",
+    ]
+    signals: list[dict] = []
+    seen: set[str] = set()
+    for url in feeds:
+        try:
+            res = await client.get(url, timeout=20.0)
+            if res.status_code != 200:
+                print(f"AXON ArXiv: HTTP {res.status_code} for {url}")
+                continue
+            feed = feedparser.parse(res.text)
+            _check_feed("ArXiv", feed.entries)
+            for e in feed.entries[:12]:
+                # Only genuinely new announcements — skip 'replace' (updates to old
+                # papers) so we don't resurface stale work with a fresh announce date.
+                atype = (e.get("arxiv_announce_type") or "").lower()
+                if atype and atype not in ("new", "cross"):
+                    continue
+                link = e.get("link")
+                if not link or link in seen:
+                    continue
+                seen.add(link)
+                # RSS summary is prefixed "arXiv:xxxx Announce Type: new \nAbstract:";
+                # strip down to the abstract for a clean snippet.
+                summary = e.get("summary", "")
+                m = re.search(r"Abstract:\s*(.*)", summary, re.S)
+                clean = (m.group(1) if m else summary).replace("\n", " ").strip()
+                signals.append({
+                    "title": e.title.replace("\n", " ").strip(),
+                    "url": link,
+                    "snippet": clean[:500],
+                    "source": "ArXiv",
+                    "category": "Signal",
+                    "likes": 0,
+                    "published": _parse_feed_date(e),
+                })
+        except Exception as ex:
+            print(f"AXON ArXiv error for {url}: {ex}")
+            continue
+    return signals
 
 
 # ---------------------------------------------------------------------------
