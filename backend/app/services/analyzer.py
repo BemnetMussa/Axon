@@ -2,6 +2,7 @@ import json
 import os
 import re
 import time
+import shutil
 from collections import Counter
 from datetime import datetime, timedelta, timezone, date
 from groq import Groq
@@ -14,15 +15,33 @@ load_dotenv(override=True)
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 _embed_model_instance = None
+_embed_model_cache_dir = os.path.join("/tmp", "fastembed_cache")
+_last_ai_error: str | None = None
+
+
+def _set_last_ai_error(message: str | None) -> None:
+    global _last_ai_error
+    _last_ai_error = message[:500] if message else None
+
+
+def get_last_ai_error() -> str | None:
+    return _last_ai_error
 
 def get_embed_model():
     global _embed_model_instance
     if _embed_model_instance is None:
         from fastembed import TextEmbedding
-        # Vercel requires writing to /tmp
-        cache_dir = os.path.join("/tmp", "fastembed_cache")
-        os.makedirs(cache_dir, exist_ok=True)
-        _embed_model_instance = TextEmbedding(cache_dir=cache_dir)
+        os.makedirs(_embed_model_cache_dir, exist_ok=True)
+        try:
+            _embed_model_instance = TextEmbedding(cache_dir=_embed_model_cache_dir)
+        except Exception as e:
+            # If the extracted model files were partially deleted or the cache was
+            # corrupted during a cold start, clear the cache and retry once.
+            # This keeps the backlog from dying on a stale /tmp snapshot.
+            print(f"AXON: fastembed init failed, clearing cache and retrying: {e}")
+            shutil.rmtree(_embed_model_cache_dir, ignore_errors=True)
+            os.makedirs(_embed_model_cache_dir, exist_ok=True)
+            _embed_model_instance = TextEmbedding(cache_dir=_embed_model_cache_dir)
     return _embed_model_instance
 
 BATCH_SIZE = 8
@@ -49,6 +68,7 @@ def _call_groq_with_fallback(messages: list, max_tokens: int, temperature: float
                 temperature=temperature,
             )
             return fallback_res.choices[0].message.content.strip() # type: ignore
+        _set_last_ai_error(f"Groq call failed: {type(e).__name__}: {e}")
         raise e
 
 # ── Categories ──────────────────────────────────────────────
@@ -206,6 +226,7 @@ def update_trends(session: Session, articles: list[Article]):
 def generate_insight(title: str, content: str, retries: int = 2) -> str:
     """Substack-style concise article summary - 3-5 paragraphs, well-written, comprehensive."""
     if not client.api_key:
+        _set_last_ai_error("GROQ_API_KEY is not set")
         return "AI analysis offline."
 
     clean_content = re.sub(r"<[^>]+>", "", content).strip()[:6000]
@@ -234,6 +255,7 @@ Source material: {clean_content}"""
                 max_tokens=600,
                 temperature=0.5,
             )
+            _set_last_ai_error(None)
             return content_res.replace("**", "").replace("*", "")
         except Exception as e:
             if attempt < retries and "rate" in str(e).lower():
@@ -241,6 +263,7 @@ Source material: {clean_content}"""
                 time.sleep(BATCH_DELAY)
             else:
                 print(f"AXON INSIGHT ERROR: {e}")
+                _set_last_ai_error(f"Insight generation failed: {type(e).__name__}: {e}")
                 return ""
     return ""
 
@@ -268,8 +291,10 @@ Opportunity: (What concrete product or optimization can a small team build today
             max_tokens=400,
             temperature=0.5,
         )
+        _set_last_ai_error(None)
         return content_res.replace("**", "")
     except Exception:
+        _set_last_ai_error("Deep brief generation failed")
         return "Intelligence gathering failed."
 
 
@@ -279,6 +304,7 @@ def probe_groq() -> dict:
     producing empty insights. Makes a 1-token call; never raises."""
     key = os.getenv("GROQ_API_KEY") or ""
     if not key:
+        _set_last_ai_error("GROQ_API_KEY is not set")
         return {"key_present": False, "reachable": False, "error": "GROQ_API_KEY is not set"}
     try:
         client.chat.completions.create(
@@ -287,8 +313,10 @@ def probe_groq() -> dict:
             max_tokens=1,
             temperature=0,
         )
+        _set_last_ai_error(None)
         return {"key_present": True, "reachable": True, "error": None}
     except Exception as e:
+        _set_last_ai_error(f"Groq probe failed: {type(e).__name__}: {e}")
         return {"key_present": True, "reachable": False, "error": str(e)[:300]}
 
 

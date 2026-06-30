@@ -110,6 +110,7 @@ export interface AdminStats {
     scheduler: SchedulerSnapshot;
     last_scheduled_ingest: LastIngestSnapshot;
     ai: AiStatus;
+    ai_last_error: string | null;
     processing: ProcessingState;
     fetch_report: FetchReport;
     recent_runs: IngestRunRow[];

@@ -36,6 +36,7 @@ from app.services.analyzer import (
     get_embed_model,
     generate_weekly_digest,
     probe_groq,
+    get_last_ai_error,
 )
 from app.services.extractor import extract_article_content
 
@@ -910,6 +911,7 @@ def admin_stats(request: Request, session: Session = Depends(get_session)):
         "scheduler": _scheduler_snapshot(),
         "last_scheduled_ingest": _last_ingest_snapshot(),
         "ai": _groq_status(),
+        "ai_last_error": get_last_ai_error(),
         "processing": _processing,
         "fetch_report": fetcher.last_fetch_report,
         "recent_runs": [

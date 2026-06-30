@@ -102,7 +102,7 @@
 		if (!stats.ai.reachable) {
 			reasons.push(
 				stats.ai.key_present
-					? `AI engine unreachable — insights can't generate: ${stats.ai.error}`
+					? `AI engine unreachable — insights can't generate: ${stats.ai.error}${stats.ai_last_error ? ` · last error: ${stats.ai_last_error}` : ''}`
 					: 'GROQ_API_KEY is not set — AI insights are disabled.',
 			);
 			bump('down');
@@ -197,7 +197,7 @@
 							<p class="mt-0.5 text-[11px] text-zinc-600">{sub}</p>
 						</div>
 					{/snippet}
-					{@render card('AI engine', stats.ai.reachable ? 'Online' : stats.ai.key_present ? 'Error' : 'No key', stats.ai.reachable ? 'Groq reachable' : (stats.ai.error ?? 'set GROQ_API_KEY'), stats.ai.reachable ? 'text-emerald-400' : 'text-red-400')}
+					{@render card('AI engine', stats.ai.reachable ? 'Online' : stats.ai.key_present ? 'Error' : 'No key', stats.ai.reachable ? 'Groq reachable' : (stats.ai_last_error ?? stats.ai.error ?? 'set GROQ_API_KEY'), stats.ai.reachable ? 'text-emerald-400' : 'text-red-400')}
 					{@render card('Scheduler', stats.scheduler.ap_scheduler_running ? 'Running' : 'Stopped', `every ${stats.scheduler.interval_hours}h · next ${fmtAgo(stats.scheduler.next_run_at_utc)}`, stats.scheduler.ap_scheduler_running ? 'text-emerald-400' : 'text-red-400')}
 					{@render card('Last ingest', stats.last_scheduled_ingest.relative ?? '—', stats.last_scheduled_ingest.ok === false ? 'failed' : (stats.last_scheduled_ingest.detail ?? 'ok'))}
 					{@render card('Backlog', fmtNum(stats.totals.unprocessed + stats.totals.missing_insight), `${fmtNum(stats.totals.unprocessed)} unprocessed · ${fmtNum(stats.totals.missing_insight)} no insight`, (stats.totals.unprocessed + stats.totals.missing_insight) ? 'text-amber-400' : 'text-emerald-400')}
