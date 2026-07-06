@@ -70,6 +70,24 @@ def init_db():
                 print(f"AXON: Failed to create vector extension (may already exist or insufficient permissions): {e}")
 
         SQLModel.metadata.create_all(engine)
+
+        # create_all skips tables that already exist, so indexes added to the
+        # models after first deploy never reach production. Backfill them here
+        # (names match SQLModel's Field(index=True) convention: ix_<table>_<col>).
+        _INDEX_BACKFILL = [
+            "CREATE INDEX IF NOT EXISTS ix_article_category ON article (category)",
+            "CREATE INDEX IF NOT EXISTS ix_article_source ON article (source)",
+            "CREATE INDEX IF NOT EXISTS ix_article_pubdate_id ON article (published_date, id)",
+            "CREATE INDEX IF NOT EXISTS ix_trend_trend_date ON trend (trend_date)",
+        ]
+        with engine.connect() as conn:
+            for ddl in _INDEX_BACKFILL:
+                try:
+                    conn.execute(text(ddl))
+                    conn.commit()
+                except Exception as e:
+                    print(f"AXON: index backfill skipped ({ddl.split(' ON ')[0]}): {e}")
+
         print("AXON: Database schema synchronized successfully!")
     except Exception as e:
         print(f"AXON: CRITICAL DATABASE INIT ERROR: {e}")

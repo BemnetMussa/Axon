@@ -17,12 +17,12 @@ class Article(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str
     url: str = Field(unique=True)
-    source: str
+    source: str = Field(index=True)
     published_date: datetime
     content_snippet: Optional[str] = None
     full_content: Optional[str] = None
     insight: Optional[str] = None
-    category: str = Field(default="General")
+    category: str = Field(default="General", index=True)
     is_processed: bool = Field(default=False)
 
     views: int = Field(default=0)
@@ -40,7 +40,7 @@ class Trend(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     keyword: str = Field(index=True)
     count: int
-    trend_date: date = Field(default_factory=date.today) # type: ignore # Group by day
+    trend_date: date = Field(default_factory=date.today, index=True) # type: ignore # Group by day
 
 class SavedArticle(SQLModel, table=True):
     user_id: str = Field(primary_key=True, index=True)

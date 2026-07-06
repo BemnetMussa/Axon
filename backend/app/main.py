@@ -12,18 +12,19 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
 from fastapi import FastAPI, Depends, Query, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlmodel import Session, select, col
-from sqlalchemy import update, func, or_, and_, case, cast, BigInteger
+from sqlalchemy import update, func, or_, and_, case, cast, text, BigInteger
 from pydantic import BaseModel, Field as PydField
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.core.database import init_db, get_session, get_script_session
+from app.core.database import init_db, get_session, get_script_session, engine as db_engine
 from app.models import Article, Trend, Digest, SavedArticle, Feedback, IngestRun
 from app.services import fetcher
 from app.services.fetcher import ingest_intelligence
@@ -59,11 +60,13 @@ limiter = Limiter(key_func=_rate_limit_key)
 
 # ---------------------------------------------------------------------------
 # In-memory suggestions cache — avoids re-generating on every article open
-# TTL: 6 hours per article
+# TTL: 6 hours per article. Bounded so a long-lived process can't grow it
+# forever (one entry per article ever opened).
 # ---------------------------------------------------------------------------
 
 _suggestions_cache: dict[int, tuple[list[str], float]] = {}
 _SUGGESTIONS_TTL = 6 * 3600  # seconds
+_SUGGESTIONS_MAX = 512
 
 def _get_cached_suggestions(article_id: int) -> list[str] | None:
     entry = _suggestions_cache.get(article_id)
@@ -72,7 +75,49 @@ def _get_cached_suggestions(article_id: int) -> list[str] | None:
     return None
 
 def _set_cached_suggestions(article_id: int, suggestions: list[str]) -> None:
+    if len(_suggestions_cache) >= _SUGGESTIONS_MAX:
+        oldest = min(_suggestions_cache, key=lambda k: _suggestions_cache[k][1])
+        del _suggestions_cache[oldest]
     _suggestions_cache[article_id] = (suggestions, time.time())
+
+
+# ---------------------------------------------------------------------------
+# Tiny TTL caches for hot read endpoints. These are polled by every client but
+# their data only changes on ingest cadence (hours) or view cadence (seconds),
+# so serving from memory keeps the DB out of the hot path. Safe because the
+# deployment runs a single worker (see Dockerfile: APScheduler constraint).
+# ---------------------------------------------------------------------------
+
+class TTLCache:
+    def __init__(self, ttl_seconds: float):
+        self.ttl = ttl_seconds
+        self._value = None
+        self._at = 0.0
+
+    def get(self):
+        if self._value is not None and (time.time() - self._at) < self.ttl:
+            return self._value
+        return None
+
+    def set(self, value) -> None:
+        self._value = value
+        self._at = time.time()
+
+    def clear(self) -> None:
+        self._value = None
+        self._at = 0.0
+
+
+_trending_cache = TTLCache(60)
+_trends_cache = TTLCache(300)
+_digest_cache = TTLCache(300)
+_db_health_cache = TTLCache(30)
+
+
+def _feed_dump(articles) -> list[dict]:
+    """Serialize articles for list payloads. Excludes full_content (up to 8KB
+    per article) — the reader fetches it separately via /articles/{id}/content."""
+    return [a.model_dump(exclude={"full_content"}) for a in articles]
 
 INTERNAL_SECRET = os.getenv("AXON_INTERNAL_SECRET", "").strip()
 if not INTERNAL_SECRET:
@@ -285,6 +330,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Feed pages are highly compressible JSON (often 50-100KB raw); gzip cuts them
+# ~5-10x, which matters most for the mobile PWA audience.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
 
 @app.middleware("http")
 async def require_internal_auth(request: Request, call_next):
@@ -435,7 +484,7 @@ def read_articles(
     next_cursor = _encode_cursor(rows[-1][1], rows[-1][0].id) if (rows and has_more) else None
 
     return {
-        "articles": articles,
+        "articles": _feed_dump(articles),
         "next_cursor": next_cursor,
         "has_more": has_more,
     }
@@ -448,10 +497,23 @@ def get_trending_articles(
     # Hot algorithmic sort: views / ((hours_since_published + 2)^1.8)
     # Since we might be using SQLite or Postgres and cross-compatibility is hard with math,
     # we'll fetch recent articles and compute the score, then sort and return.
+    # Cached for 60s: every client polls this, but the ranking only moves as
+    # fast as views accumulate.
+    cached = _trending_cache.get()
+    if cached is not None:
+        return cached
+
     cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-    query = select(Article).where(col(Article.published_date) >= cutoff)
+    # Cap the scan so a growing corpus can't make this endpoint load unbounded
+    # rows into memory; 2000 newest is far more than a week ever produces.
+    query = (
+        select(Article)
+        .where(col(Article.published_date) >= cutoff)
+        .order_by(col(Article.published_date).desc())
+        .limit(2000)
+    )
     recent_articles = session.exec(query).all()
-    
+
     def calculate_hot_score(article: Article) -> float:
         views = article.views or 0
         likes = article.likes or 0
@@ -464,7 +526,9 @@ def get_trending_articles(
         return base_score / ((hours_since + 2) ** 1.8)
 
     recent_articles.sort(key=calculate_hot_score, reverse=True)
-    return {"articles": recent_articles[:30]}
+    payload = {"articles": _feed_dump(recent_articles[:30])}
+    _trending_cache.set(payload)
+    return payload
 
 
 @app.get("/saved")
@@ -482,7 +546,7 @@ def get_saved_articles(
         return {"articles": []}
     
     articles = session.exec(select(Article).where(col(Article.id).in_(article_ids))).all()
-    return {"articles": articles}
+    return {"articles": _feed_dump(articles)}
 
 
 @app.post("/articles/{article_id}/save")
@@ -527,7 +591,8 @@ def count_since(
 # ---------------------------------------------------------------------------
 
 @app.get("/articles/{article_id}/content")
-async def get_article_content(article_id: int, session: Session = Depends(get_session)):
+@limiter.limit("60/minute")
+async def get_article_content(request: Request, article_id: int, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
@@ -549,7 +614,8 @@ async def get_article_content(article_id: int, session: Session = Depends(get_se
 # ---------------------------------------------------------------------------
 
 @app.get("/search/semantic")
-def search_semantic(query: str = Query(..., min_length=1, max_length=200), session: Session = Depends(get_session)):
+@limiter.limit("20/minute")
+def search_semantic(request: Request, query: str = Query(..., min_length=1, max_length=200), session: Session = Depends(get_session)):
     model = get_embed_model()
     query_embed = list(model.embed([query]))[0].tolist()
     
@@ -559,8 +625,8 @@ def search_semantic(query: str = Query(..., min_length=1, max_length=200), sessi
         .order_by(Article.embedding.cosine_distance(query_embed))
         .limit(15)
     ).all()
-    
-    return {"articles": results}
+
+    return {"articles": _feed_dump(results)}
 
 
 # ---------------------------------------------------------------------------
@@ -568,7 +634,8 @@ def search_semantic(query: str = Query(..., min_length=1, max_length=200), sessi
 # ---------------------------------------------------------------------------
 
 @app.get("/brief/{article_id}")
-def get_brief(article_id: int, session: Session = Depends(get_session)):
+@limiter.limit("10/minute")
+def get_brief(request: Request, article_id: int, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
@@ -645,10 +712,15 @@ def track_view(article_id: int, session: Session = Depends(get_session)):
 
 @app.get("/digests/latest")
 def get_latest_digest(session: Session = Depends(get_session)):
+    cached = _digest_cache.get()
+    if cached is not None:
+        return cached
     digest = session.exec(select(Digest).order_by(col(Digest.created_at).desc()).limit(1)).first()
     if not digest:
         return {"content": "No weekly digest available yet."}
-    return {"content": digest.content, "created_at": digest.created_at}
+    payload = {"content": digest.content, "created_at": digest.created_at}
+    _digest_cache.set(payload)
+    return payload
 
 @app.post("/digests/generate")
 @limiter.limit("3/hour")
@@ -659,6 +731,7 @@ def trigger_digest(request: Request, session: Session = Depends(get_session)):
             {"status": "error", "detail": "No articles available to generate a weekly digest yet."},
             status_code=503,
         )
+    _digest_cache.clear()
     return {"status": "success", "digest": content}
 
 
@@ -670,8 +743,11 @@ def trigger_digest(request: Request, session: Session = Depends(get_session)):
 def read_trends(session: Session = Depends(get_session)):
     from datetime import date, timedelta
 
-    today = date.today()
-    yesterday = today - timedelta(days=1)
+    # Trends are recomputed at ingest time (every few hours) — 5 min of cache
+    # costs nothing in freshness and absorbs every client's poll.
+    cached = _trends_cache.get()
+    if cached is not None:
+        return cached
 
     # Get the most recent date we have trend data for (may not be today)
     latest_date = session.exec(
@@ -715,6 +791,7 @@ def read_trends(session: Session = Depends(get_session)):
             "is_new": is_new,
         })
 
+    _trends_cache.set(result)
     return result
 
 # ---------------------------------------------------------------------------
@@ -802,6 +879,22 @@ def _last_ingest_snapshot() -> dict:
     }
 
 
+def _db_status() -> dict:
+    """Cheap DB liveness (SELECT 1), cached 30s so keep-alive pings don't hold
+    a pool connection per probe and a dead DB doesn't get hammered."""
+    cached = _db_health_cache.get()
+    if cached is not None:
+        return cached
+    try:
+        with db_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        value = {"ok": True, "error": None}
+    except Exception as e:
+        value = {"ok": False, "error": str(e)[:200]}
+    _db_health_cache.set(value)
+    return value
+
+
 @app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     """Public JSON for uptime checks and debugging ingest timing (no auth).
@@ -809,8 +902,10 @@ def health():
     Accepts HEAD as well as GET — uptime monitors (Better Stack, etc.) probe
     with HEAD, and a GET-only route would answer them with 405.
     """
+    db = _db_status()
     return {
-        "status": "ok",
+        "status": "ok" if db["ok"] else "degraded",
+        "db": db,
         "service": "axon-api",
         "scheduler": _scheduler_snapshot(),
         "last_scheduled_ingest": _last_ingest_snapshot(),

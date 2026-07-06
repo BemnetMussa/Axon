@@ -73,6 +73,18 @@ npm install
 npm run dev
 ```
 
+### 4. Run the tests
+```bash
+# Backend (pytest — runs against in-memory SQLite, no services needed)
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest
+
+# Frontend (Vitest)
+cd fronted
+npm test
+```
+
 ---
 
 ## 📂 Project Structure
