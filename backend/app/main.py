@@ -3,6 +3,7 @@ import asyncio
 import time
 import base64
 import json
+import httpx
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -122,6 +123,10 @@ def _feed_dump(articles) -> list[dict]:
 INTERNAL_SECRET = os.getenv("AXON_INTERNAL_SECRET", "").strip()
 if not INTERNAL_SECRET:
     raise RuntimeError("Missing required env var: AXON_INTERNAL_SECRET")
+
+# Frontend base URL used to fan Web Push notifications out after a productive ingest.
+# Optional: when unset, push notifications are simply skipped (see _notify_new_signals).
+FRONTEND_URL = os.getenv("AXON_FRONTEND_URL", "").strip()
 
 # Admin dashboard allow-list. Comma-separated Better-Auth user IDs that may read
 # /admin/stats. Fail closed: if unset, nobody is admin (the dashboard tells the
@@ -245,6 +250,29 @@ def _record_ingest_run(trigger: str, ok: bool, new_articles: int, analyzed: int,
         print(f"AXON: failed to record ingest run: {e}")
 
 
+async def _notify_new_signals(session: Session, new_count: int) -> None:
+    """Fan a Web Push "new signals" notification out via the frontend after a
+    productive ingest. Best-effort: a missing AXON_FRONTEND_URL, a timeout, or any
+    other error is swallowed so a push failure can never break or delay ingestion.
+    The frontend endpoint owns the subscriber list + web-push (see
+    fronted/src/routes/api/push/notify)."""
+    if new_count <= 0 or not FRONTEND_URL:
+        return
+    try:
+        top = session.exec(
+            select(Article).order_by(col(Article.id).desc()).limit(1)
+        ).first()
+        title = top.title if top else ""
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                f"{FRONTEND_URL.rstrip('/')}/api/push/notify",
+                headers={"X-Axon-Internal-Secret": INTERNAL_SECRET},
+                json={"count": new_count, "title": title},
+            )
+    except Exception as e:
+        print(f"AXON: push notify failed: {e}")
+
+
 async def scheduled_ingest():
     """Runs ingestion + analysis on a timer."""
     global _last_ingest_at_utc, _last_ingest_ok, _last_ingest_detail
@@ -266,6 +294,7 @@ async def scheduled_ingest():
             _last_ingest_ok = True
             _last_ingest_detail = f"ingested {new_count} new, analyzed {analyzed} articles"
             print(f"AXON SCHEDULER: Ingested {new_count}, analyzed {analyzed}")
+            await _notify_new_signals(session, new_count)
         else:
             _last_ingest_ok = True
             _last_ingest_detail = "no new signals (dedupe or empty run)"
@@ -381,6 +410,7 @@ async def trigger_ingestion(request: Request, context_id: str | None = Query(def
     count = await ingest_intelligence(session, context_id)
     _last_ingest_at_utc = datetime.now(timezone.utc).isoformat()
     _record_ingest_run("manual", True, count, 0, f"manual ingest ({context_id or 'ALL'})", started)
+    await _notify_new_signals(session, count)
     return {"status": "success", "new_articles": count}
 
 

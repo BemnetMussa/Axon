@@ -5,6 +5,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { api, type Trend } from '$lib/api';
 	import FeedbackModal from '../feedback/FeedbackModal.svelte';
+	import NotificationToggle from '../ui/NotificationToggle.svelte';
 
 	type Props = {
 		navigation: NavItem[];
@@ -203,6 +204,8 @@
 				<span class="text-[10px] font-semibold">Dark Mode</span>
 			{/if}
 		</button>
+
+		<NotificationToggle {theme} variant="sidebar" />
 
 		<button
 			onclick={() => showFeedbackModal = true}

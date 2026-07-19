@@ -25,6 +25,7 @@
 		"@tailwindcss/typography": "^0.5.14",
 		"@tailwindcss/vite": "^4.1.18",
 		"@types/node": "^22",
+		"@types/web-push": "^3.6.4",
 		"autoprefixer": "^10.4.24",
 		"drizzle-kit": "^0.31.4",
 		"eslint": "^9.39.2",
@@ -54,6 +55,7 @@
 		"isomorphic-dompurify": "^3.17.0",
 		"lucide-svelte": "^0.563.0",
 		"marked": "^17.0.3",
-		"postgres": "^3.4.5"
+		"postgres": "^3.4.5",
+		"web-push": "^3.6.7"
 	}
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Zap, Sparkles, Menu, Sun, Moon, X } from 'lucide-svelte';
 	import type { NavItem } from '$lib/ui';
+	import NotificationToggle from '../ui/NotificationToggle.svelte';
 
 	type Props = {
 		items: NavItem[];
@@ -85,6 +86,8 @@
 			</button>
 
 			<div class={`my-2 h-px ${dark ? 'bg-white/[0.06]' : 'bg-zinc-100'}`}></div>
+
+			<NotificationToggle {theme} variant="mobile" />
 
 			<button
 				onclick={(e) => { onToggleTheme(e); showMenu = false; }}

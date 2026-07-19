@@ -25,6 +25,54 @@ self.addEventListener('activate', (event) => {
 	);
 });
 
+// --- Web Push ---------------------------------------------------------------
+// Payload is JSON sent by the server (see src/lib/server/push-sender.ts):
+// { title, body, url }. `tag` collapses repeat pushes into a single notification
+// so an active ingest cadence can't stack a wall of alerts.
+self.addEventListener('push', (event) => {
+	let data: { title?: string; body?: string; url?: string } = {};
+	try {
+		data = event.data?.json() ?? {};
+	} catch {
+		data = { body: event.data?.text() };
+	}
+
+	const title = data.title || 'Axon';
+	event.waitUntil(
+		self.registration.showNotification(title, {
+			body: data.body || 'New signals are in.',
+			icon: '/icon-192.svg',
+			badge: '/icon-192.svg',
+			tag: 'axon-signals',
+			renotify: true,
+			data: { url: data.url || '/app' }
+		} as NotificationOptions)
+	);
+});
+
+self.addEventListener('notificationclick', (event) => {
+	event.notification.close();
+	const target = (event.notification.data?.url as string) || '/app';
+	event.waitUntil(
+		self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+			// Focus an existing Axon window if one is open; otherwise open a new one.
+			for (const client of clients) {
+				if ('focus' in client) {
+					const url = new URL(client.url);
+					if (url.pathname.startsWith('/app') || url.origin === self.location.origin) {
+						client.focus();
+						if ('navigate' in client && url.pathname !== target) {
+							(client as WindowClient).navigate(target).catch(() => {});
+						}
+						return;
+					}
+				}
+			}
+			return self.clients.openWindow(target);
+		})
+	);
+});
+
 self.addEventListener('fetch', (event) => {
 	if (event.request.method !== 'GET') return;
 

@@ -49,3 +49,19 @@ export const verification = pgTable('verification', {
 	createdAt: timestamp('createdAt', { mode: 'date' }).notNull(),
 	updatedAt: timestamp('updatedAt', { mode: 'date' }).notNull(),
 });
+
+// Web Push subscriptions. One row per browser/device a user has enabled
+// notifications on (a user can have several). `endpoint` is globally unique — the
+// push service's URL for this device — so re-enabling on the same device upserts
+// rather than duplicating. Deleted with the user (cascade) or when the push service
+// reports the subscription as gone (410/404) during a send (see push-sender.ts).
+export const pushSubscription = pgTable('push_subscription', {
+	id: text('id').primaryKey(),
+	userId: text('userId')
+		.notNull()
+		.references(() => user.id, { onDelete: 'cascade' }),
+	endpoint: text('endpoint').notNull().unique(),
+	p256dh: text('p256dh').notNull(),
+	auth: text('auth').notNull(),
+	createdAt: timestamp('createdAt', { mode: 'date' }).notNull(),
+});
