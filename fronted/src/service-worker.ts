@@ -77,30 +77,24 @@ self.addEventListener('fetch', (event) => {
 	if (event.request.method !== 'GET') return;
 
 	const url = new URL(event.request.url);
+	if (url.origin !== self.location.origin) return;
 
-	// Never let the service worker touch API calls (feed proxy + auth). These must
-	// always go straight to the network so data stays fresh — caching them here is
-	// what caused the feed to keep showing stale articles after a refresh.
-	if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) {
+	// Never intercept navigations or SvelteKit data requests. Caching `/app` HTML
+	// (including 500 error pages) made post-login full loads keep showing a stale
+	// Internal Error while client-side "Back to feed" still worked via __data.json.
+	if (event.request.mode === 'navigate' || url.pathname.includes('__data.json')) {
 		return;
 	}
 
+	// Never let the service worker touch API calls (feed proxy + auth).
+	if (url.pathname.startsWith('/api/')) {
+		return;
+	}
+
+	// Only cache hashed build assets + static files from the precache list.
 	if (ASSETS.includes(url.pathname)) {
 		event.respondWith(
 			caches.match(event.request).then((cached) => cached || fetch(event.request))
-		);
-		return;
-	}
-
-	if (url.origin === self.location.origin) {
-		event.respondWith(
-			fetch(event.request)
-				.then((response) => {
-					const clone = response.clone();
-					caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-					return response;
-				})
-				.catch(() => caches.match(event.request).then((cached) => cached || new Response('Offline', { status: 503 })))
 		);
 	}
 });
