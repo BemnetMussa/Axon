@@ -59,6 +59,7 @@ def _reset_app_state(monkeypatch, engine):
     or a real Postgres."""
     monkeypatch.setattr(main, "INTERNAL_SECRET", TEST_SECRET)
     monkeypatch.setattr(main, "ADMIN_USER_IDS", {ADMIN_ID})
+    monkeypatch.setattr(main, "EXPOSE_API_DOCS", False)
     monkeypatch.setattr(main, "db_engine", engine)
     main.limiter.reset()
     main._suggestions_cache.clear()

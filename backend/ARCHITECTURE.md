@@ -344,8 +344,9 @@ that attaches two headers:
 - `X-Axon-User-Id` — the authenticated user's id
 
 The `require_internal_auth` middleware (`main.py`) rejects any request missing/mismatching
-these with **401**, *except* the public paths: `GET /`, `GET /health`, `/docs`,
-`/openapi.json`, `/redoc`, and CORS preflight `OPTIONS`. This is why a misconfigured
+these with **401**, *except* the public paths: `GET /`, `GET /health`, and CORS preflight
+`OPTIONS`. FastAPI docs (`/docs`, `/openapi.json`, `/redoc`) return **404** unless
+`EXPOSE_API_DOCS=true`. This is why a misconfigured
 `INTERNAL_API_URL` or a secret mismatch between the two deployments shows up as
 "Couldn't refresh the feed" — the proxy's call gets 401'd.
 
@@ -357,7 +358,7 @@ are per-user. A `429` returns a friendly message + `Retry-After: 60`.
 ## 12. Scheduling & background work
 
 - **APScheduler** registers `scheduled_ingest` on an `IntervalTrigger` (default every
-  6 hours; override with `INGEST_INTERVAL_HOURS`). It runs ingest, then runs analysis
+  4 hours; override with `INGEST_INTERVAL_HOURS`). It runs ingest, then runs analysis
   via `asyncio.to_thread()` so the blocking Groq/sleep work never freezes the event loop.
 - The scheduler **only fires while the process is alive** — it needs a long-lived host
   (container/VM), not serverless cold-starts. Set `DISABLE_SCHEDULER=1` and drive ingest
@@ -407,7 +408,7 @@ the `vector` extension exists, and syncs the schema. Semantic search uses pgvect
 | `GROQ_API_KEY` | yes (for AI) | Groq LLM access; insights go offline without it |
 | `DATABASE_URL` *or* `DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT`/`DB_NAME` | yes | Postgres connection |
 | `GITHUB_TOKEN` / `GITHUB_AUTH_STYLE` | optional | Raises GitHub API rate limits (`token` vs `bearer` PAT style) |
-| `INGEST_INTERVAL_HOURS` | optional (def 6) | Scheduler cadence + manual-ingest cooldown |
+| `INGEST_INTERVAL_HOURS` | optional (def 4) | Scheduler cadence + manual-ingest cooldown |
 | `DISABLE_SCHEDULER` | optional | Turn off the in-process timer (serverless) |
 | `INGEST_RUN_ON_STARTUP` | optional | Queue one ingest on boot |
 | `CORS_ALLOWED_ORIGINS` | optional | Comma-separated allowed origins |

@@ -36,6 +36,14 @@ jobs:
   frontend:
     name: Frontend checks
     runs-on: ubuntu-latest
+    env:
+      # Auth module hard-requires these at import time during `npm run build`.
+      BETTER_AUTH_SECRET: ci-test-better-auth-secret
+      GOOGLE_CLIENT_ID: ci-test-google-client-id.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: ci-test-google-client-secret
+      AXON_INTERNAL_SECRET: ci-test-secret
+      DATABASE_URL: postgresql://axon:axon123@127.0.0.1:5432/axon_db
+      BETTER_AUTH_URL: http://localhost:5173
     steps:
       - uses: actions/checkout@v4
 

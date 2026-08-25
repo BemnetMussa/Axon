@@ -227,7 +227,14 @@
 					</div>
 				{/if}
 
-				<p class="mt-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+				<p class="mt-8 text-center text-xs leading-relaxed text-zinc-500 dark:text-zinc-500">
+					By creating an account you agree to our
+					<a class="underline underline-offset-2 hover:text-zinc-800 dark:hover:text-zinc-300" href="/terms">Terms</a>
+					and
+					<a class="underline underline-offset-2 hover:text-zinc-800 dark:hover:text-zinc-300" href="/privacy">Privacy Policy</a>.
+				</p>
+
+				<p class="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
 					Already an operative?
 					<a class="font-medium text-zinc-900 dark:text-white underline decoration-zinc-300 dark:decoration-zinc-600 underline-offset-4 hover:decoration-zinc-900 dark:hover:decoration-white transition-colors" href="/login">Sign in here</a>
 				</p>

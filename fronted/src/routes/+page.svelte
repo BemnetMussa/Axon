@@ -6,7 +6,10 @@
 		Sparkles, Play, Star, MessageSquare, Rss
 	} from 'lucide-svelte';
 
-	const REPO_URL = 'https://github.com/bemnetmussa/axon';
+	const REPO_URL = 'https://github.com/BemnetMussa/Axon';
+	const SITE_URL = 'https://axon-phi-ruby.vercel.app';
+	const OG_DESC =
+		'AXON scans Hacker News, ArXiv, GitHub, Reddit and the top AI labs, then distills the signal into a high-density 3-minute daily brief.';
 
 	const sources = [
 		{ name: 'Hacker News', desc: 'Front page & Show HN', icon: Terminal, style: 'sm:col-span-2 sm:row-span-2 p-8' },
@@ -31,7 +34,20 @@
 
 <svelte:head>
 	<title>AXON — The bleeding edge, summarized.</title>
-	<meta name="description" content="AXON scans Hacker News, ArXiv, GitHub, Reddit and the top AI labs, then distills the signal into a high-density 3-minute daily brief. Open source and free." />
+	<meta name="description" content="{OG_DESC} Open source and free." />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="AXON" />
+	<meta property="og:title" content="AXON — The bleeding edge, summarized." />
+	<meta property="og:description" content={OG_DESC} />
+	<meta property="og:url" content={SITE_URL} />
+	<meta property="og:image" content="{SITE_URL}/og.png" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="AXON — The bleeding edge, summarized." />
+	<meta name="twitter:description" content={OG_DESC} />
+	<meta name="twitter:image" content="{SITE_URL}/og.png" />
+	<link rel="canonical" href={SITE_URL} />
 </svelte:head>
 
 <div class="relative min-h-screen w-full overflow-x-hidden bg-white dark:bg-[#0B0F17] font-sans text-zinc-900 dark:text-[#E8ECF4] antialiased selection:bg-zinc-900 selection:text-white dark:selection:bg-[#5B8CFF]/40 dark:selection:text-white">
@@ -297,8 +313,10 @@
 				</div>
 				<span class="text-sm text-zinc-500 dark:text-[#7B8497]">Open-source intelligence for builders.</span>
 			</div>
-			<div class="flex items-center gap-6 text-sm font-medium text-zinc-500 dark:text-[#7B8497]">
+			<div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-medium text-zinc-500 dark:text-[#7B8497]">
 				<a href={REPO_URL} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]"><Github class="h-4 w-4" /> GitHub</a>
+				<a href="/privacy" class="transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]">Privacy</a>
+				<a href="/terms" class="transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]">Terms</a>
 				<a href="/login" class="transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]">Sign in</a>
 				<a href="/signup" class="transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]">Get started</a>
 			</div>

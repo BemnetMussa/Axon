@@ -42,7 +42,7 @@ graph TD
 - **🧠 Zero-Latency AI Insights** — Every signal gets a dense, two-paragraph context summary.
 - **💬 Article-Scoped Chat** — Chat directly with any research paper or technical blog.
 - **📱 PWA & Mobile-First** — Installable on iOS/Android with a gesture-based UI and native navigation.
-- **🔍 Content Extraction** — Full-text extraction logic that bypasses paywalls and noise.
+- **🔍 Content Extraction** — Full-text extraction via readability parsing (public pages we can fetch).
 - **✨ Sleek Minimalist UI** — High-contrast monochrome theme with pulsing skeleton loaders and fluid animations.
 - **💾 Cloud Sync** — Authenticated saves and reading history synced across devices.
 - **📈 Global Trends** — Live tracking of moving keywords and momentum across all tech sub-cultures.
@@ -53,8 +53,8 @@ graph TD
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/bemnetmussa/axon.git
-cd axon
+git clone https://github.com/BemnetMussa/Axon.git
+cd Axon
 ```
 
 ### 2. Backend (FastAPI)
@@ -100,7 +100,7 @@ npm test
 
 We love builders. Check out `CONTRIBUTING.md` to get started.
 
-**[Live Demo](https://axon-phi-ruby.vercel.app)** • **[Documentation](https://github.com/bemnetmussa/axon/wiki)** • **[License](LICENSE)**
+**[Live Demo](https://axon-phi-ruby.vercel.app)** • **[Architecture](backend/ARCHITECTURE.md)** • **[Privacy](https://axon-phi-ruby.vercel.app/privacy)** • **[License](LICENSE)**
 
 ---
 <div align="center">
@@ -150,8 +150,8 @@ The SvelteKit app can trigger your **hosted FastAPI** on a schedule so ingest st
 ### 1. Clone
 
 ```bash
-git clone https://github.com/bemnetmussa/axon.git
-cd axon
+git clone https://github.com/BemnetMussa/Axon.git
+cd Axon
 ```
 
 ### 2. Set Up PostgreSQL
@@ -198,8 +198,13 @@ The API is now running at `http://127.0.0.1:8000`. On first startup it creates t
 In a separate terminal, trigger the first ingestion and analysis:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/ingest
-curl -X POST http://127.0.0.1:8000/analyze
+# Replace SECRET with the AXON_INTERNAL_SECRET from backend/.env
+curl -X POST http://127.0.0.1:8000/ingest \
+  -H "X-Axon-Internal-Secret: SECRET" \
+  -H "X-Axon-User-Id: local-dev"
+curl -X POST http://127.0.0.1:8000/analyze \
+  -H "X-Axon-Internal-Secret: SECRET" \
+  -H "X-Axon-User-Id: local-dev"
 ```
 
 ### 5. Frontend Setup
@@ -400,5 +405,7 @@ MIT — see [LICENSE](LICENSE).
 ## Links
 
 - **Live Demo:** [axon-phi-ruby.vercel.app](https://axon-phi-ruby.vercel.app)
-- **Issues:** [github.com/bemnetmussa/axon/issues](https://github.com/bemnetmussa/axon/issues)
+- **Issues:** [github.com/BemnetMussa/Axon/issues](https://github.com/BemnetMussa/Axon/issues)
 - **Twitter:** [@BemnetMussa](https://x.com/BemnetMussa)
+- **Privacy:** [axon-phi-ruby.vercel.app/privacy](https://axon-phi-ruby.vercel.app/privacy)
+- **Terms:** [axon-phi-ruby.vercel.app/terms](https://axon-phi-ruby.vercel.app/terms)

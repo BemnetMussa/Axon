@@ -21,7 +21,16 @@ def test_health_accepts_head(client):
     assert client.head("/health").status_code == 200
 
 
-def test_docs_are_public(client):
+def test_docs_are_private_by_default(client):
+    assert client.get("/docs").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
+    assert client.get("/redoc").status_code == 404
+
+
+def test_docs_can_be_exposed(client, monkeypatch):
+    import app.main as main
+
+    monkeypatch.setattr(main, "EXPOSE_API_DOCS", True)
     assert client.get("/docs").status_code == 200
 
 

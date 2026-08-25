@@ -45,7 +45,7 @@ from app.services.extractor import extract_article_content
 scheduler = AsyncIOScheduler()
 
 # Scheduler observability (updated by scheduled_ingest)
-_scheduler_interval_hours = 6
+_scheduler_interval_hours = 4
 _last_ingest_at_utc: str | None = None
 _last_ingest_ok: bool | None = None
 _last_ingest_detail: str = ""
@@ -121,6 +121,8 @@ def _feed_dump(articles) -> list[dict]:
     return [a.model_dump(exclude={"full_content"}) for a in articles]
 
 INTERNAL_SECRET = os.getenv("AXON_INTERNAL_SECRET", "").strip()
+# Keep Swagger/ReDoc private in production unless explicitly enabled.
+EXPOSE_API_DOCS = os.getenv("EXPOSE_API_DOCS", "").strip().lower() in ("1", "true", "yes")
 if not INTERNAL_SECRET:
     raise RuntimeError("Missing required env var: AXON_INTERNAL_SECRET")
 
@@ -318,7 +320,7 @@ async def lifespan(app: FastAPI):
     # host (container/VM), not a serverless cold-start model, or the interval
     # will not fire reliably. Override cadence with env INGEST_INTERVAL_HOURS.
     # Set DISABLE_SCHEDULER=1 if you trigger ingest only via Vercel Cron (see README).
-    _scheduler_interval_hours = int(os.getenv("INGEST_INTERVAL_HOURS", "6"))
+    _scheduler_interval_hours = int(os.getenv("INGEST_INTERVAL_HOURS", "4"))
     disable_sched = os.getenv("DISABLE_SCHEDULER", "").lower() in ("1", "true", "yes")
     if not disable_sched:
         scheduler.add_job(
@@ -367,10 +369,13 @@ app.add_middleware(GZipMiddleware, minimum_size=1024)
 @app.middleware("http")
 async def require_internal_auth(request: Request, call_next):
     """When AXON_INTERNAL_SECRET is set, require SvelteKit proxy headers (see fronted /api/backend)."""
-    if not INTERNAL_SECRET:
-        return await call_next(request)
     path = request.url.path
-    if path in ("/docs", "/openapi.json", "/redoc") or path.startswith("/docs"):
+    docs_paths = path in ("/docs", "/openapi.json", "/redoc") or path.startswith("/docs")
+    if docs_paths:
+        if EXPOSE_API_DOCS:
+            return await call_next(request)
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    if not INTERNAL_SECRET:
         return await call_next(request)
     # Public health for uptime monitors (no internal secret).
     # Allow HEAD too — most monitors (Better Stack, etc.) probe with HEAD.

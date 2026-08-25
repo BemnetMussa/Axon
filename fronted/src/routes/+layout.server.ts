@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 
-const publicPaths = new Set(['/', '/login', '/signup']);
+	const publicPaths = new Set(['/', '/login', '/signup', '/privacy', '/terms']);
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const path = url.pathname;
