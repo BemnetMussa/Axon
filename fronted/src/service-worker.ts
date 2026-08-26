@@ -41,8 +41,8 @@ self.addEventListener('push', (event) => {
 	event.waitUntil(
 		self.registration.showNotification(title, {
 			body: data.body || 'New signals are in.',
-			icon: '/icon-192.svg',
-			badge: '/icon-192.svg',
+			icon: '/icon-192.png',
+			badge: '/icon-192.png',
 			tag: 'axon-signals',
 			renotify: true,
 			data: { url: data.url || '/app' }
