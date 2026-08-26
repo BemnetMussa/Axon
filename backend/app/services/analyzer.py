@@ -47,27 +47,44 @@ def get_embed_model():
 BATCH_SIZE = 8
 BATCH_DELAY = 12
 
+# Groq retired older Llama IDs for many accounts; pin to models the current key can call.
+# Override with GROQ_MODEL / GROQ_FALLBACK_MODEL in the environment if needed.
+GROQ_PRIMARY_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b").strip() or "qwen/qwen3.8-27b"
+GROQ_FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b").strip() or "openai/gpt-oss-20b"
+
+
 def _call_groq_with_fallback(messages: list, max_tokens: int, temperature: float) -> str:
-    """Helper to call Groq with a fallback to a smaller, more generous model on rate limit."""
+    """Helper to call Groq with a fallback model on rate limit or model errors."""
     try:
         res = client.chat.completions.create(
             messages=messages,
-            model="llama-3.3-70b-versatile",
+            model=GROQ_PRIMARY_MODEL,
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        return res.choices[0].message.content.strip() # type: ignore
+        content = (res.choices[0].message.content or "").strip()
+        if content:
+            return content
+        raise RuntimeError(f"Empty completion from {GROQ_PRIMARY_MODEL}")
     except Exception as e:
         error_msg = str(e).lower()
-        if "rate limit" in error_msg or "too many requests" in error_msg or "429" in error_msg:
-            print(f"AXON: Primary model rate limited, falling back to 8B model. Error: {e}")
+        retryable = any(
+            x in error_msg
+            for x in ("rate limit", "too many requests", "429", "model_not_found", "does not exist", "empty completion")
+        )
+        if retryable:
+            print(f"AXON: Primary model issue ({GROQ_PRIMARY_MODEL}), falling back to {GROQ_FALLBACK_MODEL}. Error: {e}")
             fallback_res = client.chat.completions.create(
                 messages=messages,
-                model="llama3-8b-8192",
+                model=GROQ_FALLBACK_MODEL,
                 max_tokens=max_tokens,
                 temperature=temperature,
             )
-            return fallback_res.choices[0].message.content.strip() # type: ignore
+            content = (fallback_res.choices[0].message.content or "").strip()
+            if content:
+                return content
+            _set_last_ai_error(f"Empty completion from fallback {GROQ_FALLBACK_MODEL}")
+            raise RuntimeError(f"Empty completion from {GROQ_FALLBACK_MODEL}")
         _set_last_ai_error(f"Groq call failed: {type(e).__name__}: {e}")
         raise e
 
@@ -309,7 +326,7 @@ def probe_groq() -> dict:
     try:
         client.chat.completions.create(
             messages=[{"role": "user", "content": "ping"}],
-            model="llama-3.3-70b-versatile",
+            model=GROQ_PRIMARY_MODEL,
             max_tokens=1,
             temperature=0,
         )
