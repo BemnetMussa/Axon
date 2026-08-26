@@ -7,8 +7,9 @@
 	} from 'lucide-svelte';
 
 	const SITE_URL = 'https://axon-phi-ruby.vercel.app';
+	const TAGLINE = 'Catch up on AI — without drowning in it.';
 	const OG_DESC =
-		'AXON scans Hacker News, ArXiv, GitHub, Reddit and the top AI labs, then distills the signal into a high-density 3-minute daily brief.';
+		'The world moves fast. One place to track what matters — Healthy Signals from HN, ArXiv, GitHub, Reddit, and AI labs, in a 3-minute daily brief.';
 
 	const sources = [
 		{ name: 'Hacker News', desc: 'Front page & Show HN', icon: Terminal, style: 'sm:col-span-2 sm:row-span-2 p-8' },
@@ -19,10 +20,10 @@
 	];
 
 	const engineFeatures = [
-		{ title: 'Deduplication', desc: 'Merges 50 articles about the same launch into one core update.' },
-		{ title: 'Technical extraction', desc: 'Pulls out real benchmark numbers, not marketing fluff.' },
-		{ title: 'Actionable insight', desc: 'Tells you what actually changes for what you’re building.' },
-		{ title: 'Article-scoped chat', desc: 'Interrogate any paper or release directly, powered by LLaMA 3.3.' }
+		{ title: 'Noise out', desc: 'Drops fluff, listicles, and engagement bait before they hit your brief.' },
+		{ title: 'Healthy Signal in', desc: 'Keeps papers, releases, tools, and debates that help you build.' },
+		{ title: 'Actionable insight', desc: 'Says what changed — and what it means for what you’re shipping.' },
+		{ title: 'Article-scoped chat', desc: 'Ask any signal a question, powered by LLaMA 3.3.' }
 	];
 
 	function scrollToEngine(e: MouseEvent) {
@@ -32,18 +33,18 @@
 </script>
 
 <svelte:head>
-	<title>AXON — The bleeding edge, summarized.</title>
+	<title>AXON — {TAGLINE}</title>
 	<meta name="description" content="{OG_DESC} Free to try." />
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content="AXON" />
-	<meta property="og:title" content="AXON — The bleeding edge, summarized." />
+	<meta property="og:title" content="AXON — {TAGLINE}" />
 	<meta property="og:description" content={OG_DESC} />
 	<meta property="og:url" content={SITE_URL} />
 	<meta property="og:image" content="{SITE_URL}/og.png" />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="AXON — The bleeding edge, summarized." />
+	<meta name="twitter:title" content="AXON — {TAGLINE}" />
 	<meta name="twitter:description" content={OG_DESC} />
 	<meta name="twitter:image" content="{SITE_URL}/og.png" />
 	<link rel="canonical" href={SITE_URL} />
@@ -87,16 +88,17 @@
 				<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22C3A6] opacity-70"></span>
 				<span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#22C3A6]"></span>
 			</span>
-			<span class="tracking-wide">LIVE · Tracking global tech signals</span>
+			<span class="tracking-wide">LIVE · HN · ArXiv · GitHub · Reddit · AI labs</span>
 		</div>
 
 		<h1 use:reveal={{ delay: 80 }} class="max-w-4xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
-			Track where technology is moving. <br class="hidden sm:block" />
-			<span class="bg-gradient-to-r from-[#5B8CFF] via-[#A3ADBF] to-[#22C3A6] bg-clip-text text-transparent">In three minutes a day.</span>
+			Catch up on AI — without drowning in it.
 		</h1>
 
 		<p use:reveal={{ delay: 160 }} class="mt-6 max-w-2xl text-base font-normal leading-7 text-zinc-600 dark:text-[#A3ADBF] sm:text-lg">
-			AXON scans <span class="text-zinc-900 dark:text-[#E8ECF4]">Hacker News, ArXiv, GitHub, Reddit, and the top AI labs</span>, then distills the signal into a high-density daily brief — so you stay on the frontier without juggling 50 tabs.
+			The world moves fast. AXON is <span class="text-zinc-900 dark:text-[#E8ECF4]">one place to track what matters</span> —
+			<span class="text-zinc-900 dark:text-[#E8ECF4]">Healthy Signals only</span> from Hacker News, ArXiv, GitHub, Reddit, and the labs.
+			Skim it in three minutes.
 		</p>
 
 		<div use:reveal={{ delay: 240 }} class="mt-8 flex w-full max-w-sm flex-col items-center gap-3">
@@ -112,7 +114,7 @@
 
 		<div use:reveal={{ delay: 320 }} class="mt-10">
 			<p class="text-sm font-medium text-zinc-500 dark:text-[#7B8497]">
-				Free to try · Proprietary curation engine · No credit card
+				Free to try · One brief · No credit card
 			</p>
 		</div>
 	</section>
@@ -123,9 +125,9 @@
 			<div class="mb-5 inline-flex items-center gap-2 rounded-full border border-zinc-300 dark:border-[#33415C] bg-white dark:bg-[#121826] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-[#7B8497]">
 				<span class="h-1.5 w-1.5 rounded-full bg-[#22C3A6]"></span> Phase 1 · Ingestion
 			</div>
-			<h2 class="text-3xl font-semibold tracking-tight sm:text-4xl">Tap the global firehose.</h2>
+			<h2 class="text-3xl font-semibold tracking-tight sm:text-4xl">One place to track what matters.</h2>
 			<p class="mx-auto mt-4 max-w-2xl text-base leading-7 text-zinc-600 dark:text-[#A3ADBF] sm:text-lg">
-				Stop checking 15 different sites. AXON continuously monitors the raw nodes where frontier technology is built, debated, and shipped.
+				Stop juggling 15 tabs. AXON watches where AI and tech are built, debated, and shipped — then keeps only Healthy Signals.
 			</p>
 		</div>
 
@@ -153,9 +155,10 @@
 					<div class="mb-6 inline-flex w-max items-center gap-2 rounded-full border border-zinc-300 dark:border-[#33415C] bg-zinc-100 dark:bg-[#0F1522] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-[#7B8497]">
 						<span class="h-1.5 w-1.5 rounded-full bg-[#5B8CFF]"></span> Phase 2 · Synthesis
 					</div>
-					<h3 class="mb-6 text-3xl font-semibold tracking-tight sm:text-4xl">Axon filters the noise.</h3>
+					<h3 class="mb-6 text-3xl font-semibold tracking-tight sm:text-4xl">Catch up — without drowning.</h3>
 					<p class="mb-8 text-base leading-7 text-zinc-600 dark:text-[#A3ADBF] sm:text-lg">
-						99% of the internet is distraction. AXON pipes thousands of daily signals through a <strong class="font-semibold text-zinc-900 dark:text-[#E8ECF4]">Groq-accelerated LLaMA 3.3 engine</strong> to extract the raw value at near-zero latency.
+						Most feeds amplify whatever gets attention. AXON’s <strong class="font-semibold text-zinc-900 dark:text-[#E8ECF4]">healthy algorithm</strong> keeps
+						<strong class="font-semibold text-zinc-900 dark:text-[#E8ECF4]">Healthy Signals</strong> — informative AI and tech worth your time — and drops the fluff. Powered by Groq and LLaMA 3.3.
 					</p>
 
 					<div class="space-y-5">
@@ -198,7 +201,7 @@
 
 						<div use:reveal={{ delay: 120 }} class="rounded-xl border border-zinc-300 dark:border-[#33415C] bg-white dark:bg-[#121826] p-5">
 							<div class="mb-3 flex items-center gap-2 font-bold text-[#22C3A6]">
-								<Zap class="h-4 w-4 fill-current" /> &gt; HIGH SIGNAL DETECTED
+								<Zap class="h-4 w-4 fill-current" /> &gt; HEALTHY SIGNAL
 							</div>
 							<p class="mb-3 leading-relaxed text-zinc-600 dark:text-[#A3ADBF]">
 								<span class="font-semibold text-zinc-900 dark:text-[#E8ECF4]">OpenAI Structured Outputs</span> cuts JSON schema hallucination by 90%.
@@ -219,9 +222,9 @@
 			<div class="mb-6 inline-flex items-center gap-2 rounded-full border border-zinc-300 dark:border-[#33415C] bg-white dark:bg-[#121826] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-[#7B8497]">
 				<span class="h-1.5 w-1.5 rounded-full bg-[#22C3A6]"></span> Phase 3 · Delivery
 			</div>
-			<h2 class="mb-6 text-3xl font-semibold tracking-tight sm:text-4xl">Your 3-minute advantage.</h2>
+			<h2 class="mb-6 text-3xl font-semibold tracking-tight sm:text-4xl">Your 3-minute brief.</h2>
 			<p class="mx-auto mb-14 max-w-2xl text-base leading-7 text-zinc-600 dark:text-[#A3ADBF] sm:text-lg">
-				No endless feeds. No doomscrolling. Just a clean, high-density briefing waiting for you when you wake up.
+				No endless feeds. No doomscrolling. Just Healthy Signals — waiting when you wake up.
 			</p>
 		</div>
 
@@ -266,9 +269,9 @@
 			<div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#5B8CFF]/10 to-transparent"></div>
 
 			<div class="relative z-10">
-				<h2 class="mb-6 text-3xl font-semibold tracking-tight sm:text-5xl">Ready to plug in?</h2>
+				<h2 class="mb-6 text-3xl font-semibold tracking-tight sm:text-5xl">Ready to catch up?</h2>
 				<p class="mx-auto mb-10 max-w-xl text-base leading-7 text-zinc-600 dark:text-[#A3ADBF] sm:text-lg">
-					AXON is a hosted intelligence feed with a proprietary curation engine. Read your brief every morning — free to try, no credit card.
+					One place to track what matters. Healthy Signals only — free to try.
 				</p>
 				<div class="flex flex-col items-center justify-center gap-3 sm:flex-row">
 					<a href="/signup" class="group inline-flex h-12 items-center justify-center gap-2 rounded-md bg-black dark:bg-white text-white dark:text-black px-8 text-base font-semibold transition-colors hover:bg-zinc-800 dark:hover:bg-zinc-200">
@@ -279,7 +282,7 @@
 						How it works
 					</a>
 				</div>
-				<p class="mt-6 text-sm text-zinc-500 dark:text-[#7B8497]">Free to try · Proprietary engine · No credit card required</p>
+				<p class="mt-6 text-sm text-zinc-500 dark:text-[#7B8497]">Free to try · Healthy Signals · No credit card required</p>
 			</div>
 		</div>
 	</section>
@@ -291,7 +294,7 @@
 				<div class="flex h-7 w-7 items-center justify-center rounded-md bg-black dark:bg-white text-white dark:text-black">
 					<Zap class="h-3.5 w-3.5 fill-current" />
 				</div>
-				<span class="text-sm text-zinc-500 dark:text-[#7B8497]">Intelligence for builders.</span>
+				<span class="text-sm text-zinc-500 dark:text-[#7B8497]">Catch up on AI — without drowning in it.</span>
 			</div>
 			<div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-medium text-zinc-500 dark:text-[#7B8497]">
 				<a href="/privacy" class="transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]">Privacy</a>
@@ -301,7 +304,7 @@
 			</div>
 		</div>
 		<div class="mx-auto w-full max-w-6xl px-5 pb-10 text-center text-xs text-zinc-400 dark:text-[#525C6E] sm:px-8 sm:text-left">
-			© 2026 Bemnet Mussa · Proprietary curation engine · Built with SvelteKit, FastAPI &amp; Groq.
+			© 2026 Bemnet Mussa · Healthy Signals only · Built with SvelteKit, FastAPI &amp; Groq.
 		</div>
 	</footer>
 

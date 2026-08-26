@@ -91,14 +91,13 @@
 
 				<div class="max-w-md">
 					<p class="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-zinc-500 dark:text-emerald-400/90">
-						High-Signal, Low-Noise
+						Catch up · Healthy Signals
 					</p>
 					<h2 class="text-3xl font-medium tracking-tight text-zinc-900 dark:text-white mb-4">
-						The bleeding edge of tech, summarized in minutes.
+						Catch up on AI — without drowning in it.
 					</h2>
 					<p class="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
-						AXON pulls real-time signals from HackerNews, GitHub, ArXiv, and top AI feeds. <br>
-						Get a personalized	 feed you can skim in minutes.
+						The world moves fast. One place to track what matters — Healthy Signals from Hacker News, GitHub, ArXiv, and the labs.
 					</p>
 				</div>
 			</div>

@@ -89,13 +89,13 @@
 
 				<div class="max-w-md">
 					<p class="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-zinc-500 dark:text-blue-400/90">
-						Your Daily Briefing
+						Healthy Signals · 3 min
 					</p>
 					<h2 class="text-3xl font-medium tracking-tight text-zinc-900 dark:text-white mb-4">
-						Cut through the noise.
+						Catch up on AI — without drowning in it.
 					</h2>
 					<p class="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
-						Sign in to see exactly where the tech world is heading today. Catch up on the latest from OpenAI, Nvidia, ProductHunt, and more.
+						One place to track what matters. Sign in for today’s brief from OpenAI, Nvidia, Product Hunt, and more.
 					</p>
 				</div>
 			</div>

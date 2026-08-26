@@ -1,16 +1,16 @@
 <div align="center">
   <h1>⚡ Axon v1.0.0 ⚡</h1>
-  <p><b>The Official Launch Release: "The Bleeding Edge, Summarized."</b></p>
-  <p>A hosted OSINT intelligence feed for founders and builders.</p>
+  <p><b>Catch up on AI — without drowning in it.</b></p>
+  <p>One place to track what matters. Healthy Signals only.</p>
   
   <p>
     <a href="https://axon-phi-ruby.vercel.app"><b>Explore Live Demo →</b></a>
   </p>
 </div>
 
-Axon continuously scans the frontier of technical discourse — ArXiv, Hacker News, GitHub, Reddit, and elite AI labs — distilling the global firehose into a high-density, 3-minute daily brief.
+Axon exists because the world moves fast. It’s **one place to track what matters** — ArXiv, Hacker News, GitHub, Reddit, and AI labs — then keeps **Healthy Signals** (useful, informative) and filters the noise into a 3-minute daily brief.
 
-Built to solve information overload, Axon filters out the noise (no tutorials, no fluff) and surfaces the raw nodes where technology is being built, debated, and shipped.
+Built for builders who want to **catch up on AI without drowning** in tabs, fluff, or engagement bait.
 
 ---
 
