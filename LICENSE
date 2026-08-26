@@ -1,21 +1,34 @@
-MIT License
+Axon Proprietary License (Open-Core)
 
-Copyright (c) 2026 Bemnet Mussa
+Copyright (c) 2026 Bemnet Mussa. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Axon is an open-core product:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  • Hosted product and proprietary curation engine
+    (ingestion, source weighting, quality filters, AI analysis,
+    prompts, and related operational tooling) are proprietary.
+  • A public client / docs package may be released separately
+    under an OSI-approved license in the future. Until then,
+    nothing in this repository is MIT-licensed or free to
+    redistribute as open source.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+PERMISSIONS
+  You may use the hosted Axon service subject to the Terms of Use
+  at https://axon-phi-ruby.vercel.app/terms (or the then-current
+  production domain).
+
+RESTRICTIONS
+  Except as expressly permitted in writing by the copyright holder,
+  you may not copy, modify, distribute, sublicense, sell, or
+  operate a competing hosted service based on this source code,
+  including the proprietary curation and analysis engine.
+
+NO WARRANTY
+  THE SOFTWARE AND SERVICE ARE PROVIDED "AS IS", WITHOUT WARRANTY
+  OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+  THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+  PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+  COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+  LIABILITY ARISING FROM USE OF THE SOFTWARE OR SERVICE.
+
+For licensing questions: https://x.com/BemnetMussa

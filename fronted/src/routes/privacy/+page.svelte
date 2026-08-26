@@ -32,7 +32,7 @@
 			<section class="space-y-3">
 				<h2 class="text-lg font-semibold text-zinc-900 dark:text-[#E8ECF4]">Who we are</h2>
 				<p>
-					AXON (“we”, “us”) is an open-source OSINT intelligence feed operated by Bemnet Mussa.
+					AXON (“we”, “us”) is a hosted OSINT intelligence feed operated by Bemnet Mussa.
 					This policy explains what we collect when you use the website and app, and why.
 				</p>
 			</section>
@@ -67,8 +67,7 @@
 				<h2 class="text-lg font-semibold text-zinc-900 dark:text-[#E8ECF4]">Retention &amp; deletion</h2>
 				<p>
 					We keep account and product data while your account is active. You can request deletion of your account data by contacting
-					<a class="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-[#E8ECF4]" href="https://x.com/BemnetMussa" target="_blank" rel="noopener noreferrer">@BemnetMussa</a>
-					or opening a GitHub issue on the project repository.
+					<a class="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-[#E8ECF4]" href="https://x.com/BemnetMussa" target="_blank" rel="noopener noreferrer">@BemnetMussa</a>.
 				</p>
 			</section>
 

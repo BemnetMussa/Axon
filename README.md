@@ -1,7 +1,7 @@
 <div align="center">
   <h1>⚡ Axon v1.0.0 ⚡</h1>
   <p><b>The Official Launch Release: "The Bleeding Edge, Summarized."</b></p>
-  <p>An open-source OSINT intelligence feed for founders and elite builders.</p>
+  <p>A hosted OSINT intelligence feed for founders and builders.</p>
   
   <p>
     <a href="https://axon-phi-ruby.vercel.app"><b>Explore Live Demo →</b></a>
@@ -51,7 +51,7 @@ graph TD
 
 ## 🚀 Getting Started
 
-### 1. Clone & Setup
+### 1. Clone & Setup (private repo — collaborators only)
 ```bash
 git clone https://github.com/BemnetMussa/Axon.git
 cd Axon
@@ -96,15 +96,24 @@ npm test
 
 ---
 
-## 🤝 Contributing
+## Licensing
 
-We love builders. Check out `CONTRIBUTING.md` to get started.
+Axon is **open-core**. The curation engine and hosted product are proprietary. A public client may be released separately under an open-source license later.
 
-**[Live Demo](https://axon-phi-ruby.vercel.app)** • **[Architecture](backend/ARCHITECTURE.md)** • **[Privacy](https://axon-phi-ruby.vercel.app/privacy)** • **[License](LICENSE)**
+Details: [OPEN_CORE.md](OPEN_CORE.md) · [LICENSE](LICENSE)
+
+---
+
+## Feedback
+
+Questions and product feedback: [@BemnetMussa](https://x.com/BemnetMussa).
+Invited collaborators: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**[Live Demo](https://axon-phi-ruby.vercel.app)** · **[Architecture](backend/ARCHITECTURE.md)** · **[Privacy](https://axon-phi-ruby.vercel.app/privacy)** · **[License](LICENSE)** · **[Open-core](OPEN_CORE.md)**
 
 ---
 <div align="center">
-  <sub>Built by elites, for elites. © 2026 AXON OSINT.</sub>
+  <sub>Built for builders. © 2026 AXON.</sub>
 </div>
 
 **Scheduler note:** Auto-ingestion uses APScheduler inside the API process. It only runs while that process is **continuously up**—deploy the backend on an always-on host (e.g. a container or VM), not a model that cold-stops between requests, or the 4-hour job will not fire reliably. Set `INGEST_INTERVAL_HOURS` in the API environment to change the cadence (default `4`).
@@ -147,7 +156,7 @@ The SvelteKit app can trigger your **hosted FastAPI** on a schedule so ingest st
 - [Groq API key](https://console.groq.com) (free tier — 14,400 req/day)
 - GitHub personal access token (optional, improves GitHub API rate limits)
 
-### 1. Clone
+### 1. Clone (private — collaborators only)
 
 ```bash
 git clone https://github.com/BemnetMussa/Axon.git
@@ -362,25 +371,11 @@ This starts both FastAPI and PostgreSQL. The API will be available at `http://lo
 
 ---
 
-## Contributing
+## Feedback
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
+Axon is open-core. The curation engine is proprietary; public pull requests to that engine are not accepted at this time.
 
-**Quick version:**
-
-1. Fork the repo
-2. Create a branch: `git checkout -b feature/your-feature`
-3. Make your changes
-4. Run checks: `npx svelte-check` (frontend) and verify backend imports
-5. Submit a pull request
-
-**Areas where help is needed:**
-
-- Unit and integration tests (backend services, frontend components)
-- Accessibility improvements (keyboard nav, screen readers, ARIA)
-- Deployment guides (Vercel, Railway, Fly.io, Coolify)
-- New data sources and smarter classification logic
-- Internationalization
+Product feedback: [@BemnetMussa](https://x.com/BemnetMussa). Collaborators with repo access: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -398,14 +393,14 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for th
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+**Proprietary (open-core)** — see [LICENSE](LICENSE) and [OPEN_CORE.md](OPEN_CORE.md).
 
 ---
 
 ## Links
 
 - **Live Demo:** [axon-phi-ruby.vercel.app](https://axon-phi-ruby.vercel.app)
-- **Issues:** [github.com/BemnetMussa/Axon/issues](https://github.com/BemnetMussa/Axon/issues)
 - **Twitter:** [@BemnetMussa](https://x.com/BemnetMussa)
 - **Privacy:** [axon-phi-ruby.vercel.app/privacy](https://axon-phi-ruby.vercel.app/privacy)
 - **Terms:** [axon-phi-ruby.vercel.app/terms](https://axon-phi-ruby.vercel.app/terms)
+- **Open-core:** [OPEN_CORE.md](OPEN_CORE.md)

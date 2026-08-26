@@ -42,7 +42,8 @@
 				<p>
 					AXON aggregates publicly available technical and research sources, summarizes them with AI,
 					and provides authenticated reading tools (saves, history, article chat, optional push).
-					The software is released under the MIT License; hosted deployments may have additional operational limits.
+					The curation engine and hosted software are proprietary (open-core); see the product license.
+					Hosted deployments may have additional operational limits.
 				</p>
 			</section>
 
@@ -117,7 +118,7 @@
 					Questions:
 					<a class="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-[#E8ECF4]" href="https://x.com/BemnetMussa" target="_blank" rel="noopener noreferrer">@BemnetMussa on X</a>
 					·
-					<a class="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-[#E8ECF4]" href="https://github.com/BemnetMussa/Axon" target="_blank" rel="noopener noreferrer">GitHub</a>
+					<a class="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-[#E8ECF4]" href="/privacy">Privacy</a>
 				</p>
 			</section>
 		</div>

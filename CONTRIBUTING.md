@@ -1,15 +1,23 @@
 # Contributing to Axon
 
-Thanks for your interest in contributing! Axon is an open-source intelligence feed for builders, and contributions of all kinds are welcome — code, docs, bug reports, feature ideas.
+Axon is open-core. The curation engine and this monorepo are proprietary.
 
-## Getting Started
+## How to help today
 
-1. **Fork** the repository
-2. **Clone** your fork locally
-3. Follow the [Quick Start](README.md#quick-start) guide to get the project running
-4. Create a branch from `main`: `git checkout -b feature/your-feature`
+- Try the [live demo](https://axon-phi-ruby.vercel.app) and share feedback
+- Report bugs or ideas on X: [@BemnetMussa](https://x.com/BemnetMussa)
 
-## Development Setup
+Public contributions to the proprietary engine are not open yet. If a public client repository is published later, contribution guidelines will live there.
+
+## Collaborators
+
+If you have private-repo access:
+
+1. Clone the repository
+2. Follow the [Quick Start](README.md#quick-start)
+3. Branch from `main`: `git checkout -b feature/your-feature`
+
+## Development setup
 
 ### Backend
 
@@ -32,91 +40,46 @@ npm run dev
 
 ### Database
 
-Start PostgreSQL via Docker:
-
 ```bash
 cd backend
 docker compose up db -d
 ```
 
-## Making Changes
+## Making changes
 
-### Code Style
+### Code style
 
 **Backend (Python):**
 - Follow PEP 8
 - Use type hints for function signatures
 - Keep services modular — ingestion in `fetcher.py`, AI in `analyzer.py`, extraction in `extractor.py`
-- Use SQLModel for all database models
 
 **Frontend (Svelte/TypeScript):**
-- Use Svelte 5 runes (`$state`, `$derived`, `$props`) — no legacy stores
-- All state lives in `+page.svelte`, passed down as props
-- Use Tailwind CSS for styling — no separate CSS files for components
-- Run `npx svelte-check` before committing to catch type errors
+- Prefer Svelte 5 runes
+- Keep components small and focused
+- Run `npx svelte-check` before opening a PR
 
-### Commit Messages
-
-Write clear, concise commit messages:
-- `add: new data source for TechCrunch RSS`
-- `fix: article card overlap on mobile`
-- `update: improve classification logic in analyzer`
-
-### Testing Your Changes
-
-Before submitting a PR:
+### Tests
 
 ```bash
-# Backend — verify imports
-cd backend && python -c "from app.main import app"
+# Backend
+cd backend && pip install -r requirements-dev.txt && python -m pytest
 
-# Frontend — type check
-cd fronted && npx svelte-check
+# Frontend
+cd fronted && npm test
 ```
 
-## Submitting a Pull Request
+## Pull requests
 
-1. Push your branch to your fork
-2. Open a PR against `main`
-3. Fill in the PR template — describe what changed and why
-4. Wait for review — we'll try to respond within a few days
-
-## What to Work On
-
-Check the [issues](https://github.com/bemnetmussa/axon/issues) for tasks labeled:
-- `good first issue` — great for first-time contributors
-- `help wanted` — areas where we need the most help
-- `enhancement` — feature ideas
-
-### High-Impact Areas
-
-- **New data sources** — add feeds from more tech/AI sources
-- **Smarter classification** — improve `analyzer.py` category logic
-- **Accessibility** — screen reader support, keyboard navigation
-- **Tests** — unit tests for backend services, component tests for frontend
-- **Deployment guides** — Vercel, Railway, Fly.io, Coolify
-- **Internationalization** — multi-language support
-
-## Reporting Bugs
-
-Open an issue using the **Bug Report** template. Include:
-- Steps to reproduce
-- Expected vs actual behavior
-- Browser/OS if it's a frontend issue
-- Relevant logs or screenshots
-
-## Suggesting Features
-
-Open an issue using the **Feature Request** template. Describe:
-- The problem you're solving
-- Your proposed solution
-- Any alternatives you've considered
+- Keep PRs focused on one change
+- Describe what and why
+- Note any env or migration steps
 
 ## Code of Conduct
 
-This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold a welcoming, respectful environment.
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Questions?
+## Questions
 
-- Open a [discussion](https://github.com/bemnetmussa/axon/discussions) or issue
-- Reach out on Twitter: [@BemnetMussa](https://x.com/BemnetMussa)
+- [@BemnetMussa](https://x.com/BemnetMussa)
+- [OPEN_CORE.md](OPEN_CORE.md) for licensing

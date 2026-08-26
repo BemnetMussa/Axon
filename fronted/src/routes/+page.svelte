@@ -2,11 +2,10 @@
 	import AxonNetworkBg from '$lib/components/hero/AxonNetworkbg.svelte';
 	import { reveal } from '$lib/actions/reveal';
 	import {
-		Zap, ArrowRight, Github, Terminal, Cpu, Layers, Globe,
-		Sparkles, Play, Star, MessageSquare, Rss
+		Zap, ArrowRight, Github, Terminal, Cpu, Layers,
+		Sparkles, Play, MessageSquare, Rss
 	} from 'lucide-svelte';
 
-	const REPO_URL = 'https://github.com/BemnetMussa/Axon';
 	const SITE_URL = 'https://axon-phi-ruby.vercel.app';
 	const OG_DESC =
 		'AXON scans Hacker News, ArXiv, GitHub, Reddit and the top AI labs, then distills the signal into a high-density 3-minute daily brief.';
@@ -34,7 +33,7 @@
 
 <svelte:head>
 	<title>AXON — The bleeding edge, summarized.</title>
-	<meta name="description" content="{OG_DESC} Open source and free." />
+	<meta name="description" content="{OG_DESC} Free to try." />
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content="AXON" />
 	<meta property="og:title" content="AXON — The bleeding edge, summarized." />
@@ -69,14 +68,6 @@
 			</a>
 
 			<div class="flex items-center gap-2 sm:gap-4">
-				<a
-					href={REPO_URL}
-					target="_blank"
-					rel="noopener noreferrer"
-					class="hidden items-center gap-2 rounded-md border border-zinc-200 dark:border-[#242E43] px-3 py-2 text-sm font-medium text-zinc-700 dark:text-[#A3ADBF] transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:hover:border-[#33415C] dark:hover:text-[#E8ECF4] sm:inline-flex"
-				>
-					<Star class="h-4 w-4" /> Star
-				</a>
 				<a href="/login" class="hidden text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-[#A3ADBF] dark:hover:text-[#E8ECF4] sm:block">
 					Sign in
 				</a>
@@ -119,20 +110,9 @@
 			</a>
 		</div>
 
-		<!-- Honest, open-core proof -->
-		<div use:reveal={{ delay: 320 }} class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
-			<a
-				href={REPO_URL}
-				target="_blank"
-				rel="noopener noreferrer"
-				class="group inline-flex items-center gap-2 rounded-full border border-zinc-300 dark:border-[#33415C] bg-white/70 dark:bg-[#121826]/70 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-[#A3ADBF] transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:hover:border-[#5B8CFF]/50 dark:hover:text-[#E8ECF4]"
-			>
-				<Github class="h-4 w-4" />
-				Star on GitHub
-				<Star class="h-3.5 w-3.5 transition-colors group-hover:text-[#F59E0B]" />
-			</a>
+		<div use:reveal={{ delay: 320 }} class="mt-10">
 			<p class="text-sm font-medium text-zinc-500 dark:text-[#7B8497]">
-				Open source · MIT licensed · No credit card
+				Free to try · Proprietary curation engine · No credit card
 			</p>
 		</div>
 	</section>
@@ -288,18 +268,18 @@
 			<div class="relative z-10">
 				<h2 class="mb-6 text-3xl font-semibold tracking-tight sm:text-5xl">Ready to plug in?</h2>
 				<p class="mx-auto mb-10 max-w-xl text-base leading-7 text-zinc-600 dark:text-[#A3ADBF] sm:text-lg">
-					AXON is open source and free to use. Read your brief every morning, or self-host the whole engine — your call.
+					AXON is a hosted intelligence feed with a proprietary curation engine. Read your brief every morning — free to try, no credit card.
 				</p>
 				<div class="flex flex-col items-center justify-center gap-3 sm:flex-row">
 					<a href="/signup" class="group inline-flex h-12 items-center justify-center gap-2 rounded-md bg-black dark:bg-white text-white dark:text-black px-8 text-base font-semibold transition-colors hover:bg-zinc-800 dark:hover:bg-zinc-200">
 						Get today’s brief
 						<ArrowRight class="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
 					</a>
-					<a href={REPO_URL} target="_blank" rel="noopener noreferrer" class="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-zinc-300 dark:border-[#33415C] px-8 text-base font-semibold text-zinc-700 dark:text-[#A3ADBF] transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:hover:border-[#5B8CFF]/50 dark:hover:text-[#E8ECF4]">
-						<Github class="h-5 w-5" /> Star on GitHub
+					<a href="#engine" onclick={scrollToEngine} class="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-zinc-300 dark:border-[#33415C] px-8 text-base font-semibold text-zinc-700 dark:text-[#A3ADBF] transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:hover:border-[#5B8CFF]/50 dark:hover:text-[#E8ECF4]">
+						How it works
 					</a>
 				</div>
-				<p class="mt-6 text-sm text-zinc-500 dark:text-[#7B8497]">100% free · MIT licensed · No credit card required</p>
+				<p class="mt-6 text-sm text-zinc-500 dark:text-[#7B8497]">Free to try · Proprietary engine · No credit card required</p>
 			</div>
 		</div>
 	</section>
@@ -311,10 +291,9 @@
 				<div class="flex h-7 w-7 items-center justify-center rounded-md bg-black dark:bg-white text-white dark:text-black">
 					<Zap class="h-3.5 w-3.5 fill-current" />
 				</div>
-				<span class="text-sm text-zinc-500 dark:text-[#7B8497]">Open-source intelligence for builders.</span>
+				<span class="text-sm text-zinc-500 dark:text-[#7B8497]">Intelligence for builders.</span>
 			</div>
 			<div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-medium text-zinc-500 dark:text-[#7B8497]">
-				<a href={REPO_URL} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]"><Github class="h-4 w-4" /> GitHub</a>
 				<a href="/privacy" class="transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]">Privacy</a>
 				<a href="/terms" class="transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]">Terms</a>
 				<a href="/login" class="transition-colors hover:text-zinc-900 dark:hover:text-[#E8ECF4]">Sign in</a>
@@ -322,7 +301,7 @@
 			</div>
 		</div>
 		<div class="mx-auto w-full max-w-6xl px-5 pb-10 text-center text-xs text-zinc-400 dark:text-[#525C6E] sm:px-8 sm:text-left">
-			MIT © 2026 Bemnet Mussa · Built with SvelteKit, FastAPI &amp; Groq.
+			© 2026 Bemnet Mussa · Proprietary curation engine · Built with SvelteKit, FastAPI &amp; Groq.
 		</div>
 	</footer>
 
