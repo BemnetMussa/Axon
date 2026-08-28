@@ -10,10 +10,12 @@ function requireEnv(name: 'AXON_INTERNAL_SECRET' | 'INTERNAL_API_URL'): string {
 	return value;
 }
 
-const INTERNAL_SECRET = requireEnv('AXON_INTERNAL_SECRET');
-const INTERNAL_API_URL = requireEnv('INTERNAL_API_URL');
-
 async function proxy(event: RequestEvent, method: string): Promise<Response> {
+	// Resolve at request time — not module load — so `vite build` / analyse
+	// does not require INTERNAL_API_URL during CI or Vercel builds.
+	const INTERNAL_SECRET = requireEnv('AXON_INTERNAL_SECRET');
+	const INTERNAL_API_URL = requireEnv('INTERNAL_API_URL');
+
 	const session = await auth.api.getSession({
 		headers: event.request.headers,
 	});
