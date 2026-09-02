@@ -12,7 +12,7 @@
 		onNavigate: (id: string | null) => void;
 		onShowSaved: () => void;
 		onShowDigest: () => void;
-		onToggleTheme: (e: MouseEvent) => void;
+		onToggleTheme: () => void;
 	};
 
 	let { items, activeCategory, showSavedOnly, showDigestView, theme, onNavigate, onShowSaved, onShowDigest, onToggleTheme }: Props = $props();
@@ -90,7 +90,7 @@
 			<NotificationToggle {theme} variant="mobile" />
 
 			<button
-				onclick={(e) => { onToggleTheme(e); showMenu = false; }}
+				onclick={() => { onToggleTheme(); showMenu = false; }}
 				class={`flex items-center gap-3 rounded-xl px-3 py-3 ${dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'}`}
 			>
 				{#if dark}
