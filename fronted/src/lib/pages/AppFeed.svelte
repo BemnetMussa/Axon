@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -684,13 +684,15 @@
 		};
 	});
 
+	// Keep teardown inside onMount's return — onDestroy also runs during SSR
+	// close_render, where `document` does not exist and used to 500 /app on refresh.
 	onMount(() => {
 		load();
 		document.addEventListener('visibilitychange', handleVisibility);
-	});
-	onDestroy(() => {
-		if (pollTimer) clearInterval(pollTimer);
-		document.removeEventListener('visibilitychange', handleVisibility);
+		return () => {
+			if (pollTimer) clearInterval(pollTimer);
+			document.removeEventListener('visibilitychange', handleVisibility);
+		};
 	});
 </script>
 

@@ -8,9 +8,9 @@ import type { Handle, HandleServerError } from '@sveltejs/kit';
 // the user and printed here so a report can be matched to its server log line.
 export const handleError: HandleServerError = ({ error, event, status, message }) => {
 	const errorId = crypto.randomUUID();
+	const detail = error instanceof Error ? `${error.name}: ${error.message}\n${error.stack}` : String(error);
 	console.error(
-		`[error] id=${errorId} ${status} ${message} — ${event.request.method} ${event.url.pathname}`,
-		error,
+		`[error] id=${errorId} ${status} ${message} — ${event.request.method} ${event.url.pathname}\n${detail}`,
 	);
 	return { message, errorId };
 };
