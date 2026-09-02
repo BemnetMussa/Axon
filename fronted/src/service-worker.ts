@@ -18,10 +18,14 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+	// Drop every Axon cache (not only old versions). Stale HTML 500 pages used to
+	// stick around and poison full reloads while client-side nav still worked.
 	event.waitUntil(
-		caches.keys().then((keys) =>
-			Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-		).then(() => self.clients.claim())
+		caches
+			.keys()
+			.then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+			.then(() => caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)))
+			.then(() => self.clients.claim())
 	);
 });
 

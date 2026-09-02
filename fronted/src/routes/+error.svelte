@@ -1,6 +1,23 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { Zap, RefreshCw, Home } from 'lucide-svelte';
+
+	async function hardRecover() {
+		try {
+			if ('serviceWorker' in navigator) {
+				const regs = await navigator.serviceWorker.getRegistrations();
+				await Promise.all(regs.map((r) => r.unregister()));
+			}
+			if ('caches' in window) {
+				const keys = await caches.keys();
+				await Promise.all(keys.map((k) => caches.delete(k)));
+			}
+		} catch {
+			/* best-effort — still navigate */
+		}
+		// Bypass any leftover HTTP/SW cache of the error document.
+		window.location.replace(`/app?recover=${Date.now()}`);
+	}
 </script>
 
 <svelte:head>
@@ -30,12 +47,12 @@
 			{$page.error?.message || 'Something went wrong'}
 		</h1>
 		<p class="mb-10 max-w-xs text-[13px] leading-relaxed text-zinc-500">
-			Axon hit an unexpected error. Your data is safe — try refreshing or go back to the feed.
+			Usually a stuck offline cache — Reload clears it. Your data is safe.
 		</p>
 
 		<div class="flex flex-wrap items-center justify-center gap-3">
 			<button
-				onclick={() => window.location.reload()}
+				onclick={hardRecover}
 				class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-[13px] font-bold text-black transition-colors hover:bg-zinc-200"
 			>
 				<RefreshCw class="h-4 w-4" />
@@ -43,6 +60,7 @@
 			</button>
 			<a
 				href="/app"
+				data-sveltekit-reload
 				class="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-5 py-2.5 text-[13px] font-semibold text-zinc-300 transition-colors hover:bg-white/[0.07]"
 			>
 				<Home class="h-4 w-4" />

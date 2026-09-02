@@ -17,6 +17,11 @@ let { children } = $props();
 let runtimeError = $state<string | null>(null);
 
 onMount(() => {
+	// Pull the latest service worker so old caches that poisoned /app reloads get replaced.
+	if ('serviceWorker' in navigator) {
+		navigator.serviceWorker.getRegistration().then((reg) => reg?.update().catch(() => {}));
+	}
+
 	const handleError = (e: ErrorEvent) => {
 		// Ignore benign browser extension errors and ResizeObserver noise
 		const msg = e.message || '';
