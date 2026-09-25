@@ -1,0 +1,24 @@
+Axon Open-Core Notice
+=====================
+
+Copyright (c) 2026 Bemnet Mussa. All rights reserved for proprietary components.
+
+Open (MIT) — see LICENSE
+------------------------
+- SvelteKit client (`fronted/`)
+- FastAPI API shell, models, extractor, and community engine stubs
+- Documentation, issue/PR templates, and contributor guidelines
+
+Proprietary (not open source)
+-----------------------------
+- Hosted product: accounts, sync, production feed, admin operations
+- Curation engine: source selection, quality filters, ranking, deduplication
+- AI analysis layer: prompts, classification, insights, digests, article chat
+- Local overlay path: `private/services/` (gitignored; never published)
+- Maintainer backup (outside this repo): `Axon-proprietary/`
+
+You may not copy, redistribute, or operate a competing hosted service based on
+the proprietary engine. Use of the hosted service is governed by the Terms of Use
+on the production site.
+
+Questions: https://x.com/BemnetMussa

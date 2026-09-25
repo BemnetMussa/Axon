@@ -1,31 +1,48 @@
 # Open-core
 
-Axon is an **open-core** product: the hosted service and curation engine are proprietary. Parts of the client and documentation may be published under an open-source license in the future.
+Axon is **open-core**: the reading experience and API shell are open so builders
+can learn, contribute, and self-host a UI against the public contracts. The
+curation engine and AI analysis that make Axon “Healthy Signals” stay proprietary.
+
+## Why this split
+
+Most AI catch-up products are closed newsletters (big audiences, little you can
+fork) or thin indie aggregators. Axon opens the **product surface** people touch
+and contribute to — UI, docs, API shell — while keeping the **signal quality**
+moat closed.
+
+## Open (MIT)
+
+- Client UI (`fronted/`) — feed, reader, PWA shell
+- API shell — routes, models, content extraction helpers
+- Community stubs — `fetcher_community.py`, `analyzer_community.py`
+- Docs, contributing guide, security policy
 
 ## Proprietary
 
-These remain closed:
+- Hosted product (accounts, sync, production feed)
+- Curation engine (ingestion, source selection, filters, dedup, ranking)
+- AI analysis (prompts, insights, digests, article chat)
+- Admin / schedulers / secrets
+- Local-only overlay: `private/services/` (gitignored)
 
-- The hosted product (accounts, sync, production feed)
-- The curation engine (ingestion, source selection, quality filters, deduplication)
-- The AI analysis layer (prompts, classification, insights, article chat)
-- Operational tooling (admin, schedulers, secrets)
+## Local maintainer setup
 
-## Open (when published)
+On machines that run the full product:
 
-If a public package is released, it may include:
+```text
+private/services/fetcher.py   # full engine
+private/services/analyzer.py
+```
 
-- Client UI shell
-- High-level product documentation
-- Contributor guidelines for that package
-
-Until a separate public repository is published under an OSI-approved license, this codebase is not open source and may not be redistributed.
-
-## License
-
-See [LICENSE](LICENSE) for terms. The hosted service is also governed by the [Terms of Use](https://axon-phi-ruby.vercel.app/terms).
+A backup outside git lives at `~/Documents/Projects/Axon-proprietary/`.
 
 ## Try Axon
 
 - **Live demo:** [axon-phi-ruby.vercel.app](https://axon-phi-ruby.vercel.app)
-- **Feedback:** [@BemnetMussa](https://x.com/BemnetMussa)
+- **Feedback / support:** [@BemnetMussa](https://x.com/BemnetMussa)
+
+## License
+
+- Open package: [LICENSE](LICENSE) (MIT)
+- Boundary: [NOTICE](NOTICE)

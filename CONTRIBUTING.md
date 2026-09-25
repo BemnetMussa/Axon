@@ -1,85 +1,68 @@
 # Contributing to Axon
 
-Axon is open-core. The curation engine and this monorepo are proprietary.
+Thanks for helping. Axon is **open-core**: the UI, docs, and API shell welcome
+contributions. The curation + AI analysis engine stays proprietary
+([OPEN_CORE.md](OPEN_CORE.md)).
 
-## How to help today
+## Ways to help
 
-- Try the [live demo](https://axon-phi-ruby.vercel.app) and share feedback
-- Report bugs or ideas on X: [@BemnetMussa](https://x.com/BemnetMussa)
+| Area | Welcome? | Notes |
+|------|----------|--------|
+| UI / PWA / accessibility | Yes | `fronted/` |
+| Docs, README, examples | Yes | Keep claims honest |
+| API shell / models / extractor | Yes | No proprietary prompts |
+| Bug reports & product feedback | Yes | Issues or [@BemnetMussa](https://x.com/BemnetMussa) |
+| Curation filters, ranking, AI prompts | No | Proprietary — not accepted as PRs |
+| Secrets, keys, production configs | No | Never commit |
 
-Public contributions to the proprietary engine are not open yet. If a public client repository is published later, contribution guidelines will live there.
+## Before you start
 
-## Collaborators
-
-If you have private-repo access:
-
-1. Clone the repository
-2. Follow the [Quick Start](README.md#quick-start)
-3. Branch from `main`: `git checkout -b feature/your-feature`
+1. Try the [live demo](https://axon-phi-ruby.vercel.app)
+2. Skim [OPEN_CORE.md](OPEN_CORE.md) and [NOTICE](NOTICE)
+3. Open an issue for larger changes so we can align scope
 
 ## Development setup
-
-### Backend
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env       # Add your GROQ_API_KEY
-uvicorn app.main:app --reload
-```
 
 ### Frontend
 
 ```bash
 cd fronted
 npm install
+cp .env.example .env   # point at local API or demo
 npm run dev
 ```
 
-### Database
+### Backend (API shell)
 
 ```bash
 cd backend
-docker compose up db -d
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn app.main:app --reload
 ```
 
-## Making changes
-
-### Code style
-
-**Backend (Python):**
-- Follow PEP 8
-- Use type hints for function signatures
-- Keep services modular — ingestion in `fetcher.py`, AI in `analyzer.py`, extraction in `extractor.py`
-
-**Frontend (Svelte/TypeScript):**
-- Prefer Svelte 5 runes
-- Keep components small and focused
-- Run `npx svelte-check` before opening a PR
+Without `private/services/*.py`, ingest/analyze use **community stubs** (safe no-ops).
+That is expected for public contributors. The hosted product still serves real signals.
 
 ### Tests
 
 ```bash
-# Backend
 cd backend && pip install -r requirements-dev.txt && python -m pytest
-
-# Frontend
 cd fronted && npm test
 ```
 
 ## Pull requests
 
-- Keep PRs focused on one change
+- One focused change per PR
 - Describe what and why
-- Note any env or migration steps
+- Run checks you can (`svelte-check`, `pytest`)
+- Do not include `.env`, credentials, or anything under `private/`
 
 ## Code of Conduct
 
-This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).
 
 ## Questions
 
-- [@BemnetMussa](https://x.com/BemnetMussa)
-- [OPEN_CORE.md](OPEN_CORE.md) for licensing
+[@BemnetMussa](https://x.com/BemnetMussa)
