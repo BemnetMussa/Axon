@@ -10,9 +10,9 @@
 	let { data }: { data: PageData } = $props();
 
 	const SITE_URL = 'https://axon-phi-ruby.vercel.app';
-	const TITLE = 'AXON — Everything is scanned. Little gets through.';
+	const TITLE = 'AXON — You can’t keep up with everything. You don’t have to.';
 	const DESC =
-		'Axon sweeps AI labs, ArXiv, GitHub and Hacker News every few hours. A filter we built drops the reposts, listicles and hype. You read what is left.';
+		'Axon reads the labs, the papers, GitHub and Hacker News every few hours, drops the reposts, listicles and hype, and keeps what actually moved: the breakthroughs, launches and repos worth your time.';
 
 	let now = $state(Date.now());
 	let clock = $state('');
@@ -185,15 +185,15 @@
 			{sourceCount} sources · {interval ? `swept every ${interval}h` : 'swept on a schedule'}{since ? ` · running since ${since}` : ''}
 		</p>
 
-		<h1 use:reveal={{ delay: 60 }} class="max-w-4xl text-[44px] font-semibold leading-[0.98] tracking-[-0.045em] sm:text-7xl lg:text-[88px]">
-			Everything is scanned.<br />
-			<span class="text-black/35 dark:text-white/35">Little gets through.</span>
+		<h1 use:reveal={{ delay: 60 }} class="max-w-5xl text-[40px] font-semibold leading-[1] tracking-[-0.045em] sm:text-6xl lg:text-[76px]">
+			You can’t keep up<br class="hidden sm:block" /> with everything.<br />
+			<span class="text-black/35 dark:text-white/35">You don’t have to.</span>
 		</h1>
 
 		<div use:reveal={{ delay: 140 }} class="mt-8 grid gap-8 sm:mt-10 lg:grid-cols-[1fr_auto] lg:items-end">
 			<p class="max-w-xl text-lg leading-relaxed text-black/65 dark:text-white/60">
-				Axon reads the labs, the papers, GitHub and Hacker News {interval ? `every ${interval} hours` : 'on a schedule'}. A filter we built drops the
-				reposts, listicles and hype, and keeps what actually moved. You read what is left.
+				Noise is the reposts, listicles and hype. Signal is what actually moved: a breakthrough, a launch, a repo people suddenly use.
+				Axon reads the labs, the papers, GitHub and Hacker News {interval ? `every ${interval} hours` : 'on a schedule'} and keeps only the signal.
 			</p>
 			<div class="flex flex-col gap-3 sm:flex-row">
 				<a href="/signup" class="group inline-flex h-12 items-center justify-center gap-2 bg-black px-6 text-sm font-medium text-white transition-colors hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/85">
@@ -415,7 +415,7 @@
 					<span class="text-[13px] font-semibold uppercase tracking-[0.24em]">Axon</span>
 				</a>
 				<p class="mt-5 max-w-xs text-[15px] leading-relaxed text-black/55 dark:text-white/50">
-					Everything is scanned. Little gets through. A filtered feed of what is moving in AI.
+					The signal from the frontier of technology, without the noise. Swept every few hours.
 				</p>
 				<p class="axon-label mt-6 flex items-center gap-2 text-black/60 dark:text-white/55">
 					<span class="axon-live text-black dark:text-white"></span>
