@@ -630,14 +630,6 @@
 		analytics.articleOpened(article.id, article.source, article.category);
 	}
 
-	function openArticleWithChat(article: Article, starterQuestion: string) {
-		openArticle(article);
-		// Pre-fill and immediately send the starter question so the user lands in an active chat
-		chatInput = starterQuestion;
-		// Small delay so the reader panel + suggestions have time to mount before the send
-		setTimeout(() => sendChat(starterQuestion), 80);
-	}
-
 	function closeReader() {
 		selectedArticle = null;
 	}
@@ -784,7 +776,6 @@
 					onClearCategoryOrSaved={clearCategoryOrSaved}
 					onClearAllFilters={clearAllFilters}
 				onArticleOpen={openArticle}
-				onArticleOpenWithChat={openArticleWithChat}
 				onToggleSave={toggleSave}
 					onShowDigest={showDigest}
 					onLoadMore={loadMore}

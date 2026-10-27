@@ -130,7 +130,6 @@
 						onClearCategoryOrSaved={noop}
 						onClearAllFilters={noop}
 						onArticleOpen={noop}
-						onArticleOpenWithChat={noop}
 						onToggleSave={noop}
 						onShowDigest={noop}
 						onLoadMore={noop}

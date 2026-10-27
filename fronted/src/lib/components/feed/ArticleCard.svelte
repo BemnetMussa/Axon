@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowUp, Zap, Sparkles } from 'lucide-svelte';
+	import { ArrowUp, Zap } from 'lucide-svelte';
 	import type { Article } from '$lib/api';
 	import { getBrandColor, formatEngagement, relativeTime, stripHtml, readingTime } from '$lib/ui';
 	import { analytics } from '$lib/analytics';
@@ -12,15 +12,11 @@
 		isRead?: boolean;
 		theme: 'dark' | 'light';
 		onOpen: (article: Article) => void;
-		onOpenWithChat: (article: Article, starterQuestion: string) => void;
 		onToggleSave: (id: number) => void;
 	};
 
-	let { article, selected, isSaved, isNew = false, isRead = false, theme, onOpen, onOpenWithChat, onToggleSave }: Props = $props();
+	let { article, selected, isSaved, isNew = false, isRead = false, theme, onOpen, onToggleSave }: Props = $props();
 	let dark = $derived(theme === 'dark');
-
-	// A quick, punchy starter question for the card teaser
-	const TEASER_QUESTION = 'What can I build or do with this?';
 
 	function cardClass() {
 		if (selected && dark) return 'border-white/20 bg-white/[0.06]';
@@ -35,12 +31,6 @@
 	function handleOpen() {
 		analytics.articleOpened(article.id, article.source, article.category);
 		onOpen(article);
-	}
-
-	function handleChatTeaser(e: MouseEvent) {
-		e.stopPropagation();
-		analytics.chatStarted(article.id, 'card_teaser');
-		onOpenWithChat(article, TEASER_QUESTION);
 	}
 
 	function handleSave(e: MouseEvent) {
@@ -88,20 +78,7 @@
 		{:else}
 			<span></span>
 		{/if}
-		<div class="pointer-events-auto flex items-center gap-1.5">
-		<button
-			type="button"
-			onclick={handleChatTeaser}
-			class={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all ${
-				dark
-					? 'border-white/10 bg-white/[0.04] text-zinc-200 hover:border-white/25 hover:bg-white/[0.08] hover:text-white'
-					: 'border-black/10 bg-black/[0.03] text-zinc-800 hover:border-black/25 hover:text-black'
-			}`}
-			aria-label="Ask Axon AI about this article"
-		>
-			<Sparkles class="h-3 w-3 shrink-0" />
-			Ask Axon
-		</button>
+		<div class="pointer-events-auto flex items-center">
 			<button
 				type="button"
 				onclick={handleSave}

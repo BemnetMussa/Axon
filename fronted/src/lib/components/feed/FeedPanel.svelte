@@ -43,7 +43,6 @@
 		onClearCategoryOrSaved: () => void;
 		onClearAllFilters: () => void;
 		onArticleOpen: (article: Article) => void;
-		onArticleOpenWithChat: (article: Article, starterQuestion: string) => void;
 		onToggleSave: (id: number) => void;
 		onShowDigest: () => void;
 		onLoadMore: () => void;
@@ -57,7 +56,7 @@
 		activeCategory, showSavedOnly, semanticSearchActive = false, dbEmpty = false,
 		secondaryCategories = [], onCategorySelect,
 		onSearchChange, onSourceSelect, onSortChange, onTimeFilterChange,
-		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onArticleOpenWithChat, onToggleSave, onShowDigest, onLoadMore, onRefresh
+		onClearCategoryOrSaved, onClearAllFilters, onArticleOpen, onToggleSave, onShowDigest, onLoadMore, onRefresh
 	}: Props = $props();
 
 	const sortOptions: { value: SortOption; label: string }[] = [
@@ -306,7 +305,6 @@
 							isRead={readArticleIds.has(article.id)}
 							{theme}
 							onOpen={onArticleOpen}
-							onOpenWithChat={onArticleOpenWithChat}
 							onToggleSave={onToggleSave}
 						/>
 					{/snippet}

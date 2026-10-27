@@ -39,7 +39,7 @@ export const analytics = {
 	articleOpened: (articleId: number, source: string, category: string) =>
 		track('article_opened', { article_id: articleId, source, category }),
 
-	chatStarted: (articleId: number, trigger: 'card_teaser' | 'suggestion' | 'manual') =>
+	chatStarted: (articleId: number, trigger: 'suggestion' | 'manual') =>
 		track('chat_started', { article_id: articleId, trigger }),
 
 	articleSaved: (articleId: number, saved: boolean) =>
