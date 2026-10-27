@@ -23,7 +23,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ detail: 'Unauthorized' }, { status: 401 });
 	}
 
-	let payload: { count?: number; title?: string };
+	let payload: { count?: number; title?: string; titles?: string[] };
 	try {
 		payload = await request.json();
 	} catch {
@@ -35,11 +35,17 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ status: 'skipped', reason: 'no new signals' });
 	}
 
-	const headline = payload?.title?.trim();
-	const label = count === 1 ? '1 new signal' : `${count} new signals`;
+	const titles = (Array.isArray(payload?.titles) ? payload.titles : [payload?.title])
+		.map((t) => (typeof t === 'string' ? t.trim() : ''))
+		.filter(Boolean)
+		.slice(0, 2);
+	const rest = count - titles.length;
+	const lines = titles.map((t) => `· ${t}`);
+	if (rest > 0) lines.push(`+${rest} more in your feed`);
+
 	const result = await sendToAll({
-		title: `Axon — ${label}`,
-		body: headline || 'Fresh intelligence just landed. Tap to catch up.',
+		title: count === 1 ? '1 new story made the cut' : `${count} new stories made the cut`,
+		body: lines.join('\n') || 'A new sweep just landed. Tap to read.',
 		url: '/app'
 	});
 

@@ -253,7 +253,7 @@ def _record_ingest_run(trigger: str, ok: bool, new_articles: int, analyzed: int,
         print(f"AXON: failed to record ingest run: {e}")
 
 
-async def _notify_new_signals(session: Session, new_count: int) -> None:
+async def _notify_new_signals(session: Session, new_count: int, since_id: int = 0) -> None:
     """Fan a Web Push "new signals" notification out via the frontend after a
     productive ingest. Best-effort: a missing AXON_FRONTEND_URL, a timeout, or any
     other error is swallowed so a push failure can never break or delay ingestion.
@@ -263,17 +263,24 @@ async def _notify_new_signals(session: Session, new_count: int) -> None:
         return
     try:
         top = session.exec(
-            select(Article).order_by(col(Article.id).desc()).limit(1)
-        ).first()
-        title = top.title if top else ""
+            select(Article)
+            .where(col(Article.id) > since_id)
+            .order_by(col(Article.engagement_score).desc(), col(Article.id).desc())
+            .limit(3)
+        ).all()
+        titles = [a.title for a in top if a.title]
         async with httpx.AsyncClient(timeout=10) as client:
             await client.post(
                 f"{FRONTEND_URL.rstrip('/')}/api/push/notify",
                 headers={"X-Axon-Internal-Secret": INTERNAL_SECRET},
-                json={"count": new_count, "title": title},
+                json={"count": new_count, "title": titles[0] if titles else "", "titles": titles},
             )
     except Exception as e:
         print(f"AXON: push notify failed: {e}")
+
+
+def _max_article_id(session: Session) -> int:
+    return session.exec(select(func.max(Article.id))).one() or 0
 
 
 async def scheduled_ingest():
@@ -284,8 +291,11 @@ async def scheduled_ingest():
     analyzed = 0
     session = get_script_session()
     try:
+        since_id = _max_article_id(session)
         new_count = await ingest_intelligence(session)
         if new_count > 0:
+            # Notify as soon as stories land; analysis can take hours and only adds briefs.
+            await _notify_new_signals(session, new_count, since_id)
             try:
                 # analyze_articles is blocking (sync Groq calls + time.sleep between
                 # batches). Run it off the event loop so the API stays responsive
@@ -297,7 +307,6 @@ async def scheduled_ingest():
             _last_ingest_ok = True
             _last_ingest_detail = f"ingested {new_count} new, analyzed {analyzed} articles"
             print(f"AXON SCHEDULER: Ingested {new_count}, analyzed {analyzed}")
-            await _notify_new_signals(session, new_count)
         else:
             _last_ingest_ok = True
             _last_ingest_detail = "no new signals (dedupe or empty run)"
@@ -413,10 +422,11 @@ async def trigger_ingestion(request: Request, context_id: str | None = Query(def
             }
     
     started = datetime.now(timezone.utc)
+    since_id = _max_article_id(session)
     count = await ingest_intelligence(session, context_id)
     _last_ingest_at_utc = datetime.now(timezone.utc).isoformat()
     _record_ingest_run("manual", True, count, 0, f"manual ingest ({context_id or 'ALL'})", started)
-    await _notify_new_signals(session, count)
+    await _notify_new_signals(session, count, since_id)
     return {"status": "success", "new_articles": count}
 
 

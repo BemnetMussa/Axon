@@ -88,6 +88,23 @@ export async function enable(): Promise<PushStatus> {
 	return getStatus();
 }
 
+/** iOS only allows Web Push from a Home Screen install, never from a Safari tab. */
+export function needsIosInstall(): boolean {
+	if (typeof window === 'undefined') return false;
+	const ios =
+		/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+		(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+	const standalone =
+		window.matchMedia('(display-mode: standalone)').matches ||
+		(navigator as Navigator & { standalone?: boolean }).standalone === true;
+	return ios && !standalone;
+}
+
+/** Ask the server to push a test notification to this user's devices. */
+export async function sendTest(): Promise<void> {
+	await fetch('/api/push/test', { method: 'POST' }).catch(() => {});
+}
+
 /** Unsubscribe on this device and remove it server-side. */
 export async function disable(): Promise<PushStatus> {
 	if (!isPushSupported()) return getStatus();

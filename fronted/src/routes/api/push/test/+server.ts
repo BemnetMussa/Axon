@@ -14,8 +14,8 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	const result = await sendToUser(session.user.id, {
-		title: 'Axon',
-		body: 'Notifications are on — you’ll get a ping when fresh signals land.',
+		title: 'Notifications are on',
+		body: 'You’ll get one ping per sweep, with the top stories that made the cut.',
 		url: '/app'
 	});
 

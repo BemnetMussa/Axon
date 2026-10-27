@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Bell, BellRing, BellOff } from 'lucide-svelte';
-	import { getStatus, enable, disable, isPushSupported, type PushStatus } from '$lib/push';
+	import { getStatus, enable, disable, isPushSupported, sendTest, type PushStatus } from '$lib/push';
 
 	type Props = {
 		theme: 'dark' | 'light';
@@ -41,9 +41,12 @@
 		busy = true;
 		error = null;
 		try {
-			status = on ? await disable() : await enable();
-			if (!on && status && status.permission === 'denied') {
+			const wasOn = on;
+			status = wasOn ? await disable() : await enable();
+			if (!wasOn && status.permission === 'denied') {
 				error = 'Permission was denied.';
+			} else if (!wasOn && status.subscribed) {
+				void sendTest();
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Something went wrong.';
@@ -67,7 +70,7 @@
 		type="button"
 		onclick={toggle}
 		disabled={busy}
-		class={`${rowClass} ${on ? 'text-emerald-500 hover:text-emerald-400' : ''} disabled:opacity-60`}
+		class={`${rowClass} ${on ? (dark ? 'text-white' : 'text-zinc-900') : ''} disabled:opacity-60`}
 		aria-pressed={on}
 		title={blocked ? 'Blocked — enable in browser settings' : label}
 	>

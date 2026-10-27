@@ -11,6 +11,7 @@
 	import { NAVIGATION, SECONDARY_CATEGORIES, SUGGESTIONS } from '$lib/ui';
 	import { analytics } from '$lib/analytics';
 	import OnboardingOverlay from '$lib/components/onboarding/OnboardingOverlay.svelte';
+	import NotificationPrompt from '$lib/components/ui/NotificationPrompt.svelte';
 	import { pulseStore } from '$lib/pulse-store.svelte';
 	import '$lib/app-shell.css';
 
@@ -827,6 +828,8 @@
 	{#if showOnboarding}
 		<OnboardingOverlay {theme} onDone={finishOnboarding} />
 	{/if}
+
+	<NotificationPrompt {theme} suppressed={showOnboarding || !!selectedArticle} />
 
 	{#if !selectedArticle}
 		<MobileBottomNav

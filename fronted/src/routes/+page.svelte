@@ -90,11 +90,11 @@
 	];
 
 	const channels = [
-		{ ch: '01', name: 'Hacker News', what: 'Front page, plus Ask and Show HN threads with real discussion' },
-		{ ch: '02', name: 'GitHub', what: 'Repos created this month that are already pulling stars' },
-		{ ch: '03', name: 'ArXiv', what: 'New cs.AI and cs.LG papers' },
-		{ ch: '04', name: 'AI labs', what: 'OpenAI, Anthropic, DeepMind, Google AI, Google Research, Hugging Face, NVIDIA, Together AI' },
-		{ ch: '05', name: 'People', what: 'Simon Willison. Only voices that post often and stay fresh' },
+		{ ch: '01', name: 'Hacker News', what: 'Front page, Ask and Show HN' },
+		{ ch: '02', name: 'GitHub', what: 'New repos gaining stars' },
+		{ ch: '03', name: 'ArXiv', what: 'cs.AI and cs.LG papers' },
+		{ ch: '04', name: 'AI labs', what: 'OpenAI, Anthropic, DeepMind, Google, Hugging Face, NVIDIA, Together' },
+		{ ch: '05', name: 'People', what: 'Simon Willison' },
 		{ ch: '06', name: 'Launches & news', what: 'Product Hunt, Lobsters, TechCrunch, The Verge, Ars Technica' }
 	];
 
@@ -323,18 +323,17 @@
 	</section>
 
 	<!-- Channels -->
-	<section id="channels" class="mx-auto w-full max-w-7xl scroll-mt-20 px-5 pt-28 sm:px-8 sm:pt-36">
-		<div use:reveal class="mb-12 grid gap-4 lg:grid-cols-[280px_1fr]">
-			<p class="axon-label pt-2 text-black/45 dark:text-white/40">Channels</p>
-			<h2 class="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">Where we listen.</h2>
+	<section id="channels" class="mx-auto w-full max-w-7xl scroll-mt-20 px-5 pt-24 sm:px-8 sm:pt-28">
+		<div use:reveal class="mb-8 flex items-baseline justify-between gap-6 border-b border-black/10 pb-4 dark:border-white/10">
+			<h2 class="text-xl font-semibold tracking-tight sm:text-2xl">Where we listen</h2>
+			<p class="axon-label text-black/45 dark:text-white/40">{sourceCount} sources · 6 channels</p>
 		</div>
-
-		<ul class="border-t border-black/10 dark:border-white/10">
-			{#each channels as c, i}
-				<li use:reveal={{ delay: i * 40 }} class="grid grid-cols-[48px_1fr] items-baseline gap-x-4 gap-y-1 border-b border-black/10 py-5 sm:grid-cols-[80px_240px_1fr] dark:border-white/10">
-					<span class="axon-label text-black/40 dark:text-white/35">CH {c.ch}</span>
-					<span class="text-lg font-medium tracking-tight">{c.name}</span>
-					<span class="col-start-2 text-[15px] text-black/55 sm:col-start-auto dark:text-white/50">{c.what}</span>
+		<ul use:reveal class="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-0">
+			{#each channels as c}
+				<li class="min-w-0 lg:border-l lg:border-black/10 lg:px-5 lg:first:border-l-0 lg:first:pl-0 dark:lg:border-white/10">
+					<p class="axon-label text-black/40 dark:text-white/35">CH {c.ch}</p>
+					<p class="mt-2 text-[15px] font-medium tracking-tight">{c.name}</p>
+					<p class="mt-1 text-[13px] leading-snug text-black/50 dark:text-white/45">{c.what}</p>
 				</li>
 			{/each}
 		</ul>
