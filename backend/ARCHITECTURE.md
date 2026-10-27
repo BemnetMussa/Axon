@@ -177,8 +177,9 @@ Entry point: `ingest_intelligence(session, context_id=None)` in `fetcher.py`.
      overlaps (Jaccard ≥ 0.6) one already kept *from a different source* — i.e. the same
      story syndicated across feeds. Because the list is score-sorted, the highest-scored
      copy survives. Same-source overlaps are left alone (usually distinct posts).
-   - `MAX_PER_SOURCE = 8` keeps any one source from dominating.
-   - `MAX_TOTAL_PER_RUN = 100` caps the batch.
+   - `MAX_PER_SOURCE = 5` keeps any one source from dominating.
+   - `MAX_TOTAL_PER_RUN = 20` is the sweep budget: the 20 highest-scored candidates
+     that pass the checks get in, so trust weights decide admission, not just order.
 7. **Classify.** `classify_article()` assigns the category **once, here** — the single
    source of truth. (The analyzer no longer re-classifies.)
 8. **Hydrate full content.** `_hydrate_full_content()` fetches the readable body text
@@ -213,11 +214,12 @@ date is set to its real `created_at` so recency scoring reflects how new the pro
 engagement_score = source_weight × (0.55 × engagement + 0.45 × recency)
 ```
 
-- **engagement** — the item's `likes` (HN points / GitHub stars / Lobsters score),
-  normalized **within its own source** across the current run. This is the key trick:
-  GitHub stars (thousands) and HN points (hundreds) live on wildly different scales, so
-  comparing them raw is meaningless. Normalizing each source to 0–1 makes them fair, and
-  pure-RSS sources (which carry no number, `likes = 0`) simply lean on recency + trust.
+- **engagement** — the item's rank by `likes` (HN points / GitHub stars / Lobsters
+  score) **within its own source** this run: 1 for the top, 0 for the bottom, ties share
+  the middle. GitHub stars (thousands) and HN points (hundreds) live on wildly different
+  scales, so ranks make them comparable, and one viral outlier can't squash the rest of
+  its source. Pure-RSS sources (no number, `likes = 0`) all tie at a neutral 0.5, so a
+  fresh lab post (weight 1.6) lands just below the top HN story instead of under all of them.
 - **recency** — exponential decay on the article's age, `exp(-age_hours / 72)`
   (a ~3-day scale). Fresh items score higher.
 - **source_weight** — a hand-set trust multiplier (`SOURCE_WEIGHTS`). OpenAI/DeepMind/

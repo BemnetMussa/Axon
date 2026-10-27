@@ -452,30 +452,15 @@ async def trigger_retry_insights():
 # Articles — cursor-based pagination
 # ---------------------------------------------------------------------------
 
-# Source authority for feed ranking. Within a given day, primary research/labs
-# outrank community aggregators, which outrank commodity news/launches. Weights
-# are 0-99 so they only tiebreak *within* a day and never cross a day boundary
-# (the day bucket is multiplied by 100). Freshness still dominates: a newer day
-# always outranks an older one regardless of source.
-SOURCE_AUTHORITY = {
-    "OpenAI": 60, "Anthropic": 60, "DeepMind": 60, "GoogleResearch": 60,
-    "GoogleAI": 60, "ArXiv": 60, "HuggingFace": 60, "NVIDIA": 60, "Together": 60,
-    "SimonW": 55,
-    "HackerNews": 40, "Lobsters": 40, "GitHub": 40,
-    "TechCrunch": 20, "TheVerge": 20, "ArsTechnica": 20, "ProductHunt": 20,
-}
-DEFAULT_AUTHORITY = 30
-
-
 def _feed_sort_key():
-    """day-bucket (UTC days since epoch) * 100 + source authority. Deterministic
-    and stable per row, so it's safe to keyset-paginate on."""
-    authority = case(
-        *[(Article.source == s, w) for s, w in SOURCE_AUTHORITY.items()],
-        else_=DEFAULT_AUTHORITY,
-    )
+    """day-bucket (UTC days since epoch) * 1000 + the article's ingest score in
+    hundredths (0-999). A newer day always outranks an older one; within a day the
+    best-scored stories lead. Deterministic and stable per row, so it's safe to
+    keyset-paginate on."""
+    raw = cast(func.floor(func.coalesce(Article.engagement_score, 0) * 100), BigInteger)
+    score = case((raw > 999, 999), else_=raw)
     day_bucket = cast(func.floor(func.extract("epoch", Article.published_date) / 86400.0), BigInteger)
-    return day_bucket * 100 + authority
+    return day_bucket * 1000 + score
 
 
 def _encode_cursor(sort_key: int, article_id: int) -> str:
@@ -498,9 +483,9 @@ def read_articles(
     source: str | None = Query(default=None),
     session: Session = Depends(get_session),
 ):
-    # Authority-weighted keyset pagination. Sort key = day-bucket * 100 + source
-    # authority, so the feed reads "newest day first, best sources first within a
-    # day", with id as the unique tiebreaker. The key is deterministic/stable so
+    # Score-ordered keyset pagination. Sort key = day-bucket * 1000 + ingest score,
+    # so the feed reads "newest day first, best stories first within a day", with
+    # id as the unique tiebreaker. The key is deterministic/stable so
     # cursoring never skips or duplicates rows. The cursor carries (sort_key, id).
     #
     # Optional `category`/`source` filters scope the feed to a single tab. They're

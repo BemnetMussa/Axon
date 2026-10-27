@@ -15,21 +15,21 @@ def test_empty_feed(client, auth_headers):
     assert body["has_more"] is False
 
 
-def test_authority_orders_within_a_day(client, auth_headers, session):
-    make_article(session, title="news", source="TechCrunch")
-    make_article(session, title="community", source="HackerNews")
-    make_article(session, title="lab", source="OpenAI")
+def test_score_orders_within_a_day(client, auth_headers, session):
+    make_article(session, title="mid", score=0.9)
+    make_article(session, title="best", score=1.3)
+    make_article(session, title="weak", score=0.4)
 
     titles = [a["title"] for a in get_feed(client, auth_headers)["articles"]]
-    assert titles == ["lab", "community", "news"]
+    assert titles == ["best", "mid", "weak"]
 
 
-def test_newer_day_beats_higher_authority(client, auth_headers, session):
-    make_article(session, title="old-lab", source="OpenAI", days_ago=2)
-    make_article(session, title="fresh-news", source="TechCrunch", days_ago=0)
+def test_newer_day_beats_higher_score(client, auth_headers, session):
+    make_article(session, title="old-best", score=1.5, days_ago=2)
+    make_article(session, title="fresh-weak", score=0.3, days_ago=0)
 
     titles = [a["title"] for a in get_feed(client, auth_headers)["articles"]]
-    assert titles == ["fresh-news", "old-lab"]
+    assert titles == ["fresh-weak", "old-best"]
 
 
 def test_cursor_pagination_no_skips_no_duplicates(client, auth_headers, session):

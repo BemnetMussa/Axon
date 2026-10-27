@@ -51,7 +51,7 @@
 
 <div class="[--stage-bg:#fafafa] dark:[--stage-bg:#0a0a0a]">
 	<!-- Desktop: sources → core → phone, left to right -->
-	<div class="hidden items-center justify-center gap-10 py-4 lg:flex xl:gap-16">
+	<div class="hidden items-center justify-center py-4 lg:flex">
 		<div class="w-full max-w-[660px] xl:max-w-[720px]">
 			<p class="axon-label mb-6 text-black/40 dark:text-white/35">Input · 17 sources → Axon filter</p>
 			<IntakeStage layout="wide" onKeep={handleKeep} {keepable} />
@@ -65,10 +65,10 @@
 	<!-- Phone: sources → core → phone, top to bottom -->
 	<div class="flex flex-col items-center pb-6 lg:hidden">
 		<p class="axon-label mb-4 self-start text-black/40 dark:text-white/35">Input · 17 sources</p>
-		<div class="w-full max-w-[380px]">
+		<div class="relative w-full max-w-[380px]">
 			<IntakeStage layout="tall" onKeep={handleKeep} {keepable} />
+			<p class="axon-label absolute bottom-3 left-0 text-black/40 dark:text-white/35">Output · your feed</p>
 		</div>
-		<p class="axon-label mb-4 mt-2 text-black/40 dark:text-white/35">Output · your feed</p>
 		<PhoneFrame screen="feed" {theme} title="Axon feed on a phone" {pulse} bind:frame={mobileFrame} />
 	</div>
 

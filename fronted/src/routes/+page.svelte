@@ -53,14 +53,14 @@
 			name: 'Not a repeat',
 			rule: 'Two titles from different sources that share 60% or more of their key words are one story. The list is sorted, so the higher-scored copy is already in.'
 		},
-		{ n: '05', name: 'Under quota', rule: 'At most 8 stories per source and 100 per sweep, so one loud source cannot fill the feed.' }
+		{ n: '05', name: 'Under quota', rule: 'At most 5 stories per source and 20 per sweep. The 20 go to the highest scores, so weaker sources drop out first.' }
 	];
 
 	const terms = [
 		{
 			sym: 'e',
 			name: 'Traction',
-			body: 'Points, stars or votes, divided by the highest in the same source that sweep, so it runs from 0 to 1. That puts 300 Hacker News points and 3,000 GitHub stars on one scale.'
+			body: 'Where the story ranks by points, stars or votes within its own source that sweep: 1 for the top, 0 for the bottom. That puts 300 Hacker News points and 3,000 GitHub stars on one scale. Sources without votes sit at 0.5.'
 		},
 		{
 			sym: 'r',
@@ -70,7 +70,7 @@
 		{
 			sym: 'w',
 			name: 'Trust',
-			body: 'A fixed weight per source, from 0.9 for news rewrites to 1.6 for OpenAI and Anthropic. Lab blogs carry no votes, so they rank on freshness and trust.'
+			body: 'A fixed weight per source, from 0.9 for news rewrites to 1.6 for OpenAI and Anthropic. A fresh lab post lands just below the top Hacker News story of the sweep.'
 		}
 	];
 
@@ -222,7 +222,7 @@
 				<h2 class="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">One score, then five checks.</h2>
 				<p class="mt-6 max-w-2xl text-lg leading-relaxed text-black/65 dark:text-white/60">
 					{interval ? `Every ${interval} hours` : 'On each sweep'}, Axon fetches all {sourceCount} sources at once and scores every candidate.
-					It sorts the list, then walks down it and admits a story only if it passes all five checks. It stops at 100 or when the list runs out.
+					It sorts the list, then walks down it and admits a story only if it passes all five checks. It stops at 20, so a sweep is something you can actually read. The same score orders the feed: newest day first, best story first within each day.
 				</p>
 				{#if pulse?.last_sweep_at}
 					<p class="axon-label mt-6 flex items-center gap-2 text-black/60 dark:text-white/55">
