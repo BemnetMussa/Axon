@@ -1,18 +1,19 @@
 <script lang="ts">
-	import { MessageSquare, Moon, Sun, Zap, Sparkles, LogOut, TrendingUp } from 'lucide-svelte';
+	import { MessageSquare, Moon, Sun, Zap, Sparkles, LogOut } from 'lucide-svelte';
 	import { authClient } from '$lib/auth-client';
 	import type { NavItem } from '$lib/ui';
-	import { onMount, onDestroy } from 'svelte';
-	import { api, type Trend } from '$lib/api';
+	import type { Trend } from '$lib/api';
+	import { pulseStore } from '$lib/pulse-store.svelte';
+	import { sweepAgo, sweepIn, keptPercent, pulseWindow, formatCount } from '$lib/pulse';
 	import FeedbackModal from '../feedback/FeedbackModal.svelte';
 	import NotificationToggle from '../ui/NotificationToggle.svelte';
+	import SignalTrace from '../ui/SignalTrace.svelte';
 
 	type Props = {
 		navigation: NavItem[];
 		activeCategory: string | null;
 		showSavedOnly: boolean;
 		showDigestView: boolean;
-		sourceCounts: Record<string, number>;
 		trends?: Trend[];
 		theme: 'dark' | 'light';
 		newSignalCount?: number;
@@ -24,203 +25,170 @@
 	};
 
 	let {
-		navigation, activeCategory, showSavedOnly, showDigestView, sourceCounts, trends = [],
+		navigation, activeCategory, showSavedOnly, showDigestView, trends = [],
 		theme, newSignalCount = 0, onNavigate, onShowSaved, onShowDigest, onToggleTheme, onTopicSearch
 	}: Props = $props();
 
 	let showFeedbackModal = $state(false);
-	let lastSynced = $state<string | null>(null);
-    let healthPollTimer: any;
-
 	let dark = $derived(theme === 'dark');
-	let topSources = $derived.by(() => {
-		// Calculate top sources from whatever articles we have in memory
-		// This keeps it stable even when scrolling down
-		const counts: Record<string, number> = {};
-		sourceCounts && Object.entries(sourceCounts).forEach(([src, count]) => {
-			counts[src] = count;
-		});
-		return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
-	});
-	let activeModeLabel = $derived(showSavedOnly ? 'Saved' : (activeCategory ?? 'Frontier'));
 
-	async function updateHealth() {
-        try {
-            const health = await api.getHealth();
-            lastSynced = health.last_scheduled_ingest?.relative || null;
-        } catch {
-            /* silent */
-        }
-    }
+	let pulse = $derived(pulseStore.value);
+	let win = $derived(pulseWindow(pulse));
+	let pct = $derived(win ? keptPercent(win.scanned, win.kept) : null);
+	let lastAgo = $derived(sweepAgo(pulse?.last_sweep_at, pulseStore.now));
+	let nextIn = $derived(pulse?.next_sweep_at ? sweepIn(pulse.next_sweep_at, pulseStore.now) : null);
 
-	onMount(() => {
-        updateHealth();
-        healthPollTimer = setInterval(updateHealth, 60000); // Check health every min
-    });
+	const pad = (n: number) => String(n).padStart(2, '0');
 
-    onDestroy(() => {
-        if (healthPollTimer) clearInterval(healthPollTimer);
-    });
+	let muted = $derived(dark ? 'text-white/40' : 'text-black/45');
+	let rule = $derived(dark ? 'border-white/10' : 'border-black/10');
 
-	function navItemClass(active: boolean) {
-		if (active && dark) return 'bg-white/[0.06] text-white';
-		if (active && !dark) return 'bg-zinc-100 text-black';
-		if (dark) return 'text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-300';
-		return 'text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600';
+	function rowClass(active: boolean) {
+		if (active) return dark ? 'bg-white text-black' : 'bg-black text-white';
+		return dark ? 'text-white/60 hover:bg-white/[0.05] hover:text-white' : 'text-black/60 hover:bg-black/[0.04] hover:text-black';
 	}
 
+	function velocityMark(t: Trend): string {
+		if (t.is_new || t.velocity === 'New') return 'New';
+		if (t.velocity === 'Surging') return '↑↑';
+		if (t.velocity === 'Rising') return '↑';
+		return '·';
+	}
 </script>
 
-<nav class={`hidden w-56 shrink-0 flex-col border-r lg:flex ${dark ? 'border-white/[0.05] bg-[#0b0b0b]/90' : 'border-zinc-200 bg-white/90'} backdrop-blur-xl`}>
-	<div class="flex items-center gap-2.5 px-5 py-4">
-		<div class={`flex h-7 w-7 items-center justify-center rounded-md ${dark ? 'bg-white/10 ring-1 ring-white/10' : 'bg-black'} transition-colors duration-300`}>
-			<Zap class="h-3.5 w-3.5 fill-white text-white transition-colors duration-300" />
+<nav class={`hidden w-60 shrink-0 flex-col border-r lg:flex ${rule} ${dark ? 'bg-[#0a0a0a] text-[#ededed]' : 'bg-[#fafafa] text-[#0a0a0a]'}`}>
+	<!-- Brand -->
+	<div class={`flex h-14 shrink-0 items-center justify-between border-b px-5 ${rule}`}>
+		<div class="flex items-center gap-2.5">
+			<span class={`flex h-6 w-6 items-center justify-center ${dark ? 'bg-white text-black' : 'bg-black text-white'}`}>
+				<Zap class="h-3 w-3 fill-current" />
+			</span>
+			<span class="text-[12px] font-semibold uppercase tracking-[0.24em]">Axon</span>
 		</div>
-		<span class={`text-[13px] font-black uppercase tracking-[2px] italic ${dark ? 'text-white' : 'text-black'} transition-colors duration-300`}>Axon</span>
+		<span class={`axon-label flex items-center gap-2 ${muted}`}>
+			<span class={`axon-live ${dark ? 'text-white' : 'text-black'}`}></span>Live
+		</span>
 	</div>
 
-	<div class="px-5 pb-2">
-		<p class={`text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-500'}`}>Active</p>
-		<p class={`mt-1 text-[12px] font-semibold ${dark ? 'text-zinc-200' : 'text-zinc-800'}`}>{activeModeLabel}</p>
-	</div>
+	<!-- Sweep readout -->
+	<section class={`shrink-0 border-b px-5 py-4 ${rule}`}>
+		<div class={`axon-label flex items-center justify-between ${muted}`}>
+			<span>Filter</span>
+			<span>{pulse?.last_sweep_at ? lastAgo : 'standby'}</span>
+		</div>
 
-	<div class="px-2.5 pb-1">
-		<p class={`px-3 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Navigate</p>
-	</div>
-	<div class="flex flex-col gap-1 px-2.5">
-		{#each navigation as item}
-			{@const isActive = activeCategory === item.id && !showSavedOnly}
-			<button
-				onclick={() => onNavigate(item.id)}
-				class={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all ${navItemClass(isActive)}`}
-			>
-				<item.icon class="h-4 w-4 shrink-0" />
-				<span class="text-[11px] font-semibold tracking-wide">{item.label}</span>
-				{#if isActive}
-					<div class={`absolute -left-2.5 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full ${dark ? 'bg-white' : 'bg-black'}`}></div>
+		<SignalTrace compact class={`mt-3 h-9 ${dark ? '[--trace-bg:#0a0a0a]' : '[--trace-bg:#fafafa]'}`} />
+
+		{#if win}
+			<div class="mt-3 flex items-baseline justify-between">
+				<p class="text-[22px] font-medium leading-none tracking-tight tabular-nums">
+					{formatCount(win.kept)}<span class={`ml-1 text-[13px] ${muted}`}>/ {formatCount(win.scanned)}</span>
+				</p>
+				{#if pct !== null}
+					<span class={`axon-label ${muted}`}>{pct}% kept</span>
 				{/if}
+			</div>
+			<div class={`mt-2.5 h-[3px] ${dark ? 'bg-white/10' : 'bg-black/10'}`}>
+				<div class={`h-full ${dark ? 'bg-white' : 'bg-black'}`} style={`width: ${Math.max(pct ?? 0, 2)}%`}></div>
+			</div>
+			<div class={`axon-label mt-3 space-y-1.5 ${muted}`}>
+				<p class="flex justify-between"><span>Kept / scanned</span><span>{win.label}</span></p>
+				{#if nextIn}
+					<p class="flex justify-between"><span>Next sweep</span><span class="tabular-nums">{nextIn}</span></p>
+				{/if}
+			</div>
+		{:else}
+			<p class={`mt-3 text-[12px] leading-relaxed ${muted}`}>Waiting for the first sweep to report.</p>
+		{/if}
+	</section>
+
+	<!-- Channels -->
+	<section class={`shrink-0 border-b px-3 py-4 ${rule}`}>
+		<p class={`axon-label px-2 pb-2 ${muted}`}>Channels</p>
+		<div class="flex flex-col">
+			{#each navigation as item, i}
+				{@const active = activeCategory === item.id && !showSavedOnly && !showDigestView}
+				<button onclick={() => onNavigate(item.id)} class={`flex items-center gap-3 px-2 py-2 text-left transition-colors ${rowClass(active)}`}>
+					<span class="axon-label w-5 opacity-50">{pad(i + 1)}</span>
+					<item.icon class="h-3.5 w-3.5 shrink-0" />
+					<span class="text-[13px] font-medium">{item.label}</span>
+					{#if item.id === null && newSignalCount > 0}
+						<span class="axon-label ml-auto tabular-nums">+{newSignalCount}</span>
+					{/if}
+				</button>
+			{/each}
+			<button onclick={onShowSaved} class={`flex items-center gap-3 px-2 py-2 text-left transition-colors ${rowClass(showSavedOnly)}`}>
+				<span class="axon-label w-5 opacity-50">{pad(navigation.length + 1)}</span>
+				<Zap class="h-3.5 w-3.5 shrink-0" />
+				<span class="text-[13px] font-medium">Saved</span>
 			</button>
-		{/each}
-
-		<button
-			onclick={onShowSaved}
-			class={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all ${navItemClass(showSavedOnly)}`}
-		>
-			<Zap class="h-4 w-4 shrink-0" />
-			<span class="text-[11px] font-semibold">Saved</span>
-			{#if showSavedOnly}
-				<div class={`absolute -left-2.5 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full ${dark ? 'bg-white' : 'bg-black'}`}></div>
-			{/if}
-		</button>
-	</div>
-
-	<!-- Signal count -->
-	<div class="px-5 pb-1">
-		<div class="flex items-center justify-between">
-			<p class={`text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>New signals</p>
-			<span class={`text-[11px] font-semibold tabular-nums ${newSignalCount > 0 ? 'text-emerald-500' : (dark ? 'text-zinc-600' : 'text-zinc-400')}`}>{newSignalCount}</span>
+			<button onclick={onShowDigest} class={`flex items-center gap-3 px-2 py-2 text-left transition-colors ${rowClass(showDigestView)}`}>
+				<span class="axon-label w-5 opacity-50">{pad(navigation.length + 2)}</span>
+				<Sparkles class="h-3.5 w-3.5 shrink-0" />
+				<span class="text-[13px] font-medium">Weekly digest</span>
+			</button>
 		</div>
-	</div>
+	</section>
 
-	<!-- Trending topics -->
-	{#if trends.length > 0}
-		<div class="px-2.5 pt-2">
-			<div class="flex items-center gap-1.5 px-3 pb-1.5">
-				<TrendingUp class={`h-3 w-3 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`} />
-				<p class={`text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Trending now</p>
-			</div>
-			<div class="flex flex-wrap gap-1.5 px-3">
-				{#each trends.slice(0, 10) as trend}
-					{@const isNew = trend.is_new || trend.velocity === 'New'}
-					{@const isSurging = trend.velocity === 'Surging'}
-					<button
-						onclick={() => onTopicSearch(trend.keyword)}
-						class={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-all ${
-							dark
-								? 'border-white/[0.06] bg-white/[0.03] text-zinc-400 hover:border-white/15 hover:bg-white/[0.07] hover:text-zinc-200'
-								: 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-800'
-						}`}
-					>
-						{#if isNew}
-							<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-						{:else if isSurging}
-							<span class="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0"></span>
-						{/if}
-						{trend.keyword}
-					</button>
+	<!-- Rising keywords -->
+	<section class="no-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-4">
+		<div class={`axon-label flex justify-between pb-3 ${muted}`}>
+			<span>Rising</span>
+			<span>today</span>
+		</div>
+		{#if trends.length > 0}
+			<ol class="space-y-0.5">
+				{#each trends.slice(0, 8) as trend, i}
+					<li>
+						<button
+							onclick={() => onTopicSearch(trend.keyword)}
+							class={`grid w-full grid-cols-[22px_1fr_auto] items-baseline gap-2 py-1 text-left transition-colors ${dark ? 'text-white/70 hover:text-white' : 'text-black/70 hover:text-black'}`}
+						>
+							<span class={`axon-label ${muted}`}>{pad(i + 1)}</span>
+							<span class="truncate text-[12px]">{trend.keyword}</span>
+							<span class={`axon-label ${velocityMark(trend) === '·' ? muted : ''}`}>{velocityMark(trend)}</span>
+						</button>
+					</li>
 				{/each}
-			</div>
-		</div>
-	{/if}
+			</ol>
+		{:else}
+			<p class={`text-[12px] ${muted}`}>Nothing rising yet.</p>
+		{/if}
+	</section>
 
-	<!-- Top sources -->
-	{#if topSources.length > 0}
-		<div class="px-5 pt-3">
-			<p class={`mb-1.5 text-[9px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-700' : 'text-zinc-500'}`}>Top sources</p>
-			<div class="space-y-1">
-				{#each topSources as [source, count]}
-					<div class="flex items-center justify-between text-[10px]">
-						<span class={`${dark ? 'text-zinc-400' : 'text-zinc-600'}`}>{source}</span>
-						<span class={`tabular-nums ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{count}</span>
-					</div>
-				{/each}
-			</div>
-		</div>
-	{/if}
-
-	<div class="mt-auto px-5 pb-3">
-		<button
-			onclick={onShowDigest}
-			class={`mb-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[11px] font-bold transition-all ${
-				showDigestView
-					? dark ? 'bg-white text-black' : 'bg-zinc-900 text-white'
-					: dark ? 'bg-white/[0.06] text-zinc-300 hover:bg-white/[0.10] hover:text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 hover:text-black'
-			}`}
-		>
-			<Sparkles class="h-4 w-4" />
-			Weekly Digest
-		</button>
-	</div>
-
-	<div class={`flex flex-col gap-0.5 border-t px-2.5 py-2 ${dark ? 'border-white/[0.04]' : 'border-zinc-200'}`}>
-		<button
-			type="button"
-			onclick={() => authClient.signOut()}
-			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-zinc-600 hover:text-red-400' : 'text-zinc-400 hover:text-red-600'}`}
-		>
-			<LogOut class="h-4 w-4 shrink-0" />
-			<span class="text-[10px] font-semibold">Sign out</span>
-		</button>
-
+	<!-- Utilities -->
+	<div class={`shrink-0 border-t px-2.5 py-2 ${rule}`}>
 		<button
 			onclick={() => onToggleTheme()}
-			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-zinc-600 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`}
+			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-white/45 hover:text-white' : 'text-black/45 hover:text-black'}`}
 		>
 			{#if dark}
 				<Sun class="h-4 w-4 shrink-0" />
-				<span class="text-[10px] font-semibold">Light Mode</span>
+				<span class="text-[10px] font-semibold">Light mode</span>
 			{:else}
 				<Moon class="h-4 w-4 shrink-0" />
-				<span class="text-[10px] font-semibold">Dark Mode</span>
+				<span class="text-[10px] font-semibold">Dark mode</span>
 			{/if}
 		</button>
 
 		<NotificationToggle {theme} variant="sidebar" />
 
 		<button
-			onclick={() => showFeedbackModal = true}
-			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-zinc-600 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`}
+			onclick={() => (showFeedbackModal = true)}
+			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-white/45 hover:text-white' : 'text-black/45 hover:text-black'}`}
 		>
 			<MessageSquare class="h-4 w-4 shrink-0" />
 			<span class="text-[10px] font-semibold">Feedback</span>
 		</button>
-        
-        {#if lastSynced}
-            <div class="px-3 py-1 flex items-center gap-2">
-                <div class="h-1 w-1 rounded-full bg-emerald-500"></div>
-                <span class={`text-[9px] font-medium ${dark ? 'text-zinc-700' : 'text-zinc-400'}`}>Synced {lastSynced}</span>
-            </div>
-        {/if}
+
+		<button
+			type="button"
+			onclick={() => authClient.signOut()}
+			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-white/45 hover:text-red-400' : 'text-black/45 hover:text-red-600'}`}
+		>
+			<LogOut class="h-4 w-4 shrink-0" />
+			<span class="text-[10px] font-semibold">Sign out</span>
+		</button>
 	</div>
 </nav>
 

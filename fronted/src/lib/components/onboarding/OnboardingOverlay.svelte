@@ -17,24 +17,24 @@
 			color: 'text-blue-400',
 			darkBg: 'bg-blue-500/15',
 			lightBg: 'bg-blue-50',
-			title: 'Your intelligence feed',
-			body: 'Axon pulls from GitHub, Hacker News, ArXiv, and more — continuously. Every signal is scored, categorised, and surfaced for you.',
+			title: 'The feed',
+			body: 'Stories from GitHub, Hacker News, ArXiv, and the labs. Start with the title and the short note under it.',
 		},
 		{
 			icon: MessageSquare,
 			color: 'text-emerald-400',
 			darkBg: 'bg-emerald-500/15',
 			lightBg: 'bg-emerald-50',
-			title: 'Ask Axon anything',
-			body: 'Open any article and tap "Ask Axon" to chat about it — get a quick breakdown, ask follow-up questions, or find related ideas.',
+			title: 'Ask about a story',
+			body: 'Open one and tap Ask Axon. The chat stays on that article.',
 		},
 		{
 			icon: BookOpen,
-			color: 'text-violet-400',
-			darkBg: 'bg-violet-500/15',
-			lightBg: 'bg-violet-50',
-			title: 'Weekly Digest — the weekly brief',
-			body: 'Axon writes a structured weekly synthesis of everything that mattered. Generate one any time from the Weekly Digest tab.',
+			color: 'text-amber-400',
+			darkBg: 'bg-amber-500/15',
+			lightBg: 'bg-amber-50',
+			title: 'Save what you want back',
+			body: 'The lightning bolt saves a story. The weekly digest is the longer view, when you want it.',
 		},
 	];
 
@@ -61,7 +61,7 @@
 
 	<div class={`relative w-full max-w-sm rounded-3xl border shadow-2xl ${
 		dark
-			? 'border-white/[0.08] bg-[#121212] shadow-[0_24px_64px_rgba(0,0,0,0.7)]'
+			? 'border-[#78a9ff]/15 bg-[#0e1118] shadow-[0_24px_64px_rgba(0,0,0,0.7)]'
 			: 'border-zinc-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]'
 	}`}>
 		<!-- Skip -->

@@ -133,10 +133,12 @@
 	}
 
 	function sourceBtnClass(active: boolean) {
-		if (active && dark) return 'bg-white text-black';
-		if (active && !dark) return 'bg-black text-white';
-		return dark ? 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300' : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700';
+		return chipButtonClass(theme, active);
 	}
+
+	let rule = $derived(dark ? 'border-white/10' : 'border-black/10');
+	let muted = $derived(dark ? 'text-white/40' : 'text-black/45');
+	const chip = 'axon-label whitespace-nowrap px-2 py-1 transition-colors';
 
 	function sortBtnClass(active: boolean) {
 		return chipButtonClass(theme, active);
@@ -159,7 +161,7 @@
 	});
 </script>
 
-<section class={`relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${dark ? 'bg-[#0b0b0b]' : 'bg-white'}`}>
+<section class={`relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${dark ? 'bg-[#0a0a0a]' : 'bg-[#fafafa]'}`}>
 	<FeedHeader
 		{title}
 		articleCount={articles.length}
@@ -172,61 +174,42 @@
 		hasSemanticSearch={semanticSearchActive}
 	/>
 
-	<div class={`hidden border-b px-3 py-1.5 sm:px-5 sm:py-2 lg:block ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
-		<div class="no-scrollbar flex items-center gap-1 overflow-x-auto sm:gap-1.5">
-			<button
-				onclick={() => onSourceSelect(null)}
-				class={`whitespace-nowrap rounded-md px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-all sm:px-2.5 sm:py-1.5 sm:text-[10px] lg:px-3 lg:text-[11px] ${sourceBtnClass(activeSource === null)}`}
-			>All</button>
+	<!-- Desktop filter bar: sources on top, topic + time + sort below -->
+	<div class={`hidden border-b px-5 py-2 lg:block ${rule}`}>
+		<div class="no-scrollbar flex items-center gap-1 overflow-x-auto">
+			<span class={`axon-label w-14 shrink-0 ${muted}`}>Source</span>
+			<button onclick={() => onSourceSelect(null)} class={`${chip} ${sourceBtnClass(activeSource === null)}`}>All</button>
 			{#each sources as source}
-				<button
-					onclick={() => onSourceSelect(source)}
-					class={`whitespace-nowrap rounded-md px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-all sm:px-2.5 sm:py-1.5 sm:text-[10px] lg:px-3 lg:text-[11px] ${sourceBtnClass(activeSource === source)}`}
-				>{source}</button>
+				<button onclick={() => onSourceSelect(source)} class={`${chip} ${sourceBtnClass(activeSource === source)}`}>{source}</button>
 			{/each}
 		</div>
 	</div>
 
-	{#if secondaryCategories.length > 0 && onCategorySelect}
-		<div class={`hidden border-b px-3 py-1.5 sm:px-5 sm:py-2 lg:block ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
-			<div class="no-scrollbar flex items-center gap-1 overflow-x-auto sm:gap-1.5">
-				<span class={`shrink-0 pr-1 text-[9px] font-bold uppercase tracking-wider ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Topics</span>
-				<button
-					onclick={() => onCategorySelect?.(null)}
-					class={`whitespace-nowrap rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all lg:text-[11px] ${sortBtnClass(activeCategory === null)}`}
-				>All</button>
+	<div class={`hidden items-center gap-4 border-b px-5 py-2 lg:flex ${rule}`}>
+		{#if secondaryCategories.length > 0 && onCategorySelect}
+			<div class="no-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto">
+				<span class={`axon-label w-14 shrink-0 ${muted}`}>Topic</span>
+				<button onclick={() => onCategorySelect?.(null)} class={`${chip} ${sortBtnClass(activeCategory === null)}`}>All</button>
 				{#each secondaryCategories as cat}
-					<button
-						onclick={() => onCategorySelect?.(cat.id)}
-						class={`whitespace-nowrap rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all lg:text-[11px] ${sortBtnClass(activeCategory === cat.id)}`}
-					>{cat.label}</button>
+					<button onclick={() => onCategorySelect?.(cat.id)} class={`${chip} ${sortBtnClass(activeCategory === cat.id)}`}>{cat.label}</button>
 				{/each}
 			</div>
-		</div>
-	{/if}
-
-	<div class={`hidden items-center gap-1 border-b px-3 py-1.5 sm:gap-2 sm:px-5 sm:py-2 lg:flex ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
-		<div class="flex items-center gap-0.5 sm:gap-1">
-			<Clock class={`h-3 w-3 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`} />
+		{/if}
+		<div class={`ml-auto flex shrink-0 items-center gap-1 border-l pl-4 ${rule}`}>
+			<Clock class={`mr-1 h-3 w-3 ${muted}`} />
 			{#each timeOptions as opt}
-				<button
-					onclick={() => onTimeFilterChange(opt.value)}
-					class={`whitespace-nowrap rounded-md px-1.5 py-1 text-[9px] font-semibold transition-all sm:px-2 sm:text-[10px] lg:px-2.5 lg:text-[11px] ${sortBtnClass(timeFilter === opt.value)}`}
-				>{opt.label}</button>
+				<button onclick={() => onTimeFilterChange(opt.value)} class={`${chip} ${sortBtnClass(timeFilter === opt.value)}`}>{opt.label}</button>
 			{/each}
 		</div>
-		<div class={`ml-auto flex items-center gap-0.5 border-l pl-2 sm:gap-1 sm:pl-3 ${dark ? 'border-white/[0.04]' : 'border-zinc-200'}`}>
-			<ArrowDownUp class={`h-3 w-3 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`} />
+		<div class={`flex shrink-0 items-center gap-1 border-l pl-4 ${rule}`}>
+			<ArrowDownUp class={`mr-1 h-3 w-3 ${muted}`} />
 			{#each sortOptions as opt}
-				<button
-					onclick={() => onSortChange(opt.value)}
-					class={`whitespace-nowrap rounded-md px-1.5 py-1 text-[9px] font-semibold transition-all sm:px-2 sm:text-[10px] lg:px-2.5 lg:text-[11px] ${sortBtnClass(sortBy === opt.value)}`}
-				>{opt.label}</button>
+				<button onclick={() => onSortChange(opt.value)} class={`${chip} ${sortBtnClass(sortBy === opt.value)}`}>{opt.label}</button>
 			{/each}
 		</div>
 	</div>
 
-	<div class={`border-b px-3 py-2 lg:hidden ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
+	<div class={`border-b px-3 py-2 lg:hidden ${rule} ${activeFilterChips.length === 0 ? 'hidden' : ''}`}>
 		<div class="flex items-center justify-end gap-2">
 			{#if activeFilterChips.length > 0}
 				<button
@@ -258,8 +241,8 @@
 				<SignalLoader size={14} class={dark ? 'text-zinc-500' : 'text-zinc-400'} />
 				<span class={`text-[11px] font-semibold ${dark ? 'text-zinc-400' : 'text-zinc-500'}`}>Checking...</span>
 			{:else if pullStatus === 'new'}
-				<Check class="h-3.5 w-3.5 text-emerald-500" />
-				<span class="text-[11px] font-semibold text-emerald-500">{newCount} new {newCount === 1 ? 'signal' : 'signals'}</span>
+				<Check class={`h-3.5 w-3.5 ${dark ? 'text-white' : 'text-black'}`} />
+				<span class={`axon-label ${dark ? 'text-white' : 'text-black'}`}>{newCount} new {newCount === 1 ? 'story' : 'stories'} kept</span>
 			{:else if pullStatus === 'error'}
 				<span class="text-[11px] font-semibold text-red-400">Couldn't refresh — check your connection</span>
 			{:else}
@@ -272,7 +255,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={scrollArea}
-		class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))] lg:pb-0"
+		class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0"
 		onscroll={handleScroll}
 		ontouchstart={handleTouchStart}
 		ontouchmove={handleTouchMove}
@@ -312,7 +295,7 @@
 				{/if}
 			</div>
 		{:else}
-			<div class="w-full min-w-0 max-w-full overflow-hidden px-2 sm:px-3">
+			<div class="w-full min-w-0 max-w-full overflow-hidden px-2.5 py-1 sm:px-4">
 				<VirtualFeed items={articles} scrollEl={scrollArea}>
 					{#snippet item(article)}
 						<ArticleCard
@@ -354,7 +337,7 @@
 		<div class="fixed inset-0 z-[51] bg-black/55 lg:hidden" onclick={() => (showMobileFilters = false)}></div>
 		<div
 			class={`fixed inset-x-0 z-[52] max-h-[min(88vh,calc(100dvh-5rem))] overflow-y-auto rounded-t-3xl border px-4 pt-4 lg:hidden ${dark ? 'border-white/[0.06] bg-[#111214]' : 'border-zinc-200 bg-white'}`}
-			style="bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)); padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));"
+			style="bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px)); padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));"
 		>
 			<div class="mb-3 flex items-center justify-between">
 				<p class={`text-sm font-bold ${dark ? 'text-zinc-100' : 'text-zinc-900'}`}>Feed filters</p>

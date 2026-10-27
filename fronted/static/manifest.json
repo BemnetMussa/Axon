@@ -1,7 +1,7 @@
 {
 	"name": "Axon",
 	"short_name": "Axon",
-	"description": "Catch up on AI — without drowning in it. Healthy Signals in a 3-minute brief.",
+	"description": "The leading edge, in one feed.",
 	"start_url": "/app",
 	"display": "standalone",
 	"background_color": "#0B0F17",

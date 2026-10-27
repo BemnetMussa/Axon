@@ -39,6 +39,19 @@ export interface Article {
     insight?: string;
 }
 
+/** Aggregate filter activity from `/pulse` — what was scanned vs. kept. */
+export interface Pulse {
+    last_sweep_at: string | null;
+    last_scanned: number;
+    last_kept: number;
+    scanned_24h: number;
+    kept_24h: number;
+    sweeps_24h: number;
+    sources: number;
+    interval_hours: number;
+    next_sweep_at: string | null;
+}
+
 export interface ArticlesResponse {
     articles: Article[];
     next_cursor: string | null;
@@ -243,6 +256,11 @@ export const api = {
             body: JSON.stringify({ rating, comment })
         });
         return jsonOrThrow<{ status: string }>(res);
+    },
+
+    getPulse: async (): Promise<Pulse> => {
+        const res = await fetch(`${BASE_URL}/pulse`, { cache: 'no-store' });
+        return jsonOrThrow<Pulse>(res);
     },
 
     getHealth: async (): Promise<any> => {

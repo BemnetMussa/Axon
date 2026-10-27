@@ -12,6 +12,7 @@
 	import { analytics } from '$lib/analytics';
 	import OnboardingOverlay from '$lib/components/onboarding/OnboardingOverlay.svelte';
 	import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
+	import { pulseStore } from '$lib/pulse-store.svelte';
 
 	type ChatMessage = {
 		role: 'user' | 'ai';
@@ -183,7 +184,7 @@
 		// Keep the mobile browser chrome (status bar) in sync with the palette.
 		document
 			.querySelector('meta[name="theme-color"]')
-			?.setAttribute('content', t === 'light' ? '#ffffff' : '#0b0b0b');
+			?.setAttribute('content', t === 'light' ? '#fafafa' : '#0a0a0a');
 	}
 
 	function toggleTheme() {
@@ -688,28 +689,28 @@
 	// close_render, where `document` does not exist and used to 500 /app on refresh.
 	onMount(() => {
 		load();
+		pulseStore.start();
 		document.addEventListener('visibilitychange', handleVisibility);
 		return () => {
 			if (pollTimer) clearInterval(pollTimer);
+			pulseStore.stop();
 			document.removeEventListener('visibilitychange', handleVisibility);
 		};
 	});
 </script>
 
 <svelte:head>
-	<title>AXON — Intelligence Platform</title>
-	<meta name="theme-color" content={theme === 'dark' ? '#0b0b0b' : '#ffffff'} />
+	<title>AXON — {currentTitle}</title>
+	<meta name="theme-color" content={theme === 'dark' ? '#0a0a0a' : '#fafafa'} />
 </svelte:head>
 
-<div class={`relative flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-[#070707] text-[#e4e4e7]' : 'bg-[#f8fafc] text-zinc-900'}`}>
-	<div class={`app-bg pointer-events-none absolute inset-0 ${theme === 'dark' ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.045),transparent_42%)]' : 'bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.06),transparent_45%)]'}`}></div>
-	<div class="mx-auto flex h-full w-full max-w-[1500px] min-w-0 overflow-hidden px-0 lg:px-4">
+<div class={`relative flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a] text-[#ededed]' : 'bg-[#fafafa] text-[#0a0a0a]'}`}>
+	<div class="mx-auto flex h-full w-full max-w-[1600px] min-w-0 overflow-hidden">
 	<DesktopSidebar
 		navigation={NAVIGATION}
 		{activeCategory}
 		{showSavedOnly}
 		{showDigestView}
-		{sourceCounts}
 		{trends}
 		{theme}
 		newSignalCount={newArticleIds.size}
@@ -720,9 +721,9 @@
 		onTopicSearch={(kw) => { searchQuery = kw; }}
 	/>
 
-	<div class="relative flex min-w-0 flex-1 overflow-hidden lg:rounded-2xl lg:border lg:border-white/5">
+	<div class={`relative flex min-w-0 flex-1 overflow-hidden lg:border-r ${theme === 'dark' ? 'lg:border-white/10' : 'lg:border-black/10'}`}>
 		<div class={`min-w-0 overflow-hidden ${selectedArticle || showDigestView ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
-			<div class={`flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0b0b0b]' : 'bg-white'}`}>
+			<div class={`flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-[#fafafa]'}`}>
 				{#if fetchError}
 					<div class={`mx-3 mt-3 flex flex-col gap-2 rounded-xl border px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between ${theme === 'dark' ? 'border-amber-400/35 bg-amber-500/10 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>
 						<p class="min-w-0 flex-1 leading-relaxed">{fetchError}</p>
@@ -745,13 +746,10 @@
                     <div class="flex justify-center mt-3 absolute left-0 right-0 z-20 pointer-events-none">
                         <button
                             onclick={scrollFeedToTop}
-                            class={`pointer-events-auto flex items-center gap-2 rounded-full border px-4 py-1.5 text-[11px] font-bold shadow-xl transition-all hover:scale-105 active:scale-95 ${theme === 'dark' ? 'bg-white text-black border-white' : 'bg-zinc-900 border-zinc-700 text-white shadow-black/20'}`}
+                            class={`axon-label pointer-events-auto mt-24 flex items-center gap-2 px-4 py-2 shadow-xl transition-transform active:scale-95 lg:mt-36 ${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}
                         >
-                            <span class="relative flex h-2 w-2">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                <span class="relative inline-flex h-2 w-2 rounded-full bg-blue-500"></span>
-                            </span>
-                            {pendingNewArticlesCount} new signals detection
+                            <span class="axon-live"></span>
+                            {pendingNewArticlesCount} new {pendingNewArticlesCount === 1 ? 'story' : 'stories'} kept · show
                         </button>
                     </div>
                 {/if}
@@ -796,7 +794,7 @@
 		</div>
 
 		{#if selectedArticle || showDigestView}
-			<div transition:fly={{ x: 50, duration: 400, easing: quintOut }} class={`absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a] lg:border-white/[0.04]' : 'bg-white lg:border-zinc-200'}`}>
+			<div transition:fly={{ x: 50, duration: 400, easing: quintOut }} class={`absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a] lg:border-white/10' : 'bg-white lg:border-black/10'}`}>
 				{#if showDigestView}
 					<div class="flex h-full w-full flex-col overflow-y-auto pb-24 lg:pb-0">
 						<!-- sticky back header on mobile -->
@@ -893,7 +891,7 @@
 		overflow: hidden;
 	}
 	:global(html) {
-		background: #0b0b0b;
+		background: #0a0a0a;
 	}
 	:global(html.light) {
 		background: #ffffff;

@@ -67,6 +67,7 @@ def _reset_app_state(monkeypatch, engine):
     main._trends_cache.clear()
     main._digest_cache.clear()
     main._db_health_cache.clear()
+    main._pulse_cache.clear()
     monkeypatch.setattr(main, "_last_ingest_at_utc", None)
     monkeypatch.setattr(
         main, "probe_groq", lambda: {"key_present": True, "reachable": True, "error": None}

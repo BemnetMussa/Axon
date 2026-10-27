@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { Search, Zap, LogOut, SlidersHorizontal } from 'lucide-svelte';
 	import { authClient } from '$lib/auth-client';
-	import { inputClass, iconButtonClass, quickActionClass } from '$lib/ui-styles';
+	import { inputClass, iconButtonClass } from '$lib/ui-styles';
+	import { pulseStore } from '$lib/pulse-store.svelte';
+	import { sweepAgo, pulseWindow, formatCount } from '$lib/pulse';
 
 	type Props = {
 		title: string;
@@ -21,82 +23,80 @@
 	}: Props = $props();
 
 	let dark = $derived(theme === 'dark');
+	let muted = $derived(dark ? 'text-white/40' : 'text-black/45');
+	let win = $derived(pulseWindow(pulseStore.value));
+	let lastAgo = $derived(sweepAgo(pulseStore.value?.last_sweep_at, pulseStore.now));
 </script>
 
-<header class={`sticky top-0 z-20 min-w-0 overflow-hidden border-b ${dark ? 'border-white/[0.04] bg-[#0b0b0b]' : 'border-zinc-100 bg-white'}`}>
-	<!-- top bar: logo (mobile) / title (desktop) + search + actions -->
-	<div class="flex min-w-0 items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5">
+<header class={`sticky top-0 z-20 min-w-0 overflow-hidden border-b ${dark ? 'border-white/10 bg-[#0a0a0a]/95' : 'border-black/10 bg-[#fafafa]/95'}`}>
+	<div class="flex h-14 min-w-0 items-center gap-2 px-4 sm:gap-3 sm:px-5">
 		<!-- Mobile brand mark -->
 		<div class="flex items-center gap-2.5 lg:hidden">
-			<div class={`flex h-7 w-7 items-center justify-center rounded-md ${dark ? 'bg-white/10 ring-1 ring-white/10' : 'bg-black'}`}>
-				<Zap class="h-3.5 w-3.5 fill-white text-white" />
-			</div>
-			<span class={`text-[13px] font-black uppercase tracking-[2px] italic ${dark ? 'text-white' : 'text-black'}`}>Axon</span>
+			<span class={`flex h-6 w-6 items-center justify-center ${dark ? 'bg-white text-black' : 'bg-black text-white'}`}>
+				<Zap class="h-3 w-3 fill-current" />
+			</span>
+			<span class={`text-[12px] font-semibold uppercase tracking-[0.24em] ${dark ? 'text-white' : 'text-black'}`}>Axon</span>
 		</div>
 
 		<!-- Desktop title -->
-		<div class="hidden items-baseline gap-2.5 lg:flex">
-			<h2 class={`text-[15px] font-bold ${dark ? 'text-white' : 'text-zinc-900'}`}>{title}</h2>
-			<span class={`text-[11px] font-medium tabular-nums ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{articleCount}</span>
+		<div class="hidden min-w-0 items-baseline gap-3 lg:flex">
+			<h2 class={`text-[15px] font-semibold tracking-tight ${dark ? 'text-white' : 'text-black'}`}>{title}</h2>
+			<span class={`axon-label tabular-nums ${muted}`}>{articleCount} shown</span>
+			{#if syncIndicator}
+				<span class={`axon-label flex items-center gap-2 ${dark ? 'text-white/70' : 'text-black/70'}`}>
+					<span class="axon-live"></span>Syncing
+				</span>
+			{/if}
+			{#if hasSemanticSearch}
+				<span class={`axon-label border px-1.5 py-0.5 ${dark ? 'border-white/20 text-white/70' : 'border-black/20 text-black/70'}`}>Semantic</span>
+			{/if}
 		</div>
 
 		<div class="ml-auto flex min-w-0 items-center gap-2">
-			<!-- Search -->
 			<label class="group relative min-w-0 flex-1 sm:flex-none">
-				<Search class={`pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transition-colors lg:left-3 lg:h-4 lg:w-4 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`} />
+				<Search class={`pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 lg:left-3 ${muted}`} />
 				<input
 					type="text"
 					value={searchQuery}
 					oninput={(event) => onSearchChange((event.currentTarget as HTMLInputElement).value)}
-					placeholder="Search..."
-					class={`${inputClass(theme)} w-full pl-8 pr-3 sm:w-36 sm:focus:w-52 lg:w-44 lg:pl-9 lg:focus:w-64`}
+					placeholder="Search the feed"
+					class={`${inputClass(theme)} w-full pl-8 pr-3 sm:w-40 sm:focus:w-52 lg:w-48 lg:pl-9 lg:focus:w-64`}
 				/>
 			</label>
 
-			<!-- Mobile: sign out -->
 			<button
 				type="button"
 				onclick={() => authClient.signOut()}
-				class={`${iconButtonClass(theme)} lg:hidden ${dark ? 'hover:text-red-400 hover:border-red-400/30' : 'hover:text-red-600 hover:border-red-300'}`}
+				class={`${iconButtonClass(theme)} lg:hidden ${dark ? 'hover:text-red-400' : 'hover:text-red-600'}`}
 				aria-label="Sign out"
 			>
 				<LogOut class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
 			</button>
 
-			<!-- Mobile: open filter sheet -->
 			{#if onOpenFilters}
-				<button
-					onclick={onOpenFilters}
-					class={`${iconButtonClass(theme, 'muted')} lg:hidden`}
-					aria-label="Open filters"
-				>
+				<button onclick={onOpenFilters} class={`${iconButtonClass(theme, 'muted')} lg:hidden`} aria-label="Open filters">
 					<SlidersHorizontal class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
 				</button>
 			{/if}
 		</div>
 	</div>
 
-	<!-- Mobile: title + filter badge row -->
-	<div class="flex min-w-0 items-baseline gap-2.5 overflow-hidden px-4 pb-2 sm:px-5 lg:hidden">
-		<h2 class={`min-w-0 truncate text-[14px] font-bold ${dark ? 'text-white' : 'text-zinc-900'}`}>{title}</h2>
-		<span class={`text-[10px] font-medium tabular-nums ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{articleCount}</span>
+	<!-- Mobile: title + filter readout -->
+	<div class="flex min-w-0 items-center gap-3 overflow-hidden px-4 pb-2.5 sm:px-5 lg:hidden">
+		<h2 class={`min-w-0 truncate text-[14px] font-semibold ${dark ? 'text-white' : 'text-black'}`}>{title}</h2>
 		{#if hasActiveFilters}
-			<span class={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${dark ? 'bg-white/[0.08] text-zinc-300' : 'bg-zinc-100 text-zinc-600'}`}>Filtered</span>
+			<span class={`axon-label border px-1.5 py-0.5 ${dark ? 'border-white/20 text-white/70' : 'border-black/20 text-black/70'}`}>Filtered</span>
 		{/if}
 		{#if hasSemanticSearch}
-			<span class={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${dark ? 'bg-violet-500/15 text-violet-300' : 'bg-violet-100 text-violet-700'}`}>Semantic</span>
+			<span class={`axon-label border px-1.5 py-0.5 ${dark ? 'border-white/20 text-white/70' : 'border-black/20 text-black/70'}`}>Semantic</span>
 		{/if}
-	</div>
-
-
-	<!-- Desktop: quick-actions bar -->
-	<div class={`hidden items-center gap-1.5 border-t px-4 py-2 lg:flex ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
-		{#if hasSemanticSearch}
-			<span class={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold ${dark ? 'bg-violet-500/15 text-violet-300' : 'bg-violet-100 text-violet-700'}`}>
-				Semantic search active
-			</span>
-		{/if}
-
-		
+		<span class={`axon-label ml-auto flex shrink-0 items-center gap-2 tabular-nums ${muted}`}>
+			<span class={`axon-live ${dark ? 'text-white' : 'text-black'} ${syncIndicator ? '' : 'opacity-70'}`}></span>
+			{#if win}
+				{formatCount(win.kept)}/{formatCount(win.scanned)} kept · {lastAgo}
+			{:else}
+				Live
+			{/if}
+		</span>
 	</div>
 </header>

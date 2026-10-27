@@ -32,7 +32,7 @@
 			}
 			await goto(redirectTo);
 		} catch {
-			errorMessage = 'A network anomaly occurred. Please try again.';
+			errorMessage = 'Could not reach the server. Try again.';
 		} finally {
 			formLoading = false;
 		}
@@ -89,21 +89,22 @@
 
 				<div class="max-w-md">
 					<p class="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-zinc-500 dark:text-blue-400/90">
-						Healthy Signals · 3 min
+						The feed
 					</p>
 					<h2 class="text-3xl font-medium tracking-tight text-zinc-900 dark:text-white mb-4">
-						Catch up on AI — without drowning in it.
+						The leading edge, in one feed.
 					</h2>
 					<p class="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
-						One place to track what matters. Sign in for today’s brief from OpenAI, Nvidia, Product Hunt, and more.
+						Sign in. Labs, papers, GitHub, and Hacker News are already in the list.
 					</p>
 				</div>
 			</div>
 		</aside>
 
 		<!-- The Interaction (Right Panel) -->
-		<section class="flex flex-col items-center justify-center px-6 py-12 sm:px-12 lg:px-20">
-			<div class="w-full max-w-[380px]">
+		<section class="axon-grid relative flex flex-col items-center justify-center overflow-hidden px-6 py-12 sm:px-12 lg:px-20">
+			<div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(120,169,255,0.10),transparent_38%)]"></div>
+			<div class="relative z-10 w-full max-w-[380px]">
 				
 				<!-- Mobile Logo -->
 				<div class="mb-12 flex lg:hidden items-center gap-3">
@@ -117,7 +118,7 @@
 				<div class="mb-8">
 					<h1 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Welcome back</h1>
 					<p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-						Enter your credentials to access your workspace.
+						Sign in to get back to the feed.
 					</p>
 				</div>
 
@@ -126,28 +127,34 @@
 					<div class="space-y-3">
 						<div class="relative">
 							<input
+								id="login-email"
+								name="email"
 								type="email"
 								bind:value={email}
 								placeholder="name@example.com"
 								autocomplete="email"
+								aria-describedby={errorMessage ? 'login-error' : undefined}
 								required
 								class="peer w-full rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/5 px-4 py-3.5 text-sm text-zinc-900 dark:text-white placeholder-transparent focus:border-black dark:focus:border-white focus:bg-white dark:focus:bg-black focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-all duration-200"
 							/>
-							<label class="pointer-events-none absolute left-4 top-3.5 text-sm text-zinc-400 transition-all duration-200 peer-focus:-translate-y-[1.1rem] peer-focus:scale-[0.8] peer-focus:bg-white dark:peer-focus:bg-[#050505] peer-focus:px-1 peer-valid:-translate-y-[1.1rem] peer-valid:scale-[0.8] peer-valid:bg-white dark:peer-valid:bg-[#050505] peer-valid:px-1">
+							<label for="login-email" class="pointer-events-none absolute left-4 top-3.5 text-sm text-zinc-400 transition-all duration-200 peer-focus:-translate-y-[1.1rem] peer-focus:scale-[0.8] peer-focus:bg-white dark:peer-focus:bg-[#050505] peer-focus:px-1 peer-valid:-translate-y-[1.1rem] peer-valid:scale-[0.8] peer-valid:bg-white dark:peer-valid:bg-[#050505] peer-valid:px-1">
 								Email address
 							</label>
 						</div>
 
 						<div class="relative">
 							<input
+								id="login-password"
+								name="password"
 								type="password"
 								bind:value={password}
 								placeholder="Password"
 								autocomplete="current-password"
+								aria-describedby={errorMessage ? 'login-error' : undefined}
 								required
 								class="peer w-full rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/5 px-4 py-3.5 text-sm text-zinc-900 dark:text-white placeholder-transparent focus:border-black dark:focus:border-white focus:bg-white dark:focus:bg-black focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-all duration-200"
 							/>
-							<label class="pointer-events-none absolute left-4 top-3.5 text-sm text-zinc-400 transition-all duration-200 peer-focus:-translate-y-[1.1rem] peer-focus:scale-[0.8] peer-focus:bg-white dark:peer-focus:bg-[#050505] peer-focus:px-1 peer-valid:-translate-y-[1.1rem] peer-valid:scale-[0.8] peer-valid:bg-white dark:peer-valid:bg-[#050505] peer-valid:px-1">
+							<label for="login-password" class="pointer-events-none absolute left-4 top-3.5 text-sm text-zinc-400 transition-all duration-200 peer-focus:-translate-y-[1.1rem] peer-focus:scale-[0.8] peer-focus:bg-white dark:peer-focus:bg-[#050505] peer-focus:px-1 peer-valid:-translate-y-[1.1rem] peer-valid:scale-[0.8] peer-valid:bg-white dark:peer-valid:bg-[#050505] peer-valid:px-1">
 								Password
 							</label>
 						</div>
@@ -199,7 +206,7 @@
 				<!-- Error State -->
 				{#if errorMessage}
 					<div transition:slide={{ duration: 300, axis: 'y' }} class="mt-4">
-						<div class="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20">
+						<div id="login-error" role="alert" aria-live="polite" class="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20">
 							<AlertCircle class="h-4 w-4 shrink-0" />
 							<p>{errorMessage}</p>
 						</div>
@@ -208,7 +215,7 @@
 
 				<p class="mt-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
 					Don't have an account?
-					<a class="font-medium text-zinc-900 dark:text-white underline decoration-zinc-300 dark:decoration-zinc-600 underline-offset-4 hover:decoration-zinc-900 dark:hover:decoration-white transition-colors" href="/signup">Request access</a>
+					<a class="font-medium text-zinc-900 dark:text-white underline decoration-zinc-300 dark:decoration-zinc-600 underline-offset-4 hover:decoration-zinc-900 dark:hover:decoration-white transition-colors" href="/signup">Create one</a>
 				</p>
 			</div>
 		</section>

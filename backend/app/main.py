@@ -113,6 +113,7 @@ _trending_cache = TTLCache(60)
 _trends_cache = TTLCache(300)
 _digest_cache = TTLCache(300)
 _db_health_cache = TTLCache(30)
+_pulse_cache = TTLCache(60)
 
 
 def _feed_dump(articles) -> list[dict]:
@@ -950,6 +951,63 @@ def health():
             "vercel_cron": "Optional: Vercel Cron can POST via frontend /api/cron/ingest — see project README.",
         },
     }
+
+
+def _as_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+@app.get("/pulse")
+def pulse(session: Session = Depends(get_session)):
+    """What the filter did recently: items scanned vs. kept per sweep.
+
+    Feeds the landing page readout and the app's sweep panel. Aggregates only —
+    no per-source breakdown, prompts, or rules leave this endpoint.
+    """
+    cached = _pulse_cache.get()
+    if cached is not None:
+        return cached
+
+    now = datetime.now(timezone.utc)
+    day_ago = now - timedelta(hours=24)
+
+    last = session.exec(
+        select(IngestRun)
+        .where(IngestRun.ok == True)  # noqa: E712
+        .order_by(col(IngestRun.started_at).desc())
+        .limit(1)
+    ).first()
+
+    scanned_24h, kept_24h, runs_24h = session.exec(
+        select(
+            func.coalesce(func.sum(IngestRun.raw_found), 0),
+            func.coalesce(func.sum(IngestRun.new_articles), 0),
+            func.count(),
+        ).where(IngestRun.ok == True, IngestRun.started_at >= day_ago)  # noqa: E712
+    ).one()
+
+    sources = session.exec(select(func.count(func.distinct(Article.source)))).one()
+
+    last_at = _as_utc(last.finished_at or last.started_at) if last else None
+    next_at = _scheduler_snapshot()["next_run_at_utc"]
+    if not next_at and last_at:
+        next_at = (last_at + timedelta(hours=_scheduler_interval_hours)).isoformat()
+
+    value = {
+        "last_sweep_at": last_at.isoformat() if last_at else None,
+        "last_scanned": last.raw_found if last else 0,
+        "last_kept": last.new_articles if last else 0,
+        "scanned_24h": int(scanned_24h or 0),
+        "kept_24h": int(kept_24h or 0),
+        "sweeps_24h": int(runs_24h or 0),
+        "sources": int(sources or 0),
+        "interval_hours": _scheduler_interval_hours,
+        "next_sweep_at": next_at,
+    }
+    _pulse_cache.set(value)
+    return value
 
 
 # ---------------------------------------------------------------------------

@@ -77,10 +77,10 @@
 </script>
 
 <section
-	class={`relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${dark ? 'bg-[#0a0a0a]' : 'bg-white/95'}`}
+	class={`relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${dark ? 'bg-[#0b0e14]' : 'bg-[#fffefa]'}`}
 	transition:fly={{ x: 60, duration: 300, opacity: 0 }}
 >
-	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2 sm:gap-3 sm:px-5 sm:py-2.5 ${dark ? 'border-white/[0.04] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}>
+	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2.5 sm:gap-3 sm:px-5 ${dark ? 'border-white/[0.06] bg-[#0e1118]' : 'border-zinc-200 bg-white'}`}>
 		<button
 			onclick={onBack}
 			class={`flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 transition-colors sm:gap-2 sm:px-2 ${dark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-black'}`}
@@ -127,17 +127,18 @@
 
 			<button
 				onclick={() => onOpenExternal(article.url)}
-				class={`${iconButtonClass(theme, 'muted')} ${dark ? 'hover:bg-white hover:text-black' : 'hover:bg-black hover:text-white'}`}
+				class={`${iconButtonClass(theme, 'muted')} sm:w-auto sm:gap-1.5 sm:px-3 ${dark ? 'hover:border-[#78a9ff]/30 hover:text-[#a9c5ff]' : 'hover:border-blue-200 hover:text-blue-700'}`}
 				aria-label="Open original article"
 			>
 				<ExternalLink class="h-3.5 w-3.5" />
+				<span class="hidden text-[10px] font-semibold sm:inline">Original</span>
 			</button>
 		</div>
 	</header>
 
 	<div bind:this={scrollArea} class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scroll-smooth">
-		<div class="mx-auto w-full min-w-0 max-w-2xl px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-8 lg:px-8 lg:pt-10" style="overflow-wrap: anywhere;">
-			<div class={`mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+		<div class="mx-auto w-full min-w-0 max-w-[720px] px-5 pb-8 pt-7 sm:px-9 sm:pb-10 sm:pt-11 lg:px-12 lg:pt-14" style="overflow-wrap: anywhere;">
+			<div class={`mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[9px] font-medium uppercase tracking-[0.14em] ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
 				<span>{article.category}</span>
 				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
 				<span>{new Date(article.published_date).toLocaleDateString()}</span>
@@ -145,20 +146,23 @@
 				<span class="sm:hidden" style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
 			</div>
 
-			<h2 class={`mb-6 text-[24px] font-bold leading-tight tracking-tight sm:text-[30px] lg:text-[32px] ${dark ? 'text-white' : 'text-zinc-900'}`}>{article.title}</h2>
+			<h2 class={`axon-editorial-title mb-7 text-[29px] font-bold leading-[1.08] sm:text-[38px] lg:text-[42px] ${dark ? 'text-[#f4f6fa]' : 'text-zinc-950'}`}>{article.title}</h2>
 
 			{#if dark}
-				<div class="prose prose-invert prose-sm max-w-none text-[14px] leading-7 text-zinc-300 sm:text-[15px] sm:leading-8 lg:text-[16px] lg:leading-9">
+				<div class="prose prose-invert max-w-none text-[15px] leading-8 text-[#c5cad3] sm:text-[16px] sm:leading-9 prose-headings:tracking-tight prose-strong:text-white">
 					{@html renderMarkdown(article.insight || article.content_snippet)}
 				</div>
 			{:else}
-				<div class="prose prose-sm max-w-none text-[14px] leading-7 text-zinc-700 sm:text-[15px] sm:leading-8 lg:text-[16px] lg:leading-9">
+				<div class="prose max-w-none text-[15px] leading-8 text-zinc-700 sm:text-[16px] sm:leading-9 prose-headings:tracking-tight prose-strong:text-zinc-950">
 					{@html renderMarkdown(article.insight || article.content_snippet)}
 				</div>
 			{/if}
 
-			<div class={`mt-8 border-t pt-6 ${dark ? 'border-white/[0.04]' : 'border-zinc-100'}`}>
-				<p class={`mb-4 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Ask Axon</p>
+			<div class={`mt-10 rounded-2xl border p-4 sm:p-5 ${dark ? 'border-[#78a9ff]/15 bg-[#78a9ff]/[0.035]' : 'border-blue-100 bg-blue-50/45'}`}>
+				<div class="mb-4 flex items-center justify-between">
+					<p class={`font-mono text-[10px] font-semibold uppercase tracking-[0.14em] ${dark ? 'text-[#9fbdff]' : 'text-blue-700'}`}>Ask Axon</p>
+					<span class={`text-[10px] ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>About this article</span>
+				</div>
 
 				{#if chatMessages.length > 0}
 					<div class="min-w-0 max-w-full space-y-4">
@@ -193,13 +197,13 @@
 							<span class="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:0.15s]"></span>
 							<span class="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:0.3s]"></span>
 						</div>
-						<span class={`text-[11px] ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Analyzing signal context...</span>
+						<span class={`text-[11px] ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Reading this article...</span>
 					</div>
 				{/if}
 
 				{#if chatMessages.length === 0 && !chatLoading}
 					<div class={`mt-3 rounded-xl border px-3 py-2.5 text-[11px] ${dark ? 'border-white/[0.05] bg-white/[0.02] text-zinc-500' : 'border-zinc-100 bg-zinc-50 text-zinc-500'}`}>
-						Ask for implementation ideas, risks, or practical steps from this signal.
+						Ask what the piece says, or whether it matters for what you are building.
 					</div>
 				{/if}
 			</div>

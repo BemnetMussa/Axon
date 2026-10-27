@@ -78,12 +78,15 @@
 	{/if}
 
 	<div class="flex items-center gap-1.5 px-3 py-2">
+		<label for="axon-chat-input" class="sr-only">Ask a question about this article</label>
 		<input
+			id="axon-chat-input"
+			name="axon-chat-question"
 			type="text"
 			value={chatInput}
 			oninput={(event) => onInputChange((event.currentTarget as HTMLInputElement).value)}
 			onkeydown={(event) => event.key === 'Enter' && onSend()}
-			placeholder={isListening ? 'Listening...' : 'Ask about this signal...'}
+			placeholder={isListening ? 'Listening…' : 'Ask about this article…'}
 			class={`${inputClass(theme)} min-w-0 flex-1`}
 		/>
 		{#if speechSupported}

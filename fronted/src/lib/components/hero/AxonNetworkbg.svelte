@@ -1,126 +1,172 @@
-<!-- $lib/components/hero/AxonNetworkBg.svelte -->
 <script lang="ts">
-	// No external libraries needed! Pure SVG and CSS magic.
+	// Faint square grid. A few of its lines peel off and meet at one point
+	// in the open top-right, above the first card.
+	const step = 80;
+	const width = 1440;
+	const height = 960;
+	// Sits in the open band under the header, above the first card.
+	const point = { x: 1190, y: 114 };
+
+	const grid: string[] = [];
+	for (let x = 0; x <= width; x += step) grid.push(`M ${x} 0 V ${height}`);
+	for (let y = 0; y <= height; y += step) grid.push(`M 0 ${y} H ${width}`);
+
+	const dots: { x: number; y: number }[] = [];
+	for (let x = 0; x <= width; x += step) {
+		for (let y = 0; y <= height; y += step) dots.push({ x, y });
+	}
+
+	// Start on the lattice, run straight, then bend. Uneven on purpose.
+	const curves = [
+		`M 0 128 H 760 C 940 128, 1080 120, ${point.x} ${point.y}`,
+		`M 1380 ${height} C 1380 640, 1420 280, 1310 170 C 1256 128, 1220 118, ${point.x} ${point.y}`,
+		`M ${width} 400 C 1380 320, 1290 190, ${point.x} ${point.y}`,
+		`M 160 920 C 520 900, 900 840, 1140 600 C 1280 450, 1290 200, ${point.x} ${point.y}`
+	];
+
+	// Phone: same idea, framed so the point sits in the band under the header.
+	const phoneStep = 40;
+	const phonePoint = { x: 300, y: 100 };
+	const phoneGrid: string[] = [];
+	for (let x = 0; x <= 400; x += phoneStep) phoneGrid.push(`M ${x} 0 V 800`);
+	for (let y = 0; y <= 800; y += phoneStep) phoneGrid.push(`M 0 ${y} H 400`);
+	const phoneDots: { x: number; y: number }[] = [];
+	for (let x = 0; x <= 400; x += phoneStep) {
+		for (let y = 0; y <= 800; y += phoneStep) phoneDots.push({ x, y });
+	}
+	const phoneCurves = [
+		`M 0 112 H 190 C 240 112, 276 104, ${phonePoint.x} ${phonePoint.y}`,
+		`M 400 148 C 362 128, 328 108, ${phonePoint.x} ${phonePoint.y}`,
+		`M 372 800 C 372 480, 360 210, ${phonePoint.x} ${phonePoint.y}`
+	];
 </script>
 
-<div class="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center">
-	
-	<!-- 1. The Matrix Grid (Subtle technical foundation) -->
-	<div class="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)]"></div>
+<div class="network absolute inset-0 h-full w-full overflow-hidden" aria-hidden="true">
+	<svg class="desk h-full w-full" viewBox="0 0 {width} {height}" preserveAspectRatio="xMaxYMin slice" fill="none">
+		{#each grid as d}
+			<path class="grid-line" {d} />
+		{/each}
+		{#each dots as dot}
+			<circle class="grid-dot" cx={dot.x} cy={dot.y} r="2.2" />
+		{/each}
+		{#each curves as d, i}
+			<path class="curve" {d} />
+			<path class="mark" {d} pathLength="1000" style={`animation-delay: ${-i * 1.7}s`} />
+		{/each}
+		<circle class="point" cx={point.x} cy={point.y} r="5" />
+	</svg>
 
-	<!-- 2. The Core Glow (Where signals converge) -->
-	<div class="absolute top-[10%] left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-emerald-500/10 dark:bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none"></div>
-
-	<!-- 3. The Signal Network (SVG) -->
-	<svg
-		class="absolute inset-0 w-full h-full pointer-events-none"
-		xmlns="http://www.w3.org/2000/svg"
-		viewBox="0 0 1000 1000"
-		preserveAspectRatio="xMidYMin slice"
-	>
-		<defs>
-			<!-- Signal Colors -->
-			<linearGradient id="fade-up" x1="0%" y1="100%" x2="0%" y2="0%">
-				<stop offset="0%" stop-color="rgba(16, 185, 129, 0)" />
-				<stop offset="50%" stop-color="rgba(16, 185, 129, 0.8)" />
-				<stop offset="100%" stop-color="rgba(16, 185, 129, 0)" />
-			</linearGradient>
-
-			<!-- Faded Base Lines -->
-			<linearGradient id="base-line" x1="0%" y1="100%" x2="0%" y2="0%">
-				<stop offset="0%" stop-color="currentColor" stop-opacity="0" />
-				<stop offset="100%" stop-color="currentColor" stop-opacity="0.1" />
-			</linearGradient>
-		</defs>
-
-		<!-- 
-			The paths converge roughly at X: 50%, Y: 25% (Behind the text).
-			We use a relative coordinate system (viewBox="0 0 1000 1000" but scaled).
-			For this, absolute viewport units work best for responsive curves.
-		-->
-		<g class="text-zinc-400 dark:text-zinc-600">
-			<!-- Left fan -->
-			<path class="base-path" d="M -220 920 C 80 920, 220 430, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-1" d="M -220 920 C 80 920, 220 430, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.8" />
-
-			<path class="base-path" d="M -140 860 C 120 860, 260 410, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-2" d="M -140 860 C 120 860, 260 410, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.6" />
-
-			<path class="base-path" d="M -60 980 C 180 840, 300 470, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-3" d="M -60 980 C 180 840, 300 470, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.5" />
-
-			<path class="base-path" d="M 30 1080 C 220 820, 360 520, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-4" d="M 30 1080 C 220 820, 360 520, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.4" />
-
-			<!-- Center stack -->
-			<path class="base-path" d="M 260 1150 C 340 900, 430 560, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-5" d="M 260 1150 C 340 900, 430 560, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.5" />
-
-			<path class="base-path" d="M 380 1200 C 420 930, 470 600, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-6" d="M 380 1200 C 420 930, 470 600, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.7" />
-
-			<path class="base-path" d="M 500 1240 C 500 920, 500 620, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-7" d="M 500 1240 C 500 920, 500 620, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="2" />
-
-			<path class="base-path" d="M 620 1200 C 580 930, 530 600, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-8" d="M 620 1200 C 580 930, 530 600, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.7" />
-
-			<path class="base-path" d="M 740 1150 C 660 900, 570 560, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-9" d="M 740 1150 C 660 900, 570 560, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.5" />
-
-			<!-- Right fan -->
-			<path class="base-path" d="M 970 1080 C 780 820, 640 520, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-10" d="M 970 1080 C 780 820, 640 520, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.4" />
-
-			<path class="base-path" d="M 1060 980 C 820 840, 700 470, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-11" d="M 1060 980 C 820 840, 700 470, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.5" />
-
-			<path class="base-path" d="M 1140 860 C 880 860, 740 410, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-12" d="M 1140 860 C 880 860, 740 410, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.6" />
-
-			<path class="base-path" d="M 1220 920 C 920 920, 780 430, 500 200" fill="none" stroke="url(#base-line)" stroke-width="1" />
-			<path class="signal-path delay-2" d="M 1220 920 C 920 920, 780 430, 500 200" fill="none" stroke="url(#fade-up)" stroke-width="1.8" />
-		</g>
+	<svg class="phone absolute top-0 h-screen w-full" viewBox="0 0 400 800" preserveAspectRatio="xMidYMin slice" fill="none">
+		{#each phoneGrid as d}
+			<path class="grid-line" {d} />
+		{/each}
+		{#each phoneDots as dot}
+			<circle class="grid-dot" cx={dot.x} cy={dot.y} r="1.5" />
+		{/each}
+		{#each phoneCurves as d, i}
+			<path class="curve" {d} />
+			<path class="mark" {d} pathLength="1000" style={`animation-delay: ${-i * 1.7}s`} />
+		{/each}
+		<circle class="point" cx={phonePoint.x} cy={phonePoint.y} r="3.2" />
 	</svg>
 </div>
 
 <style>
-	.signal-path {
-		/* This creates the "Dash" of light */
-		stroke-dasharray: 150 2000;
-		stroke-linecap: round;
-		animation: flow 4s linear infinite;
-		opacity: 0;
+	.phone {
+		display: none;
 	}
 
-	/* Timing variations so they don't all fire at once */
-	.delay-1 { animation-delay: 0s; animation-duration: 4s; }
-	.delay-2 { animation-delay: 1.5s; animation-duration: 3.5s; }
-	.delay-3 { animation-delay: 0.5s; animation-duration: 5s; }
-	.delay-4 { animation-delay: 2.5s; animation-duration: 4.2s; }
-	.delay-5 { animation-delay: 1s; animation-duration: 4.8s; }
-	.delay-6 { animation-delay: 0.8s; animation-duration: 4.4s; }
-	.delay-7 { animation-delay: 1.2s; animation-duration: 5.1s; }
-	.delay-8 { animation-delay: 2s; animation-duration: 4.6s; }
-	.delay-9 { animation-delay: 2.8s; animation-duration: 4.3s; }
-	.delay-10 { animation-delay: 0.3s; animation-duration: 5.3s; }
-	.delay-11 { animation-delay: 1.9s; animation-duration: 4.7s; }
-	.delay-12 { animation-delay: 3.1s; animation-duration: 4.1s; }
+	.network {
+		color: #1a1a1a;
+		-webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
+	}
 
-	@keyframes flow {
-		0% {
-			stroke-dashoffset: 2000;
-			opacity: 0;
+	:global(html:not(.light)) .network {
+		color: #f3f3f3;
+	}
+
+	.grid-line,
+	.curve,
+	.mark {
+		stroke: currentColor;
+		fill: none;
+	}
+
+	.grid-line {
+		stroke-width: 0.8;
+		opacity: 0.11;
+	}
+
+	.grid-dot {
+		fill: currentColor;
+		opacity: 0.28;
+	}
+
+	.curve {
+		stroke-width: 1.15;
+		opacity: 0.34;
+	}
+
+	.mark {
+		stroke-width: 1.35;
+		stroke-linecap: round;
+		stroke-dasharray: 14 1000;
+		opacity: 0.55;
+		animation: travel 9s linear infinite;
+	}
+
+	.point {
+		fill: currentColor;
+		opacity: 0.9;
+	}
+
+	@keyframes travel {
+		from {
+			stroke-dashoffset: 1000;
 		}
-		10% {
-			opacity: 1;
+		to {
+			stroke-dashoffset: 0;
 		}
-		80% {
-			opacity: 1;
+	}
+
+	@media (max-width: 800px) {
+		.desk {
+			display: none;
 		}
-		100% {
-			stroke-dashoffset: 0; /* Flows toward the end of the path */
-			opacity: 0;
+
+		.phone {
+			display: block;
+		}
+
+		.network {
+			opacity: 0.85;
+			-webkit-mask-image: linear-gradient(
+				to bottom,
+				transparent 0%,
+				#000 7%,
+				#000 16%,
+				rgba(0, 0, 0, 0.4) 26%,
+				rgba(0, 0, 0, 0.4) 58%,
+				#000 74%,
+				transparent 100%
+			);
+			mask-image: linear-gradient(
+				to bottom,
+				transparent 0%,
+				#000 7%,
+				#000 16%,
+				rgba(0, 0, 0, 0.4) 26%,
+				rgba(0, 0, 0, 0.4) 58%,
+				#000 74%,
+				transparent 100%
+			);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.mark {
+			display: none;
 		}
 	}
 </style>

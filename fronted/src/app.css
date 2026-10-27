@@ -6,6 +6,19 @@
 :root {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --axon-ink: #080a0f;
+  --axon-panel: #0e1118;
+  --axon-panel-raised: #141925;
+  --axon-paper: #f7f5ef;
+  --axon-line: rgba(148, 163, 184, 0.14);
+  --axon-text: #f2f4f8;
+  --axon-muted: #8b95a7;
+  --axon-blue: #78a9ff;
+  --axon-signal: #38d6b4;
+  --axon-focus: #9fc1ff;
+  --axon-radius-sm: 0.625rem;
+  --axon-radius-md: 0.875rem;
+  --axon-radius-lg: 1.25rem;
 }
 
 html, body {
@@ -31,6 +44,24 @@ body {
   overscroll-behavior-y: none;
 }
 
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(button, a, input, textarea, select):focus-visible {
+  outline: 2px solid var(--axon-focus);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: rgba(120, 169, 255, 0.3);
+  color: white;
+}
+
 /* Global transitions for specific UI elements instead of everything */
 .transition-theme {
   transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
@@ -43,3 +74,97 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+.axon-grid {
+  background-image:
+    linear-gradient(rgba(120, 169, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 169, 255, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.axon-signal-line {
+  background: linear-gradient(90deg, transparent, rgba(56, 214, 180, 0.75), transparent);
+}
+
+.axon-kicker {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Instrument language: mono readout labels, registration-mark corners, live dot. */
+.axon-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.axon-corners {
+  position: relative;
+}
+
+.axon-corners::before {
+  --c: rgba(255, 255, 255, 0.6);
+  --l: 10px;
+  content: '';
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--c), var(--c)) top left / var(--l) 1px,
+    linear-gradient(var(--c), var(--c)) top left / 1px var(--l),
+    linear-gradient(var(--c), var(--c)) top right / var(--l) 1px,
+    linear-gradient(var(--c), var(--c)) top right / 1px var(--l),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--l) 1px,
+    linear-gradient(var(--c), var(--c)) bottom left / 1px var(--l),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--l) 1px,
+    linear-gradient(var(--c), var(--c)) bottom right / 1px var(--l);
+  background-repeat: no-repeat;
+}
+
+html.light .axon-corners::before {
+  --c: rgba(0, 0, 0, 0.7);
+}
+
+.axon-live {
+  position: relative;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: currentColor;
+}
+
+.axon-live::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: axon-live 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes axon-live {
+  0% { transform: scale(1); opacity: 0.6; }
+  80%, 100% { transform: scale(3); opacity: 0; }
+}
+
+.axon-editorial-title {
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

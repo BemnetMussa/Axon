@@ -48,13 +48,15 @@
     <div 
         class="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-black/40"
         transition:fade={{ duration: 200 }}
-        onclick={close}
     >
+        <button type="button" class="absolute inset-0 cursor-default" onclick={close} aria-label="Close feedback dialog"></button>
         <!-- Modal -->
         <div 
             class={`relative w-full max-w-md overflow-hidden rounded-[2rem] border shadow-2xl transition-all ${theme === 'dark' ? 'border-white/10 bg-[#0B0F17]/95 text-white shadow-black/20' : 'border-zinc-200 bg-white/95 text-zinc-900 shadow-xl'}`}
             transition:fly={{ y: 20, duration: 300, delay: 100 }}
-            onclick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-title"
         >
             <div class="p-8">
                 <div class="flex items-center justify-between mb-8">
@@ -62,11 +64,13 @@
                         <div class={`flex h-10 w-10 items-center justify-center rounded-xl ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-black/10 text-black'}`}>
                             <Sparkles class="h-5 w-5" />
                         </div>
-                        <h2 class="text-xl font-bold">Feedback</h2>
+                        <h2 id="feedback-title" class="text-xl font-bold">Feedback</h2>
                     </div>
                     <button 
+                        type="button"
                         onclick={close}
                         class={`p-2 rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-white/5 text-zinc-400' : 'hover:bg-zinc-100 text-zinc-500'}`}
+                        aria-label="Close feedback dialog"
                     >
                         <X class="h-5 w-5" />
                     </button>
@@ -78,19 +82,22 @@
                             <Send class="h-8 w-8" />
                         </div>
                         <h3 class="text-lg font-bold mb-2">Thank you!</h3>
-                        <p class={`text-sm ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-600'}`}>Your feedback help us build the future of Axon.</p>
+                        <p class={`text-sm ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-600'}`}>Your feedback helps us build a better Axon.</p>
                     </div>
                 {:else}
                     <div class="space-y-6">
-                        <div>
-                            <label class={`block text-xs font-semibold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                        <fieldset>
+                            <legend class={`block text-xs font-semibold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
                                 Overall Rating
-                            </label>
+                            </legend>
                             <div class="flex gap-2">
                                 {#each [1, 2, 3, 4, 5] as star}
                                     <button 
+                                        type="button"
                                         onclick={() => rating = star}
                                         class={`group relative p-2 transition-transform hover:scale-110 active:scale-95`}
+                                        aria-label={`${star} out of 5 stars`}
+                                        aria-pressed={rating === star}
                                     >
                                         <Star 
                                             class={`h-8 w-8 transition-colors ${rating >= star ? 'fill-yellow-400 text-yellow-400' : theme === 'dark' ? 'text-zinc-700' : 'text-zinc-300'}`} 
@@ -98,14 +105,16 @@
                                     </button>
                                 {/each}
                             </div>
-                        </div>
+                        </fieldset>
 
                         <div>
-                            <label class={`block text-xs font-semibold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                            <label for="feedback-comment" class={`block text-xs font-semibold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
                                 Thoughts & Suggestions
                             </label>
                             <div class="relative">
                                 <textarea
+                                    id="feedback-comment"
+                                    name="feedback-comment"
                                     bind:value={comment}
                                     placeholder="Tell us what you think..."
                                     class={`w-full rounded-2xl border p-4 text-sm min-h-[120px] outline-none transition-all resize-none ${theme === 'dark' ? 'bg-[#0B0F17]/50 border-white/10 focus:border-white/30 text-white placeholder:text-zinc-600' : 'bg-zinc-50 border-zinc-200 focus:border-black/30 text-zinc-900 placeholder:text-zinc-400'}`}
@@ -115,10 +124,11 @@
                         </div>
 
                         {#if error}
-                            <p class="text-xs font-medium text-red-500">{error}</p>
+                            <p role="alert" class="text-xs font-medium text-red-500">{error}</p>
                         {/if}
 
                         <button 
+                            type="button"
                             onclick={handleSubmit}
                             disabled={submitting}
                             class={`w-full group inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 font-bold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-lg ${theme === 'dark' ? 'bg-black text-white hover:bg-zinc-800 shadow-black/10' : 'bg-white text-black hover:bg-zinc-200 shadow-black/20'}`}

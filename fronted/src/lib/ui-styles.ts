@@ -2,50 +2,48 @@ export type ThemeMode = 'dark' | 'light';
 
 /** Standard text input — same border/bg/focus language everywhere */
 export function inputClass(theme: ThemeMode) {
-	return `h-9 rounded-lg border px-3 text-[13px] outline-none transition-colors lg:h-10 lg:text-[14px] ${
+	return `h-10 rounded-md border px-3 text-[13px] outline-none transition-colors lg:h-9 ${
 		theme === 'dark'
-			? 'border-white/[0.06] bg-white/[0.03] text-white placeholder:text-zinc-600 focus:border-white/15'
-			: 'border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400'
+			? 'border-white/10 bg-white/[0.03] text-white placeholder:text-white/35 focus:border-white/50 focus:bg-white/[0.05]'
+			: 'border-black/10 bg-white text-black placeholder:text-black/35 focus:border-black/60'
 	}`;
 }
 
 /**
- * Square icon button — 40px touch target on mobile, 32px on desktop.
+ * Square icon button — 40px touch target on mobile, 36px on desktop.
  * tone='muted' = slightly more prominent bg fill (for secondary actions).
  */
 export function iconButtonClass(theme: ThemeMode, tone: 'default' | 'muted' = 'default') {
-	const base = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-all sm:h-8 sm:w-8 sm:rounded-md';
+	const base = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-md border transition-all sm:h-9 sm:w-9';
 	if (tone === 'muted') {
 		return `${base} ${
 			theme === 'dark'
-				? 'border-white/[0.06] bg-white/[0.03] text-zinc-400 hover:bg-white/[0.07] hover:text-zinc-200'
-				: 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'
+				? 'border-white/10 bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white'
+				: 'border-black/10 bg-black/[0.03] text-black/60 hover:bg-black/[0.06] hover:text-black'
 		}`;
 	}
 	return `${base} ${
 		theme === 'dark'
-			? 'border-white/[0.06] text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300'
-			: 'border-zinc-200 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'
+			? 'border-white/10 text-white/50 hover:bg-white/[0.06] hover:text-white'
+			: 'border-black/10 text-black/50 hover:bg-black/[0.04] hover:text-black'
 	}`;
 }
 
-/** Small inline pill/chip button in filter bars */
+/** Small inline chip button in filter bars */
 export function chipButtonClass(theme: ThemeMode, active = false) {
 	if (active) {
-		return theme === 'dark'
-			? 'rounded-md bg-white/[0.08] text-zinc-200 lg:text-[12px]'
-			: 'rounded-md bg-zinc-100 text-zinc-800 lg:text-[12px]';
+		return theme === 'dark' ? 'rounded-sm bg-white text-black' : 'rounded-sm bg-black text-white';
 	}
 	return theme === 'dark'
-		? 'rounded-md text-zinc-600 hover:text-zinc-400 lg:text-[12px]'
-		: 'rounded-md text-zinc-400 hover:text-zinc-600 lg:text-[12px]';
+		? 'rounded-sm text-white/45 hover:bg-white/[0.06] hover:text-white'
+		: 'rounded-sm text-black/45 hover:bg-black/[0.05] hover:text-black';
 }
 
 /** Floating card / dock panel */
 export function panelClass(theme: ThemeMode) {
-	return `rounded-xl border shadow-lg backdrop-blur-2xl ${
+	return `rounded-2xl border shadow-lg backdrop-blur-2xl ${
 		theme === 'dark'
-			? 'border-white/[0.08] bg-[#111]/90 shadow-[0_8px_32px_rgba(0,0,0,0.5)]'
+			? 'border-white/[0.09] bg-[#0e1118]/95 shadow-[0_12px_40px_rgba(0,0,0,0.55)]'
 			: 'border-zinc-200 bg-white/95 shadow-[0_4px_24px_rgba(0,0,0,0.08)]'
 	}`;
 }

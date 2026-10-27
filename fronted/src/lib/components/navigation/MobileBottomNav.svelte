@@ -25,14 +25,16 @@
 	let overflowTabs = $derived(items.filter(i => i.id !== null && i.id !== 'Trending'));
 
 	function navBg() {
-		return dark
-			? 'border-white/[0.06] bg-[#0b0b0b]/92 shadow-[0_-1px_0_rgba(255,255,255,0.04)]'
-			: 'border-zinc-200 bg-white/92 shadow-[0_-1px_0_rgba(0,0,0,0.04)]';
+		return dark ? 'border-white/10 bg-[#0a0a0a]/95' : 'border-black/10 bg-[#fafafa]/95';
 	}
 
 	function tabColor(active: boolean) {
 		if (active) return dark ? 'text-white' : 'text-black';
-		return dark ? 'text-zinc-500' : 'text-zinc-400';
+		return dark ? 'text-white/40' : 'text-black/40';
+	}
+
+	function marker(active: boolean) {
+		return active ? (dark ? 'bg-white' : 'bg-black') : 'bg-transparent';
 	}
 </script>
 
@@ -45,8 +47,8 @@
 		onclick={() => (showMenu = false)}
 	></div>
 	<div
-		class={`fixed inset-x-0 z-[52] max-h-[min(85vh,calc(100dvh-5rem))] overflow-y-auto rounded-t-2xl px-3 pt-4 lg:hidden ${dark ? 'bg-[#111]' : 'bg-white'}`}
-		style="bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)); padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));"
+		class={`fixed inset-x-0 z-[52] max-h-[min(85vh,calc(100dvh-5rem))] overflow-y-auto border-t px-3 pt-4 lg:hidden ${dark ? 'border-white/10 bg-[#0a0a0a]' : 'border-black/10 bg-[#fafafa]'}`}
+		style="bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px)); padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));"
 	>
 		<div class="mb-3 flex items-center justify-between px-1">
 			<h3 class={`text-sm font-bold ${dark ? 'text-white' : 'text-black'}`}>Explore</h3>
@@ -107,43 +109,33 @@
 
 <!-- Bottom nav bar -->
 <nav
-	class={`fixed inset-x-2 bottom-2 z-40 flex items-stretch justify-around rounded-2xl border backdrop-blur-2xl lg:hidden ${navBg()}`}
+	class={`fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t backdrop-blur-md lg:hidden ${navBg()}`}
 	style="padding-bottom: env(safe-area-inset-bottom, 0px);"
 >
 	{#each mainTabs as item}
-		<button
-			onclick={() => onNavigate(item.id)}
-			class={`flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-3.5 transition-colors ${tabColor(activeCategory === item.id && !showSavedOnly && !showDigestView)}`}
-		>
-			<item.icon class="h-[22px] w-[22px] shrink-0" />
-			<span class="truncate text-[10px] font-bold leading-none">{item.label}</span>
+		{@const active = activeCategory === item.id && !showSavedOnly && !showDigestView}
+		<button onclick={() => onNavigate(item.id)} class={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors ${tabColor(active)}`}>
+			<span class={`absolute top-0 h-[2px] w-8 ${marker(active)}`}></span>
+			<item.icon class="h-5 w-5 shrink-0" />
+			<span class="axon-label truncate !text-[9px] leading-none">{item.label}</span>
 		</button>
 	{/each}
 
-	<!-- Saved -->
-	<button
-		onclick={onShowSaved}
-		class={`flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-3.5 transition-colors ${tabColor(showSavedOnly)}`}
-	>
-		<Zap class={`h-[22px] w-[22px] shrink-0 ${showSavedOnly ? (dark ? 'fill-white' : 'fill-black') : ''}`} />
-		<span class="truncate text-[10px] font-bold leading-none">Saved</span>
+	<button onclick={onShowSaved} class={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors ${tabColor(showSavedOnly)}`}>
+		<span class={`absolute top-0 h-[2px] w-8 ${marker(showSavedOnly)}`}></span>
+		<Zap class={`h-5 w-5 shrink-0 ${showSavedOnly ? 'fill-current' : ''}`} />
+		<span class="axon-label truncate !text-[9px] leading-none">Saved</span>
 	</button>
 
-	<!-- Digest -->
-	<button
-		onclick={onShowDigest}
-		class={`flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-3.5 transition-colors ${tabColor(showDigestView)}`}
-	>
-		<Sparkles class="h-[22px] w-[22px] shrink-0" />
-		<span class="truncate text-[10px] font-bold leading-none">Weekly Digest</span>
+	<button onclick={onShowDigest} class={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors ${tabColor(showDigestView)}`}>
+		<span class={`absolute top-0 h-[2px] w-8 ${marker(showDigestView)}`}></span>
+		<Sparkles class="h-5 w-5 shrink-0" />
+		<span class="axon-label truncate !text-[9px] leading-none">Digest</span>
 	</button>
 
-	<!-- More -->
-	<button
-		onclick={() => (showMenu = true)}
-		class={`flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-3.5 transition-colors ${tabColor(showMenu)}`}
-	>
-		<Menu class="h-[22px] w-[22px] shrink-0" />
-		<span class="truncate text-[10px] font-bold leading-none">More</span>
+	<button onclick={() => (showMenu = true)} class={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors ${tabColor(showMenu)}`}>
+		<span class={`absolute top-0 h-[2px] w-8 ${marker(showMenu)}`}></span>
+		<Menu class="h-5 w-5 shrink-0" />
+		<span class="axon-label truncate !text-[9px] leading-none">More</span>
 	</button>
 </nav>
