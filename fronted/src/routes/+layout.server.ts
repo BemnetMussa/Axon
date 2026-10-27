@@ -8,6 +8,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	if (path.startsWith('/api/auth')) return { user: locals.user, session: locals.session };
 	const isPublic = publicPaths.has(path);
 
+	if (!locals.user && path === '/app') {
+		throw redirect(302, '/');
+	}
+
 	if (!locals.user && !isPublic) {
 		const dest = path === '/' ? '' : `${path}${url.search}`;
 		throw redirect(302, `/login?redirectTo=${encodeURIComponent(dest || '/')}`);
