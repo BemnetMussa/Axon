@@ -23,12 +23,12 @@
 	const TEASER_QUESTION = 'What can I build or do with this?';
 
 	function cardClass() {
-		if (selected && dark) return 'border-[#78a9ff]/30 bg-[#78a9ff]/[0.07] shadow-[0_0_0_1px_rgba(120,169,255,0.08)]';
+		if (selected && dark) return 'border-white/20 bg-white/[0.06]';
 		if (selected && !dark) return 'border-zinc-300 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.08)]';
-		if (isNew && dark) return 'border-[#38d6b4]/20 bg-[#38d6b4]/[0.035]';
+		if (isNew && dark) return 'border-white/[0.14] bg-white/[0.045]';
 		if (isNew && !dark) return 'border-zinc-200 bg-white';
 		if (isRead) return dark ? 'border-transparent opacity-60 hover:opacity-90 hover:bg-white/[0.025]' : 'border-transparent opacity-60 hover:opacity-90 hover:bg-zinc-50';
-		if (dark) return 'border-white/[0.045] bg-[#0d1017] hover:border-white/[0.09] hover:bg-[#111620]';
+		if (dark) return 'border-white/[0.07] bg-white/[0.02] hover:border-white/[0.14] hover:bg-white/[0.035]';
 		return 'border-zinc-200/70 bg-white hover:border-zinc-300 hover:bg-zinc-50/60';
 	}
 
@@ -94,8 +94,8 @@
 			onclick={handleChatTeaser}
 			class={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all ${
 				dark
-					? 'border-[#78a9ff]/20 bg-[#78a9ff]/[0.06] text-[#a9c5ff] hover:border-[#78a9ff]/40 hover:bg-[#78a9ff]/[0.1]'
-					: 'border-blue-100 bg-blue-50 text-blue-700 hover:border-blue-200'
+					? 'border-white/10 bg-white/[0.04] text-zinc-200 hover:border-white/25 hover:bg-white/[0.08] hover:text-white'
+					: 'border-black/10 bg-black/[0.03] text-zinc-800 hover:border-black/25 hover:text-black'
 			}`}
 			aria-label="Ask Axon AI about this article"
 		>

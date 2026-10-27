@@ -37,38 +37,42 @@
 		pulse?.running_since ? new Date(pulse.running_since).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null
 	);
 
-	let steps = $derived([
-		{
-			n: '01',
-			name: 'Sweep',
-			body: `All ${sourceCount} sources are fetched at once${interval ? `, every ${interval} hours` : ''}: lab blogs, new ArXiv papers, GitHub repos created this month, Hacker News, Lobsters, Product Hunt and a few news desks.`,
-			stat: pulse?.last_sweep_at ? `Last sweep: ${pulse.last_scanned} candidates` : 'About 150 candidates a sweep'
-		},
-		{
-			n: '02',
-			name: 'Cut',
-			body: 'Junk rules run before anything else. Content farms (Medium, dev.to, LinkedIn) and fluff titles (tutorials, roadmaps, career posts, awesome lists) are dropped. A high star count does not buy an exception.',
-			stat: 'Rules run first'
-		},
+	let keptTotal = $derived(pulse?.kept_total ?? null);
+	const fmt = (n: number) => n.toLocaleString('en-US');
+
+	const checks = [
+		{ n: '01', name: 'New', rule: 'The link is not already in the feed.' },
+		{ n: '02', name: 'Recent', rule: 'Published in the last 30 days.' },
 		{
 			n: '03',
-			name: 'Collapse',
-			body: 'When two sources carry the same story, their titles overlap. Above 60% overlap, only the higher-scored copy survives. Anything already in the feed is skipped.',
-			stat: 'One story, one card'
+			name: 'Not junk',
+			rule: 'Not from a content farm (Medium, dev.to, LinkedIn) and no fluff in the title: tutorials, roadmaps, career posts, awesome-lists. A high star count does not buy an exception.'
 		},
 		{
 			n: '04',
-			name: 'Rank',
-			body: 'Each candidate gets one score from traction, freshness and source trust (formula below). No source can take more than eight slots in a sweep, so one loud feed cannot drown the rest.',
-			stat: 'Max 8 per source'
+			name: 'Not a repeat',
+			rule: 'Two titles from different sources that share 60% or more of their key words are one story. The list is sorted, so the higher-scored copy is already in.'
+		},
+		{ n: '05', name: 'Under quota', rule: 'At most 8 stories per source and 100 per sweep, so one loud source cannot fill the feed.' }
+	];
+
+	const terms = [
+		{
+			sym: 'e',
+			name: 'Traction',
+			body: 'Points, stars or votes, divided by the highest in the same source that sweep, so it runs from 0 to 1. That puts 300 Hacker News points and 3,000 GitHub stars on one scale.'
 		},
 		{
-			n: '05',
-			name: 'Brief',
-			body: 'Survivors get their full text fetched and a brief written from it, then indexed by meaning so search finds ideas, not just keywords. The chat on each story reads that article only.',
-			stat: pulse?.last_sweep_at ? `Last sweep: ${pulse.last_kept} kept` : 'Up to 100 kept a sweep'
+			sym: 'r',
+			name: 'Freshness',
+			body: 'Decays exponentially with age on a 72-hour scale. A story one day old scores 0.72, three days 0.37, a week 0.10.'
+		},
+		{
+			sym: 'w',
+			name: 'Trust',
+			body: 'A fixed weight per source, from 0.9 for news rewrites to 1.6 for OpenAI and Anthropic. Lab blogs carry no votes, so they rank on freshness and trust.'
 		}
-	]);
+	];
 
 	const cut = [
 		{ title: '15 prompts that will 10x your productivity', why: 'Listicle' },
@@ -92,6 +96,33 @@
 		{ ch: '04', name: 'AI labs', what: 'OpenAI, Anthropic, DeepMind, Google AI, Google Research, Hugging Face, NVIDIA, Together AI' },
 		{ ch: '05', name: 'People', what: 'Simon Willison. Only voices that post often and stay fresh' },
 		{ ch: '06', name: 'Launches & news', what: 'Product Hunt, Lobsters, TechCrunch, The Verge, Ars Technica' }
+	];
+
+	const footerNav = [
+		{
+			title: 'Product',
+			links: [
+				{ label: 'Open the feed', href: '/signup' },
+				{ label: 'Sign in', href: '/login' },
+				{ label: 'What you get', href: '#features' }
+			]
+		},
+		{
+			title: 'How it works',
+			links: [
+				{ label: 'The filter', href: '#filter' },
+				{ label: 'What gets cut', href: '#ledger' },
+				{ label: 'Where we listen', href: '#channels' }
+			]
+		},
+		{
+			title: 'Project',
+			links: [
+				{ label: 'Source on GitHub', href: 'https://github.com/BemnetMussa/Axon', external: true },
+				{ label: 'Privacy', href: '/privacy' },
+				{ label: 'Terms', href: '/terms' }
+			]
+		}
 	];
 
 	function scrollTo(id: string) {
@@ -161,8 +192,8 @@
 
 		<div use:reveal={{ delay: 140 }} class="mt-8 grid gap-8 sm:mt-10 lg:grid-cols-[1fr_auto] lg:items-end">
 			<p class="max-w-xl text-lg leading-relaxed text-black/65 dark:text-white/60">
-				Axon reads the labs, the papers, GitHub and Hacker News around the clock. A filter we built drops the reposts,
-				listicles and hype, and keeps what actually moved. You read what is left.
+				Axon reads the labs, the papers, GitHub and Hacker News {interval ? `every ${interval} hours` : 'on a schedule'}. A filter we built drops the
+				reposts, listicles and hype, and keeps what actually moved. You read what is left.
 			</p>
 			<div class="flex flex-col gap-3 sm:flex-row">
 				<a href="/signup" class="group inline-flex h-12 items-center justify-center gap-2 bg-black px-6 text-sm font-medium text-white transition-colors hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/85">
@@ -185,48 +216,64 @@
 
 	<!-- How the filter works -->
 	<section id="filter" class="mx-auto w-full max-w-7xl scroll-mt-20 px-5 pt-28 sm:px-8 sm:pt-36">
-		<div use:reveal class="mb-12 grid gap-4 lg:grid-cols-[280px_1fr]">
+		<div use:reveal class="grid gap-4 lg:grid-cols-[280px_1fr]">
 			<p class="axon-label pt-2 text-black/45 dark:text-white/40">The filter</p>
-			<h2 class="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">
-				Five steps between the internet and your feed.
-			</h2>
+			<div>
+				<h2 class="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">One score, then five checks.</h2>
+				<p class="mt-6 max-w-2xl text-lg leading-relaxed text-black/65 dark:text-white/60">
+					{interval ? `Every ${interval} hours` : 'On each sweep'}, Axon fetches all {sourceCount} sources at once and scores every candidate.
+					It sorts the list, then walks down it and admits a story only if it passes all five checks. It stops at 100 or when the list runs out.
+				</p>
+				{#if pulse?.last_sweep_at}
+					<p class="axon-label mt-6 flex items-center gap-2 text-black/60 dark:text-white/55">
+						<span class="axon-live text-black dark:text-white"></span>
+						Last sweep: {fmt(pulse.last_scanned)} scored, {fmt(pulse.last_kept)} admitted
+					</p>
+				{/if}
+			</div>
 		</div>
 
-		<ol class="grid border-t border-black/10 sm:grid-cols-2 lg:grid-cols-5 dark:border-white/10">
-			{#each steps as step, i}
-				<li use:reveal={{ delay: i * 60 }} class="flex flex-col border-b border-black/10 py-6 sm:pr-6 lg:border-b-0 lg:border-r lg:px-5 lg:py-8 lg:first:pl-0 lg:last:border-r-0 dark:border-white/10">
-					<div class="flex items-baseline justify-between">
-						<span class="axon-label text-black/40 dark:text-white/35">{step.n}</span>
-						<span class="h-px flex-1 translate-y-[-3px] bg-black/10 mx-3 lg:hidden dark:bg-white/10"></span>
-					</div>
-					<h3 class="mt-4 text-xl font-semibold tracking-tight">{step.name}</h3>
-					<p class="mt-3 flex-1 text-[15px] leading-relaxed text-black/60 dark:text-white/55">{step.body}</p>
-					<p class="axon-label mt-6 border-t border-black/10 pt-3 text-black/70 dark:border-white/10 dark:text-white/65">{step.stat}</p>
-				</li>
-			{/each}
-		</ol>
-
-		<div use:reveal class="mt-16 grid gap-10 lg:grid-cols-[280px_1fr]">
-			<p class="axon-label pt-2 text-black/45 dark:text-white/40">The score</p>
+		<!-- 1 · Score -->
+		<div use:reveal class="mt-16 grid gap-6 border-t border-black/10 pt-10 lg:grid-cols-[280px_1fr] dark:border-white/10">
+			<p class="axon-label text-black/45 dark:text-white/40"><span class="text-black dark:text-white">1</span> · Score</p>
 			<div>
-				<p class="font-mono text-lg tracking-tight sm:text-2xl">
-					score = trust <span class="text-black/35 dark:text-white/35">×</span> (0.55 <span class="text-black/35 dark:text-white/35">×</span> traction + 0.45 <span class="text-black/35 dark:text-white/35">×</span> freshness)
+				<p class="font-mono text-xl tracking-tight sm:text-3xl">
+					score = <i class="font-serif text-[1.1em]">w</i><span class="text-black/35 dark:text-white/35">·</span>(0.55<span class="text-black/35 dark:text-white/35">·</span><i class="font-serif text-[1.1em]">e</i> + 0.45<span class="text-black/35 dark:text-white/35">·</span><i class="font-serif text-[1.1em]">r</i>)
 				</p>
-				<dl class="mt-8 grid border-t border-black/10 sm:grid-cols-3 dark:border-white/10">
-					<div class="border-b border-black/10 py-5 sm:border-b-0 sm:border-r sm:pr-6 dark:border-white/10">
-						<dt class="text-[15px] font-semibold">Traction</dt>
-						<dd class="mt-2 text-[15px] leading-relaxed text-black/60 dark:text-white/55">Points, stars or votes, compared only against the same source in the same sweep. So 300 Hacker News points and 3,000 GitHub stars can be ranked fairly.</dd>
-					</div>
-					<div class="border-b border-black/10 py-5 sm:border-b-0 sm:border-r sm:px-6 dark:border-white/10">
-						<dt class="text-[15px] font-semibold">Freshness</dt>
-						<dd class="mt-2 text-[15px] leading-relaxed text-black/60 dark:text-white/55">Decays over about three days. A story from this morning beats the same story from last week.</dd>
-					</div>
-					<div class="py-5 sm:pl-6">
-						<dt class="text-[15px] font-semibold">Trust</dt>
-						<dd class="mt-2 text-[15px] leading-relaxed text-black/60 dark:text-white/55">Primary sources (labs and papers) weigh more than aggregators, and aggregators more than news rewrites. Blogs with no vote count lean on freshness and trust.</dd>
-					</div>
+				<dl class="mt-8 grid gap-px overflow-hidden border border-black/10 bg-black/10 sm:grid-cols-3 dark:border-white/10 dark:bg-white/10">
+					{#each terms as t}
+						<div class="bg-[#fafafa] p-5 dark:bg-[#0a0a0a]">
+							<dt class="flex items-baseline gap-3">
+								<i class="font-serif text-xl">{t.sym}</i>
+								<span class="text-[15px] font-semibold">{t.name}</span>
+							</dt>
+							<dd class="mt-2 text-[15px] leading-relaxed text-black/60 dark:text-white/55">{t.body}</dd>
+						</div>
+					{/each}
 				</dl>
 			</div>
+		</div>
+
+		<!-- 2 · Admit -->
+		<div use:reveal class="mt-14 grid gap-6 border-t border-black/10 pt-10 lg:grid-cols-[280px_1fr] dark:border-white/10">
+			<p class="axon-label text-black/45 dark:text-white/40"><span class="text-black dark:text-white">2</span> · Admit, in order</p>
+			<ol class="border-t border-black/10 dark:border-white/10">
+				{#each checks as c, i}
+					<li use:reveal={{ delay: i * 40 }} class="grid grid-cols-[40px_1fr] gap-x-4 gap-y-1 border-b border-black/10 py-4 sm:grid-cols-[48px_180px_1fr] dark:border-white/10">
+						<span class="axon-label pt-1 text-black/40 dark:text-white/35">{c.n}</span>
+						<span class="text-[15px] font-semibold">{c.name}</span>
+						<span class="col-start-2 text-[15px] leading-relaxed text-black/60 sm:col-start-auto dark:text-white/55">{c.rule}</span>
+					</li>
+				{/each}
+			</ol>
+		</div>
+
+		<!-- 3 · Brief -->
+		<div use:reveal class="mt-14 grid gap-6 border-t border-black/10 pt-10 lg:grid-cols-[280px_1fr] dark:border-white/10">
+			<p class="axon-label text-black/45 dark:text-white/40"><span class="text-black dark:text-white">3</span> · Brief</p>
+			<p class="max-w-2xl text-[15px] leading-relaxed text-black/60 dark:text-white/55">
+				Each admitted story has its full text fetched and a brief written from it. The chat on a story answers from that article only.
+			</p>
 		</div>
 	</section>
 
@@ -276,7 +323,7 @@
 	</section>
 
 	<!-- Channels -->
-	<section class="mx-auto w-full max-w-7xl px-5 pt-28 sm:px-8 sm:pt-36">
+	<section id="channels" class="mx-auto w-full max-w-7xl scroll-mt-20 px-5 pt-28 sm:px-8 sm:pt-36">
 		<div use:reveal class="mb-12 grid gap-4 lg:grid-cols-[280px_1fr]">
 			<p class="axon-label pt-2 text-black/45 dark:text-white/40">Channels</p>
 			<h2 class="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">Where we listen.</h2>
@@ -306,35 +353,102 @@
 	</section>
 
 	<!-- CTA -->
-	<section class="mx-auto w-full max-w-7xl px-5 py-28 sm:px-8 sm:py-36">
-		<div use:reveal class="axon-corners border border-black/10 px-6 py-14 text-center sm:py-20 dark:border-white/10">
-			<p class="axon-label flex items-center justify-center gap-2 text-black/50 dark:text-white/45">
-				<span class="axon-live text-black dark:text-white"></span>
-				Last sweep {lastAgo}{nextIn ? ` · next ${nextIn}` : ''}
-			</p>
-			<h2 class="mx-auto mt-6 max-w-2xl text-4xl font-semibold leading-tight tracking-[-0.04em] sm:text-6xl">The filter is already running.</h2>
-			<a href="/signup" class="group mt-10 inline-flex h-12 items-center justify-center gap-2 bg-black px-7 text-sm font-medium text-white transition-colors hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/85">
-				Open the feed
-				<ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-			</a>
-			<p class="mt-4 text-sm text-black/45 dark:text-white/40">Free. No credit card.</p>
+	<section class="mx-auto w-full max-w-7xl px-5 pb-28 pt-28 sm:px-8 sm:pb-36 sm:pt-36">
+		<div use:reveal class="axon-corners grid border border-black/10 lg:grid-cols-[1.25fr_1fr] dark:border-white/10">
+			<div class="flex flex-col justify-between gap-12 px-6 py-12 sm:px-12 sm:py-16">
+				<div>
+					<p class="axon-label flex items-center gap-2 text-black dark:text-white">
+						<span class="axon-live"></span>Filter running
+					</p>
+					<h2 class="mt-6 max-w-lg text-4xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-6xl">
+						Read what made it through.
+					</h2>
+					<p class="mt-5 max-w-md text-[15px] leading-relaxed text-black/60 dark:text-white/55">
+						The next sweep is already on the clock. Sign up and the feed is there, already sorted.
+					</p>
+				</div>
+				<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+					<a href="/signup" class="group inline-flex h-12 items-center justify-center gap-2 bg-black px-7 text-sm font-medium text-white transition-colors hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/85">
+						Open the feed
+						<ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+					</a>
+					<a href="/login" class="inline-flex h-12 items-center justify-center border border-black/20 px-6 text-sm text-black/70 transition-colors hover:border-black hover:text-black dark:border-white/20 dark:text-white/70 dark:hover:border-white dark:hover:text-white">
+						Sign in
+					</a>
+					<span class="axon-label text-black/45 sm:ml-3 dark:text-white/40">Free · No card</span>
+				</div>
+			</div>
+
+			<dl class="grid grid-cols-2 border-t border-black/10 lg:border-l lg:border-t-0 dark:border-white/10">
+				<div class="border-b border-r border-black/10 p-6 sm:p-8 dark:border-white/10">
+					<dt class="axon-label text-black/45 dark:text-white/40">Last sweep</dt>
+					<dd class="mt-3 text-2xl font-medium tracking-tight tabular-nums sm:text-3xl">
+						{#if pulse?.last_sweep_at}{fmt(pulse.last_scanned)}<span class="mx-2 text-black/30 dark:text-white/30">→</span>{fmt(pulse.last_kept)}{:else}—{/if}
+					</dd>
+					<dd class="axon-label mt-2 text-black/40 dark:text-white/35">{pulse?.last_sweep_at ? `In → kept · ${lastAgo}` : ' '}</dd>
+				</div>
+				<div class="border-b border-black/10 p-6 sm:p-8 dark:border-white/10">
+					<dt class="axon-label text-black/45 dark:text-white/40">Next sweep</dt>
+					<dd class="mt-3 text-2xl font-medium tracking-tight tabular-nums sm:text-3xl">{nextIn ?? '—'}</dd>
+					<dd class="axon-label mt-2 text-black/40 dark:text-white/35">{interval ? `Every ${interval} hours` : ' '}</dd>
+				</div>
+				<div class="border-r border-black/10 p-6 sm:p-8 dark:border-white/10">
+					<dt class="axon-label text-black/45 dark:text-white/40">Kept so far</dt>
+					<dd class="mt-3 text-2xl font-medium tracking-tight tabular-nums sm:text-3xl">{keptTotal ? fmt(keptTotal) : '—'}</dd>
+					<dd class="axon-label mt-2 text-black/40 dark:text-white/35">{since ? `Since ${since}` : ' '}</dd>
+				</div>
+				<div class="p-6 sm:p-8">
+					<dt class="axon-label text-black/45 dark:text-white/40">Sources</dt>
+					<dd class="mt-3 text-2xl font-medium tracking-tight tabular-nums sm:text-3xl">{sourceCount}</dd>
+					<dd class="axon-label mt-2 text-black/40 dark:text-white/35">Labs · papers · code · forums</dd>
+				</div>
+			</dl>
 		</div>
 	</section>
 
 	<footer class="border-t border-black/10 dark:border-white/10">
-		<div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-			<div class="flex items-center gap-2.5">
-				<span class="flex h-6 w-6 items-center justify-center bg-black text-white dark:bg-white dark:text-black">
-					<Zap class="h-3 w-3 fill-current" />
-				</span>
-				<span class="axon-label text-black/50 dark:text-white/45">Axon · © 2026 Bemnet Mussa</span>
+		<div class="mx-auto grid w-full max-w-7xl gap-12 px-5 py-14 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+			<div class="sm:col-span-2 lg:col-span-1">
+				<a href="/" class="flex items-center gap-2.5">
+					<span class="flex h-7 w-7 items-center justify-center bg-black text-white dark:bg-white dark:text-black">
+						<Zap class="h-3.5 w-3.5 fill-current" />
+					</span>
+					<span class="text-[13px] font-semibold uppercase tracking-[0.24em]">Axon</span>
+				</a>
+				<p class="mt-5 max-w-xs text-[15px] leading-relaxed text-black/55 dark:text-white/50">
+					Everything is scanned. Little gets through. A filtered feed of what is moving in AI.
+				</p>
+				<p class="axon-label mt-6 flex items-center gap-2 text-black/60 dark:text-white/55">
+					<span class="axon-live text-black dark:text-white"></span>
+					Last sweep {lastAgo}{nextIn ? ` · next ${nextIn}` : ''}
+				</p>
 			</div>
-			<nav class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-black/50 dark:text-white/45">
-				<a href="/privacy" class="hover:text-black dark:hover:text-white">Privacy</a>
-				<a href="/terms" class="hover:text-black dark:hover:text-white">Terms</a>
-				<a href="/login" class="hover:text-black dark:hover:text-white">Sign in</a>
-				<a href="/signup" class="hover:text-black dark:hover:text-white">Open the feed</a>
-			</nav>
+
+			{#each footerNav as group}
+				<nav aria-label={group.title}>
+					<p class="axon-label text-black/40 dark:text-white/35">{group.title}</p>
+					<ul class="mt-5 space-y-3 text-[15px]">
+						{#each group.links as link}
+							<li>
+								<a
+									href={link.href}
+									target={link.external ? '_blank' : undefined}
+									rel={link.external ? 'noopener noreferrer' : undefined}
+									onclick={link.href.startsWith('#') ? scrollTo(link.href.slice(1)) : undefined}
+									class="text-black/60 transition-colors hover:text-black dark:text-white/55 dark:hover:text-white"
+								>{link.label}{link.external ? ' ↗' : ''}</a>
+							</li>
+						{/each}
+					</ul>
+				</nav>
+			{/each}
+		</div>
+
+		<div class="border-t border-black/10 dark:border-white/10">
+			<div class="axon-label mx-auto flex w-full max-w-7xl flex-col gap-2 px-5 py-5 text-black/40 sm:flex-row sm:items-center sm:justify-between sm:px-8 dark:text-white/35">
+				<span>© 2026 Bemnet Mussa</span>
+				<span class="tabular-nums">{sourceCount} sources{interval ? ` · every ${interval}h` : ''} · {clock || '--:--:--'} UTC</span>
+			</div>
 		</div>
 	</footer>
 </div>

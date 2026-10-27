@@ -43,7 +43,7 @@ export function chipButtonClass(theme: ThemeMode, active = false) {
 export function panelClass(theme: ThemeMode) {
 	return `rounded-2xl border shadow-lg backdrop-blur-2xl ${
 		theme === 'dark'
-			? 'border-white/[0.09] bg-[#0e1118]/95 shadow-[0_12px_40px_rgba(0,0,0,0.55)]'
+			? 'border-white/[0.09] bg-[#111]/95 shadow-[0_12px_40px_rgba(0,0,0,0.55)]'
 			: 'border-zinc-200 bg-white/95 shadow-[0_4px_24px_rgba(0,0,0,0.08)]'
 	}`;
 }

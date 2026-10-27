@@ -105,7 +105,7 @@
 
 		<!-- The Interaction (Right Panel) -->
 		<section class="axon-grid relative flex flex-col items-center justify-center overflow-hidden px-6 py-12 sm:px-12 lg:px-20">
-			<div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(56,214,180,0.09),transparent_38%)]"></div>
+			<div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(255,255,255,0.05),transparent_38%)]"></div>
 			<div class="relative z-10 w-full max-w-[380px]">
 				
 				<!-- Mobile Logo -->

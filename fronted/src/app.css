@@ -5,18 +5,9 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --axon-ink: #080a0f;
-  --axon-panel: #0e1118;
-  --axon-panel-raised: #141925;
-  --axon-paper: #f7f5ef;
-  --axon-line: rgba(148, 163, 184, 0.14);
-  --axon-text: #f2f4f8;
-  --axon-muted: #8b95a7;
-  --axon-blue: #78a9ff;
-  --axon-signal: #38d6b4;
-  --axon-focus: #9fc1ff;
+  --font-sans: 'Geist Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --axon-focus: #a3a3a3;
   --axon-radius-sm: 0.625rem;
   --axon-radius-md: 0.875rem;
   --axon-radius-lg: 1.25rem;
@@ -59,8 +50,12 @@ select {
 }
 
 ::selection {
-  background: rgba(120, 169, 255, 0.3);
-  color: white;
+  background: rgba(255, 255, 255, 0.85);
+  color: #0a0a0a;
+}
+html.light ::selection {
+  background: rgba(10, 10, 10, 0.85);
+  color: #fafafa;
 }
 
 /* Global transitions for specific UI elements instead of everything */
@@ -78,13 +73,18 @@ select {
 
 .axon-grid {
   background-image:
-    linear-gradient(rgba(120, 169, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(120, 169, 255, 0.045) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 48px 48px;
+}
+html.light .axon-grid {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
 }
 
 .axon-signal-line {
-  background: linear-gradient(90deg, transparent, rgba(56, 214, 180, 0.75), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
 }
 
 .axon-kicker {

@@ -77,10 +77,10 @@
 </script>
 
 <section
-	class={`relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${dark ? 'bg-[#0b0e14]' : 'bg-[#fffefa]'}`}
+	class={`relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${dark ? 'bg-[#0a0a0a]' : 'bg-white'}`}
 	transition:fly={{ x: 60, duration: 300, opacity: 0 }}
 >
-	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2.5 sm:gap-3 sm:px-5 ${dark ? 'border-white/[0.06] bg-[#0e1118]' : 'border-zinc-200 bg-white'}`}>
+	<header class={`flex items-center justify-between gap-2 border-b px-3 py-2.5 sm:gap-3 sm:px-5 ${dark ? 'border-white/10 bg-[#0a0a0a]' : 'border-black/10 bg-white'}`}>
 		<button
 			onclick={onBack}
 			class={`flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 transition-colors sm:gap-2 sm:px-2 ${dark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-black'}`}
@@ -127,7 +127,7 @@
 
 			<button
 				onclick={() => onOpenExternal(article.url)}
-				class={`${iconButtonClass(theme, 'muted')} sm:w-auto sm:gap-1.5 sm:px-3 ${dark ? 'hover:border-[#78a9ff]/30 hover:text-[#a9c5ff]' : 'hover:border-blue-200 hover:text-blue-700'}`}
+				class={`${iconButtonClass(theme, 'muted')} sm:w-auto sm:gap-1.5 sm:px-3 ${dark ? 'hover:border-white/30 hover:text-white' : 'hover:border-black/30 hover:text-black'}`}
 				aria-label="Open original article"
 			>
 				<ExternalLink class="h-3.5 w-3.5" />
@@ -146,10 +146,10 @@
 				<span class="sm:hidden" style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
 			</div>
 
-			<h2 class={`axon-editorial-title mb-7 text-[29px] font-bold leading-[1.08] sm:text-[38px] lg:text-[42px] ${dark ? 'text-[#f4f6fa]' : 'text-zinc-950'}`}>{article.title}</h2>
+			<h2 class={`axon-editorial-title mb-7 text-[29px] font-bold leading-[1.08] sm:text-[38px] lg:text-[42px] ${dark ? 'text-white' : 'text-zinc-950'}`}>{article.title}</h2>
 
 			{#if dark}
-				<div class="prose prose-invert max-w-none text-[15px] leading-8 text-[#c5cad3] sm:text-[16px] sm:leading-9 prose-headings:tracking-tight prose-strong:text-white">
+				<div class="prose prose-invert max-w-none text-[15px] leading-8 text-zinc-300 sm:text-[16px] sm:leading-9 prose-headings:tracking-tight prose-strong:text-white">
 					{@html renderMarkdown(article.insight || article.content_snippet)}
 				</div>
 			{:else}
@@ -158,9 +158,9 @@
 				</div>
 			{/if}
 
-			<div class={`mt-10 rounded-2xl border p-4 sm:p-5 ${dark ? 'border-[#78a9ff]/15 bg-[#78a9ff]/[0.035]' : 'border-blue-100 bg-blue-50/45'}`}>
+			<div class={`mt-10 rounded-2xl border p-4 sm:p-5 ${dark ? 'border-white/10 bg-white/[0.02]' : 'border-black/10 bg-black/[0.015]'}`}>
 				<div class="mb-4 flex items-center justify-between">
-					<p class={`font-mono text-[10px] font-semibold uppercase tracking-[0.14em] ${dark ? 'text-[#9fbdff]' : 'text-blue-700'}`}>Ask Axon</p>
+					<p class={`font-mono text-[10px] font-semibold uppercase tracking-[0.14em] ${dark ? 'text-white' : 'text-black'}`}>Ask Axon</p>
 					<span class={`text-[10px] ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>About this article</span>
 				</div>
 

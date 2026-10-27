@@ -88,7 +88,7 @@
 				</div>
 
 				<div class="max-w-md">
-					<p class="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-zinc-500 dark:text-blue-400/90">
+					<p class="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-zinc-500">
 						The feed
 					</p>
 					<h2 class="text-3xl font-medium tracking-tight text-zinc-900 dark:text-white mb-4">
@@ -103,7 +103,7 @@
 
 		<!-- The Interaction (Right Panel) -->
 		<section class="axon-grid relative flex flex-col items-center justify-center overflow-hidden px-6 py-12 sm:px-12 lg:px-20">
-			<div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(120,169,255,0.10),transparent_38%)]"></div>
+			<div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(255,255,255,0.05),transparent_38%)]"></div>
 			<div class="relative z-10 w-full max-w-[380px]">
 				
 				<!-- Mobile Logo -->
