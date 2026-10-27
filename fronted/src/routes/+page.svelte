@@ -141,13 +141,13 @@
 	<meta property="og:title" content={TITLE} />
 	<meta property="og:description" content={DESC} />
 	<meta property="og:url" content={SITE_URL} />
-	<meta property="og:image" content="{SITE_URL}/og.png" />
+	<meta property="og:image" content="{SITE_URL}/og.png?v=2" />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={TITLE} />
 	<meta name="twitter:description" content={DESC} />
-	<meta name="twitter:image" content="{SITE_URL}/og.png" />
+	<meta name="twitter:image" content="{SITE_URL}/og.png?v=2" />
 	<link rel="canonical" href={SITE_URL} />
 </svelte:head>
 
