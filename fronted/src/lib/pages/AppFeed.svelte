@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { renderMarkdown } from '$lib/markdown';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { api, feedCache, type Article, type Trend } from '$lib/api';
@@ -8,11 +7,12 @@
 	import DesktopSidebar from '$lib/components/navigation/DesktopSidebar.svelte';
 	import MobileBottomNav from '$lib/components/navigation/MobileBottomNav.svelte';
 	import ReaderPanel from '$lib/components/reader/ReaderPanel.svelte';
+	import DigestView from '$lib/components/reader/DigestView.svelte';
 	import { NAVIGATION, SECONDARY_CATEGORIES, SUGGESTIONS } from '$lib/ui';
 	import { analytics } from '$lib/analytics';
 	import OnboardingOverlay from '$lib/components/onboarding/OnboardingOverlay.svelte';
-	import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
 	import { pulseStore } from '$lib/pulse-store.svelte';
+	import '$lib/app-shell.css';
 
 	type ChatMessage = {
 		role: 'user' | 'ai';
@@ -796,55 +796,13 @@
 		{#if selectedArticle || showDigestView}
 			<div transition:fly={{ x: 50, duration: 400, easing: quintOut }} class={`absolute inset-0 z-30 flex overflow-hidden lg:relative lg:z-auto lg:w-0 lg:flex-1 lg:border-l ${theme === 'dark' ? 'bg-[#0a0a0a] lg:border-white/10' : 'bg-white lg:border-black/10'}`}>
 				{#if showDigestView}
-					<div class="flex h-full w-full flex-col overflow-y-auto pb-24 lg:pb-0">
-						<!-- sticky back header on mobile -->
-						<div class={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 py-3 sm:px-6 ${theme === 'dark' ? 'border-white/[0.05] bg-[#0a0a0a]' : 'border-zinc-100 bg-white'}`}>
-							<button
-								onclick={() => (showDigestView = false)}
-								class={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-all sm:h-8 sm:w-8 sm:rounded-md ${theme === 'dark' ? 'border-white/[0.06] text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700'}`}
-								aria-label="Back to feed"
-							>
-								←
-							</button>
-							<span class={`text-[13px] font-semibold ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>Weekly Digest</span>
-						</div>
-
-						<div class="mx-auto w-full max-w-3xl px-5 pt-8 pb-12 sm:px-10 sm:pt-12">
-							{#if digestLoading && !digestContent}
-								<div class="flex flex-col items-center justify-center py-24 gap-3">
-									<SignalLoader size={22} class={theme === 'dark' ? 'text-zinc-400' : 'text-zinc-500'} />
-									<p class={`text-[12px] font-semibold ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>Loading digest…</p>
-								</div>
-							{:else if digestContent}
-								<h1 class={`mb-2 text-2xl font-bold sm:text-4xl ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Weekly Digest</h1>
-								<p class={`mb-10 text-[12px] sm:text-sm ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
-									Synthesized {digestContent.created_at ? new Date(digestContent.created_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'recently'}
-								</p>
-
-								<div class={`prose max-w-none text-[14px] leading-[1.8] sm:text-[16px] ${theme === 'dark' ? 'prose-invert prose-p:text-[#d4d4d8] prose-headings:text-white' : 'prose-p:text-zinc-700 prose-headings:text-black'}`}>
-									{@html renderMarkdown(digestContent.content)}
-								</div>
-
-								<div class={`mt-10 flex items-center gap-3 border-t pt-6 ${theme === 'dark' ? 'border-white/[0.06]' : 'border-zinc-100'}`}>
-									<button
-										onclick={generateDigest}
-										disabled={digestLoading}
-										class={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-bold shadow-md transition-all disabled:opacity-60 ${theme === 'dark' ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-zinc-700'}`}
-									>
-										{#if digestLoading}
-											<SignalLoader size={14} />
-											Generating…
-										{:else if digestContent.content.includes('No weekly digest available')}
-											Generate first digest
-										{:else}
-											Regenerate digest
-										{/if}
-									</button>
-									<span class={`text-[11px] ${theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400'}`}>Takes ~10 seconds</span>
-								</div>
-							{/if}
-						</div>
-					</div>
+					<DigestView
+						digest={digestContent}
+						loading={digestLoading}
+						{theme}
+						onBack={() => (showDigestView = false)}
+						onGenerate={generateDigest}
+					/>
 				{:else if selectedArticle}
 					<ReaderPanel
 						article={selectedArticle}
@@ -885,55 +843,3 @@
 	{/if}
 	</div>
 </div>
-
-<style>
-	:global(body) {
-		overflow: hidden;
-	}
-	:global(html) {
-		background: #0a0a0a;
-	}
-	:global(html.light) {
-		background: #ffffff;
-	}
-	:global(html.light body) {
-		background: #ffffff;
-	}
-	:global(button) {
-		touch-action: manipulation;
-	}
-	:global(.no-scrollbar::-webkit-scrollbar) {
-		display: none;
-	}
-	:global(.no-scrollbar) {
-		-ms-overflow-style: none;
-		scrollbar-width: none;
-	}
-	:global(.prose p) {
-		margin-top: 0 !important;
-		margin-bottom: 1rem !important;
-	}
-	:global(.prose p:last-child) {
-		margin-bottom: 0 !important;
-	}
-	:global(.prose h1, .prose h2, .prose h3) {
-		font-weight: 700 !important;
-		margin-top: 1.5rem !important;
-		margin-bottom: 0.75rem !important;
-	}
-	:global(.prose ul, .prose ol) {
-		margin-bottom: 1rem !important;
-		padding-left: 1.25rem !important;
-	}
-	:global(.prose li) {
-		margin-bottom: 0.35rem !important;
-	}
-	:global(.prose a) {
-		text-decoration: underline;
-		text-underline-offset: 2px;
-	}
-	/* backdrop-filter removed: it re-blurred the whole feed/reader region on
-	   every scroll frame (and was nested under blurred sticky headers), which
-	   was the main source of scroll jank. Panels now use near-solid backgrounds
-	   that look the same but cost nothing to composite. */
-</style>

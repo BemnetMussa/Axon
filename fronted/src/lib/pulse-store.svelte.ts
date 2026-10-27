@@ -24,6 +24,11 @@ export const pulseStore = {
 	get now() {
 		return now;
 	},
+	/** Use a reading fetched elsewhere (the signed-out landing page passes its own). */
+	set(value: Pulse | null) {
+		current = value;
+		now = Date.now();
+	},
 	start() {
 		if (refreshTimer) return;
 		refresh();

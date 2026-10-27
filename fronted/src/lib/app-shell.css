@@ -1,0 +1,50 @@
+/* App-wide rules for the feed shell (/app and the /preview frames). */
+body {
+	overflow: hidden;
+}
+html {
+	background: #0a0a0a;
+}
+html.light {
+	background: #ffffff;
+}
+html.light body {
+	background: #ffffff;
+}
+button {
+	touch-action: manipulation;
+}
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+.prose p {
+	margin-top: 0 !important;
+	margin-bottom: 1rem !important;
+}
+.prose p:last-child {
+	margin-bottom: 0 !important;
+}
+.prose h1, .prose h2, .prose h3 {
+	font-weight: 700 !important;
+	margin-top: 1.5rem !important;
+	margin-bottom: 0.75rem !important;
+}
+.prose ul, .prose ol {
+	margin-bottom: 1rem !important;
+	padding-left: 1.25rem !important;
+}
+.prose li {
+	margin-bottom: 0.35rem !important;
+}
+.prose a {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+/* backdrop-filter removed: it re-blurred the whole feed/reader region on
+   every scroll frame (and was nested under blurred sticky headers), which
+   was the main source of scroll jank. Panels now use near-solid backgrounds
+   that look the same but cost nothing to composite. */

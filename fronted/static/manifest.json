@@ -4,8 +4,8 @@
 	"description": "The leading edge, in one feed.",
 	"start_url": "/app",
 	"display": "standalone",
-	"background_color": "#0B0F17",
-	"theme_color": "#0B0F17",
+	"background_color": "#0a0a0a",
+	"theme_color": "#0a0a0a",
 	"orientation": "portrait-primary",
 	"icons": [
 		{
@@ -21,11 +21,21 @@
 			"purpose": "any"
 		},
 		{
-			"src": "/icon-512.png",
+			"src": "/icon-maskable-512.png",
 			"sizes": "512x512",
 			"type": "image/png",
 			"purpose": "maskable"
+		},
+		{
+			"src": "/icon-512.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "any"
 		}
 	],
-	"categories": ["news", "productivity", "utilities"]
+	"categories": [
+		"news",
+		"productivity",
+		"utilities"
+	]
 }

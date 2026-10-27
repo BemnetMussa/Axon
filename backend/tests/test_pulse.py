@@ -51,3 +51,18 @@ def test_pulse_aggregates_recent_successful_runs(client, session, auth_headers):
     assert body["sources"] == 2
     assert body["last_sweep_at"] is not None
     assert body["next_sweep_at"] is not None
+    assert body["kept_total"] == 3
+    assert body["sweeps_total"] == 3
+    assert body["scanned_total"] == 999 + 150 + 140
+    assert body["running_since"] is not None
+
+
+def test_pulse_reports_observed_cadence(client, session, auth_headers):
+    for h in (40, 32, 24, 16, 8, 0.5):
+        _run(session, hours_ago=h, raw=100, kept=10)
+
+    body = client.get("/pulse", headers=auth_headers).json()
+    assert body["interval_hours"] == 8
+    started = datetime.now(timezone.utc) - timedelta(hours=0.5)
+    nxt = datetime.fromisoformat(body["next_sweep_at"])
+    assert abs((nxt - (started + timedelta(hours=8))).total_seconds()) < 120

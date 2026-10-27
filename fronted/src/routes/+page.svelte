@@ -2,8 +2,9 @@
 	import { onMount } from 'svelte';
 	import { reveal } from '$lib/actions/reveal';
 	import { ArrowRight, Zap } from 'lucide-svelte';
-	import SignalTrace from '$lib/components/ui/SignalTrace.svelte';
-	import { sweepAgo, sweepIn, keptPercent, pulseWindow, formatCount } from '$lib/pulse';
+	import IntakeMachine from '$lib/components/hero/IntakeMachine.svelte';
+	import FeatureShowcase from '$lib/components/hero/FeatureShowcase.svelte';
+	import { sweepAgo, sweepIn } from '$lib/pulse';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -27,43 +28,47 @@
 	});
 
 	let pulse = $derived(data.pulse);
-	let win = $derived(pulseWindow(pulse));
-	let pct = $derived(win ? keptPercent(win.scanned, win.kept) : null);
 	let lastAgo = $derived(sweepAgo(pulse?.last_sweep_at, now));
 	let nextIn = $derived(pulse?.next_sweep_at ? sweepIn(pulse.next_sweep_at, now) : null);
-	let interval = $derived(pulse?.interval_hours ?? 4);
-	let sourceCount = $derived(pulse?.sources && pulse.sources > 0 ? pulse.sources : 25);
+	let interval = $derived(pulse?.interval_hours ?? null);
+	let sourceCount = $derived(pulse?.sources && pulse.sources > 0 ? pulse.sources : 17);
 
-	let inLabel = $derived(win ? `In · ${formatCount(win.scanned)} items` : 'In · everything');
-	let outLabel = $derived(win ? `Out · ${formatCount(win.kept)} kept` : 'Out · what matters');
+	let since = $derived(
+		pulse?.running_since ? new Date(pulse.running_since).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null
+	);
 
-	const steps = [
+	let steps = $derived([
 		{
 			n: '01',
 			name: 'Sweep',
-			body: `Lab blogs, ArXiv, GitHub, Hacker News, Lobsters, Product Hunt and a short list of people worth reading. All fetched at once, every few hours.`
+			body: `All ${sourceCount} sources are fetched at once${interval ? `, every ${interval} hours` : ''}: lab blogs, new ArXiv papers, GitHub repos created this month, Hacker News, Lobsters, Product Hunt and a few news desks.`,
+			stat: pulse?.last_sweep_at ? `Last sweep: ${pulse.last_scanned} candidates` : 'About 150 candidates a sweep'
 		},
 		{
 			n: '02',
 			name: 'Cut',
-			body: 'Listicles, tutorials, career posts, roadmaps and “awesome” lists are dropped first. Popularity does not buy them back in.'
+			body: 'Junk rules run before anything else. Content farms (Medium, dev.to, LinkedIn) and fluff titles (tutorials, roadmaps, career posts, awesome lists) are dropped. A high star count does not buy an exception.',
+			stat: 'Rules run first'
 		},
 		{
 			n: '03',
 			name: 'Collapse',
-			body: 'The same launch posted on five sites becomes one story. The strongest copy stays.'
+			body: 'When two sources carry the same story, their titles overlap. Above 60% overlap, only the higher-scored copy survives. Anything already in the feed is skipped.',
+			stat: 'One story, one card'
 		},
 		{
 			n: '04',
 			name: 'Rank',
-			body: 'Traction measured inside its own source, how fresh it is, and how much we trust where it came from. No source gets more than eight slots.'
+			body: 'Each candidate gets one score from traction, freshness and source trust (formula below). No source can take more than eight slots in a sweep, so one loud feed cannot drown the rest.',
+			stat: 'Max 8 per source'
 		},
 		{
 			n: '05',
 			name: 'Brief',
-			body: 'What survives gets a brief written from the full article, and a chat that only talks about that story.'
+			body: 'Survivors get their full text fetched and a brief written from it, then indexed by meaning so search finds ideas, not just keywords. The chat on each story reads that article only.',
+			stat: pulse?.last_sweep_at ? `Last sweep: ${pulse.last_kept} kept` : 'Up to 100 kept a sweep'
 		}
-	];
+	]);
 
 	const cut = [
 		{ title: '15 prompts that will 10x your productivity', why: 'Listicle' },
@@ -84,8 +89,8 @@
 		{ ch: '01', name: 'Hacker News', what: 'Front page, plus Ask and Show HN threads with real discussion' },
 		{ ch: '02', name: 'GitHub', what: 'Repos created this month that are already pulling stars' },
 		{ ch: '03', name: 'ArXiv', what: 'New cs.AI and cs.LG papers' },
-		{ ch: '04', name: 'AI labs', what: 'OpenAI, Anthropic, DeepMind, Google, Hugging Face, NVIDIA' },
-		{ ch: '05', name: 'People', what: 'Karpathy, Simon Willison, Lilian Weng, fast.ai, BAIR' },
+		{ ch: '04', name: 'AI labs', what: 'OpenAI, Anthropic, DeepMind, Google AI, Google Research, Hugging Face, NVIDIA, Together AI' },
+		{ ch: '05', name: 'People', what: 'Simon Willison. Only voices that post often and stay fresh' },
 		{ ch: '06', name: 'Launches & news', what: 'Product Hunt, Lobsters, TechCrunch, The Verge, Ars Technica' }
 	];
 
@@ -118,7 +123,7 @@
 <div class="landing min-h-screen w-full overflow-x-hidden bg-[#fafafa] font-sans text-[#0a0a0a] antialiased selection:bg-black selection:text-white dark:bg-[#0a0a0a] dark:text-[#ededed] dark:selection:bg-white dark:selection:text-black">
 	<!-- Header -->
 	<header class="fixed inset-x-0 top-0 z-50 border-b border-black/10 bg-[#fafafa]/85 backdrop-blur-md dark:border-white/10 dark:bg-[#0a0a0a]/85">
-		<div class="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
+		<div class="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
 			<a href="/" class="flex items-center gap-2.5">
 				<span class="flex h-7 w-7 items-center justify-center bg-black text-white dark:bg-white dark:text-black">
 					<Zap class="h-3.5 w-3.5 fill-current" />
@@ -143,10 +148,10 @@
 	</header>
 
 	<!-- Hero -->
-	<section class="mx-auto w-full max-w-6xl px-5 pt-28 sm:px-8 sm:pt-36">
+	<section class="mx-auto w-full max-w-7xl px-5 pt-28 sm:px-8 sm:pt-36">
 		<p use:reveal class="axon-label mb-8 flex items-center gap-3 text-black/50 dark:text-white/45">
 			<span class="h-px w-8 bg-current"></span>
-			{sourceCount} sources · swept every {interval}h · one feed
+			{sourceCount} sources · {interval ? `swept every ${interval}h` : 'swept on a schedule'}{since ? ` · running since ${since}` : ''}
 		</p>
 
 		<h1 use:reveal={{ delay: 60 }} class="max-w-4xl text-[44px] font-semibold leading-[0.98] tracking-[-0.045em] sm:text-7xl lg:text-[88px]">
@@ -171,45 +176,15 @@
 		</div>
 	</section>
 
-	<!-- Instrument -->
-	<section class="mx-auto w-full max-w-6xl px-5 pt-14 sm:px-8 sm:pt-20">
-		<div use:reveal={{ delay: 200 }} class="axon-corners border border-black/10 dark:border-white/10">
-			<div class="axon-label flex items-center justify-between border-b border-black/10 px-4 py-3 text-black/50 sm:px-5 dark:border-white/10 dark:text-white/45">
-				<span>Input · {sourceCount} sources</span>
-				<span class="hidden sm:inline">Axon filter</span>
-				<span>Output · your feed</span>
-			</div>
-
-			<div class="px-4 pb-4 pt-8 sm:px-5 sm:pt-10 [--trace-bg:#fafafa] dark:[--trace-bg:#0a0a0a]">
-				<SignalTrace class="h-36 sm:h-52" {inLabel} {outLabel} />
-			</div>
-
-			<dl class="grid grid-cols-2 border-t border-black/10 md:grid-cols-4 dark:border-white/10">
-				<div class="border-b border-r border-black/10 px-4 py-5 sm:px-5 md:border-b-0 dark:border-white/10">
-					<dt class="axon-label text-black/45 dark:text-white/40">Last sweep</dt>
-					<dd class="mt-2 text-2xl font-medium tracking-tight tabular-nums">{lastAgo}</dd>
-				</div>
-				<div class="border-b border-black/10 px-4 py-5 sm:px-5 md:border-b-0 md:border-r dark:border-white/10">
-					<dt class="axon-label text-black/45 dark:text-white/40">Scanned{win ? ` · ${win.label}` : ''}</dt>
-					<dd class="mt-2 text-2xl font-medium tracking-tight tabular-nums">{win ? formatCount(win.scanned) : '—'}</dd>
-				</div>
-				<div class="border-r border-black/10 px-4 py-5 sm:px-5 dark:border-white/10">
-					<dt class="axon-label text-black/45 dark:text-white/40">Kept</dt>
-					<dd class="mt-2 flex items-baseline gap-2 text-2xl font-medium tracking-tight tabular-nums">
-						{win ? formatCount(win.kept) : '—'}
-						{#if pct !== null}<span class="axon-label text-black/45 dark:text-white/40">{pct}%</span>{/if}
-					</dd>
-				</div>
-				<div class="px-4 py-5 sm:px-5">
-					<dt class="axon-label text-black/45 dark:text-white/40">Next sweep</dt>
-					<dd class="mt-2 text-2xl font-medium tracking-tight tabular-nums">{nextIn ?? `every ${interval}h`}</dd>
-				</div>
-			</dl>
+	<!-- Intake: sources → Axon → feed -->
+	<section class="mx-auto w-full max-w-7xl px-5 pt-14 sm:px-8 sm:pt-20">
+		<div use:reveal={{ delay: 200 }}>
+			<IntakeMachine {pulse} />
 		</div>
 	</section>
 
 	<!-- How the filter works -->
-	<section id="filter" class="mx-auto w-full max-w-6xl scroll-mt-20 px-5 pt-28 sm:px-8 sm:pt-36">
+	<section id="filter" class="mx-auto w-full max-w-7xl scroll-mt-20 px-5 pt-28 sm:px-8 sm:pt-36">
 		<div use:reveal class="mb-12 grid gap-4 lg:grid-cols-[280px_1fr]">
 			<p class="axon-label pt-2 text-black/45 dark:text-white/40">The filter</p>
 			<h2 class="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">
@@ -219,23 +194,44 @@
 
 		<ol class="grid border-t border-black/10 sm:grid-cols-2 lg:grid-cols-5 dark:border-white/10">
 			{#each steps as step, i}
-				<li use:reveal={{ delay: i * 60 }} class="border-b border-black/10 py-6 sm:pr-6 lg:border-b-0 lg:border-r lg:px-5 lg:py-8 lg:first:pl-0 lg:last:border-r-0 dark:border-white/10">
+				<li use:reveal={{ delay: i * 60 }} class="flex flex-col border-b border-black/10 py-6 sm:pr-6 lg:border-b-0 lg:border-r lg:px-5 lg:py-8 lg:first:pl-0 lg:last:border-r-0 dark:border-white/10">
 					<div class="flex items-baseline justify-between">
 						<span class="axon-label text-black/40 dark:text-white/35">{step.n}</span>
 						<span class="h-px flex-1 translate-y-[-3px] bg-black/10 mx-3 lg:hidden dark:bg-white/10"></span>
 					</div>
 					<h3 class="mt-4 text-xl font-semibold tracking-tight">{step.name}</h3>
-					<p class="mt-3 text-[15px] leading-relaxed text-black/60 dark:text-white/55">{step.body}</p>
-					<div class="mt-6 h-[3px] bg-black/10 dark:bg-white/10">
-						<div class="h-full bg-black dark:bg-white" style={`width: ${[100, 58, 44, 26, 26][i]}%`}></div>
-					</div>
+					<p class="mt-3 flex-1 text-[15px] leading-relaxed text-black/60 dark:text-white/55">{step.body}</p>
+					<p class="axon-label mt-6 border-t border-black/10 pt-3 text-black/70 dark:border-white/10 dark:text-white/65">{step.stat}</p>
 				</li>
 			{/each}
 		</ol>
+
+		<div use:reveal class="mt-16 grid gap-10 lg:grid-cols-[280px_1fr]">
+			<p class="axon-label pt-2 text-black/45 dark:text-white/40">The score</p>
+			<div>
+				<p class="font-mono text-lg tracking-tight sm:text-2xl">
+					score = trust <span class="text-black/35 dark:text-white/35">×</span> (0.55 <span class="text-black/35 dark:text-white/35">×</span> traction + 0.45 <span class="text-black/35 dark:text-white/35">×</span> freshness)
+				</p>
+				<dl class="mt-8 grid border-t border-black/10 sm:grid-cols-3 dark:border-white/10">
+					<div class="border-b border-black/10 py-5 sm:border-b-0 sm:border-r sm:pr-6 dark:border-white/10">
+						<dt class="text-[15px] font-semibold">Traction</dt>
+						<dd class="mt-2 text-[15px] leading-relaxed text-black/60 dark:text-white/55">Points, stars or votes, compared only against the same source in the same sweep. So 300 Hacker News points and 3,000 GitHub stars can be ranked fairly.</dd>
+					</div>
+					<div class="border-b border-black/10 py-5 sm:border-b-0 sm:border-r sm:px-6 dark:border-white/10">
+						<dt class="text-[15px] font-semibold">Freshness</dt>
+						<dd class="mt-2 text-[15px] leading-relaxed text-black/60 dark:text-white/55">Decays over about three days. A story from this morning beats the same story from last week.</dd>
+					</div>
+					<div class="py-5 sm:pl-6">
+						<dt class="text-[15px] font-semibold">Trust</dt>
+						<dd class="mt-2 text-[15px] leading-relaxed text-black/60 dark:text-white/55">Primary sources (labs and papers) weigh more than aggregators, and aggregators more than news rewrites. Blogs with no vote count lean on freshness and trust.</dd>
+					</div>
+				</dl>
+			</div>
+		</div>
 	</section>
 
 	<!-- Ledger: cut vs kept -->
-	<section id="ledger" class="mx-auto w-full max-w-6xl scroll-mt-20 px-5 pt-28 sm:px-8 sm:pt-36">
+	<section id="ledger" class="mx-auto w-full max-w-7xl scroll-mt-20 px-5 pt-28 sm:px-8 sm:pt-36">
 		<div use:reveal class="mb-12 grid gap-4 lg:grid-cols-[280px_1fr]">
 			<p class="axon-label pt-2 text-black/45 dark:text-white/40">One sweep, in short</p>
 			<div>
@@ -280,7 +276,7 @@
 	</section>
 
 	<!-- Channels -->
-	<section class="mx-auto w-full max-w-6xl px-5 pt-28 sm:px-8 sm:pt-36">
+	<section class="mx-auto w-full max-w-7xl px-5 pt-28 sm:px-8 sm:pt-36">
 		<div use:reveal class="mb-12 grid gap-4 lg:grid-cols-[280px_1fr]">
 			<p class="axon-label pt-2 text-black/45 dark:text-white/40">Channels</p>
 			<h2 class="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">Where we listen.</h2>
@@ -297,43 +293,20 @@
 		</ul>
 	</section>
 
-	<!-- Ask -->
-	<section class="mx-auto w-full max-w-6xl px-5 pt-28 sm:px-8 sm:pt-36">
-		<div class="grid gap-10 lg:grid-cols-[280px_1fr]">
-			<p use:reveal class="axon-label pt-2 text-black/45 dark:text-white/40">Then ask it</p>
-			<div class="grid gap-10 lg:grid-cols-2 lg:items-start">
-				<div use:reveal>
-					<h2 class="text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">Every story you can question.</h2>
-					<p class="mt-5 max-w-md text-[15px] leading-relaxed text-black/60 dark:text-white/55">
-						Each kept story comes with a brief written from the full article. Ask it what changed, who it affects, or whether
-						it matters for what you are building. The answers stay on that story.
-					</p>
-				</div>
-
-				<article use:reveal={{ delay: 80 }} class="axon-corners border border-black/10 dark:border-white/10">
-					<div class="axon-label flex items-center justify-between border-b border-black/10 px-5 py-3 text-black/45 dark:border-white/10 dark:text-white/40">
-						<span>ArXiv · cs.AI</span>
-						<span>Example</span>
-					</div>
-					<div class="px-5 py-6">
-						<h3 class="text-xl font-semibold leading-snug tracking-tight">Tool-use accuracy falls off a cliff past 40 tools</h3>
-						<div class="mt-6 space-y-3">
-							<p class="ml-auto w-fit max-w-[85%] bg-black px-3.5 py-2.5 text-sm text-white dark:bg-white dark:text-black">
-								Does this matter if my agent has 12 tools?
-							</p>
-							<p class="max-w-[92%] border border-black/10 px-3.5 py-2.5 text-sm leading-relaxed text-black/70 dark:border-white/10 dark:text-white/65">
-								Not much yet. The drop starts past roughly 40. At 12 the paper sees near-baseline accuracy, so you get more out of
-								clear tool descriptions than out of trimming the list.
-							</p>
-						</div>
-					</div>
-				</article>
+	<!-- What you get -->
+	<section id="features" class="mx-auto w-full max-w-7xl scroll-mt-20 px-5 pt-28 sm:px-8 sm:pt-36">
+		<div use:reveal class="mb-16 grid gap-4 lg:grid-cols-[280px_1fr] sm:mb-24">
+			<p class="axon-label pt-2 text-black/45 dark:text-white/40">What you get</p>
+			<div>
+				<h2 class="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">What reaches you, and what you can do with it.</h2>
+				<p class="mt-4 text-sm text-black/45 dark:text-white/40">These are the app's own screens. The story and its brief are real, from the feed on Oct 6; the chat answer and digest summary are examples.</p>
 			</div>
 		</div>
+		<FeatureShowcase />
 	</section>
 
 	<!-- CTA -->
-	<section class="mx-auto w-full max-w-6xl px-5 py-28 sm:px-8 sm:py-36">
+	<section class="mx-auto w-full max-w-7xl px-5 py-28 sm:px-8 sm:py-36">
 		<div use:reveal class="axon-corners border border-black/10 px-6 py-14 text-center sm:py-20 dark:border-white/10">
 			<p class="axon-label flex items-center justify-center gap-2 text-black/50 dark:text-white/45">
 				<span class="axon-live text-black dark:text-white"></span>
@@ -349,7 +322,7 @@
 	</section>
 
 	<footer class="border-t border-black/10 dark:border-white/10">
-		<div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+		<div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-8">
 			<div class="flex items-center gap-2.5">
 				<span class="flex h-6 w-6 items-center justify-center bg-black text-white dark:bg-white dark:text-black">
 					<Zap class="h-3 w-3 fill-current" />

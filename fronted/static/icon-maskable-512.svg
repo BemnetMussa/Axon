@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Axon app icon (maskable, bolt inside the 80% safe zone): the brand bolt on full-bleed black. No baked-in corner radius; the OS applies its own mask. -->
+  <rect width="512" height="512" fill="#0a0a0a"/>
+  <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" fill="#fafafa" transform="translate(124.00 124.00) scale(11)"/>
+</svg>

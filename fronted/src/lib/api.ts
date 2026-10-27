@@ -50,6 +50,10 @@ export interface Pulse {
     sources: number;
     interval_hours: number;
     next_sweep_at: string | null;
+    kept_total?: number;
+    sweeps_total?: number;
+    scanned_total?: number;
+    running_since?: string | null;
 }
 
 export interface ArticlesResponse {

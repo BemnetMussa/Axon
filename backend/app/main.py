@@ -989,11 +989,36 @@ def pulse(session: Session = Depends(get_session)):
     ).one()
 
     sources = session.exec(select(func.count(func.distinct(Article.source)))).one()
+    kept_total = session.exec(select(func.count()).select_from(Article)).one()
+    sweeps_total, scanned_total, first_at = session.exec(
+        select(
+            func.count(),
+            func.coalesce(func.sum(IngestRun.raw_found), 0),
+            func.min(IngestRun.started_at),
+        ).where(IngestRun.ok == True)  # noqa: E712
+    ).one()
+
+    # The configured interval can differ from what actually runs (env drift,
+    # host restarts), so report the cadence observed between recent sweeps.
+    recent_starts = [
+        _as_utc(t)
+        for t in session.exec(
+            select(IngestRun.started_at)
+            .where(IngestRun.ok == True)  # noqa: E712
+            .order_by(col(IngestRun.started_at).desc())
+            .limit(7)
+        ).all()
+    ]
+    gaps = sorted(
+        (a - b).total_seconds() / 3600 for a, b in zip(recent_starts, recent_starts[1:])
+    )
+    interval = round(gaps[len(gaps) // 2]) if gaps else _scheduler_interval_hours
+    interval = interval or _scheduler_interval_hours
 
     last_at = _as_utc(last.finished_at or last.started_at) if last else None
     next_at = _scheduler_snapshot()["next_run_at_utc"]
-    if not next_at and last_at:
-        next_at = (last_at + timedelta(hours=_scheduler_interval_hours)).isoformat()
+    if not next_at and last:
+        next_at = (_as_utc(last.started_at) + timedelta(hours=interval)).isoformat()
 
     value = {
         "last_sweep_at": last_at.isoformat() if last_at else None,
@@ -1003,8 +1028,12 @@ def pulse(session: Session = Depends(get_session)):
         "kept_24h": int(kept_24h or 0),
         "sweeps_24h": int(runs_24h or 0),
         "sources": int(sources or 0),
-        "interval_hours": _scheduler_interval_hours,
+        "interval_hours": interval,
         "next_sweep_at": next_at,
+        "kept_total": int(kept_total or 0),
+        "sweeps_total": int(sweeps_total or 0),
+        "scanned_total": int(scanned_total or 0),
+        "running_since": _as_utc(first_at).isoformat() if first_at else None,
     }
     _pulse_cache.set(value)
     return value
