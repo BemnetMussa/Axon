@@ -12,9 +12,14 @@ export interface PushStatus {
 	subscribed: boolean;
 }
 
+export function isPushConfigured(): boolean {
+	return !!env.PUBLIC_VAPID_KEY?.trim();
+}
+
 export function isPushSupported(): boolean {
 	return (
 		typeof window !== 'undefined' &&
+		isPushConfigured() &&
 		'serviceWorker' in navigator &&
 		'PushManager' in window &&
 		'Notification' in window

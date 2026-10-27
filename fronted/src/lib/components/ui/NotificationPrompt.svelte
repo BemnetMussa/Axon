@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { Bell, Share, X } from 'lucide-svelte';
-	import { enable, getStatus, isPushSupported, needsIosInstall, sendTest } from '$lib/push';
+	import { enable, getStatus, isPushConfigured, isPushSupported, needsIosInstall, sendTest } from '$lib/push';
 
 	type Props = {
 		theme: 'dark' | 'light';
@@ -25,7 +25,7 @@
 		if (Date.now() - dismissed < SNOOZE_MS) return;
 
 		const timer = setTimeout(async () => {
-			if (needsIosInstall()) {
+			if (needsIosInstall() && isPushConfigured()) {
 				mode = 'install';
 				return;
 			}
