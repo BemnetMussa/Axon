@@ -1,13 +1,17 @@
-"""Load proprietary engine modules from the local private overlay when present.
+"""Load the curation and AI engine, or the community stubs when it is absent.
 
-Layout (repo root):
-  private/services/fetcher.py   # gitignored — full curation engine
-  private/services/analyzer.py  # gitignored — AI analysis / prompts
+Search order:
+  1. ``AXON_ENGINE_DIR`` — explicit override
+  2. ``backend/engine/`` — the copy that ships in the Docker image. Render's
+     build context is ``backend/``, so the gitignored ``private/services/``
+     tree never reaches production. This directory does.
+  3. ``/etc/secrets/`` — Render Secret Files, used when present
+  4. ``<repo>/private/services/`` — local overlay, used when the shipped copy
+     is not there
 
-In production the same two files are uploaded as Render Secret Files, which
-appear at /etc/secrets/. ``AXON_ENGINE_DIR`` overrides both locations.
-
-If those files are missing (public OSS clone), fall back to the community stubs.
+Inside the image the app lives at ``/app/app/services/``, so a path counted
+from the repo root points at ``/`` and would miss the files. The shipped copy
+is resolved from the backend root instead (``/app/engine`` in the container).
 """
 
 from __future__ import annotations
@@ -18,14 +22,19 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = _BACKEND_ROOT.parent
 
 
 def _engine_dirs() -> list[Path]:
     dirs = []
     if os.getenv("AXON_ENGINE_DIR"):
         dirs.append(Path(os.environ["AXON_ENGINE_DIR"]))
-    dirs += [_REPO_ROOT / "private" / "services", Path("/etc/secrets")]
+    dirs += [
+        _BACKEND_ROOT / "engine",
+        Path("/etc/secrets"),
+        _REPO_ROOT / "private" / "services",
+    ]
     return dirs
 
 
