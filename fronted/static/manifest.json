@@ -1,7 +1,7 @@
 {
 	"name": "Axon",
 	"short_name": "Axon",
-	"description": "The leading edge, in one feed.",
+	"description": "You can’t keep up with everything. You don’t have to. Axon keeps the signal from the frontier and drops the rest.",
 	"start_url": "/app",
 	"display": "standalone",
 	"background_color": "#0a0a0a",

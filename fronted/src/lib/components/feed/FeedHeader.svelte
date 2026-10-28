@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { Search, Zap, LogOut, SlidersHorizontal } from 'lucide-svelte';
-	import { authClient } from '$lib/auth-client';
+	import { Search, Zap, SlidersHorizontal } from 'lucide-svelte';
 	import { inputClass, iconButtonClass } from '$lib/ui-styles';
 	import { pulseStore } from '$lib/pulse-store.svelte';
 	import { sweepAgo, pulseWindow, formatCount } from '$lib/pulse';
@@ -43,9 +42,7 @@
 			<h2 class={`text-[15px] font-semibold tracking-tight ${dark ? 'text-white' : 'text-black'}`}>{title}</h2>
 			<span class={`axon-label tabular-nums ${muted}`}>{articleCount} shown</span>
 			{#if syncIndicator}
-				<span class={`axon-label flex items-center gap-2 ${dark ? 'text-white/70' : 'text-black/70'}`}>
-					<span class="axon-live"></span>Syncing
-				</span>
+				<span class={`axon-label ${dark ? 'text-white/70' : 'text-black/70'}`}>Syncing</span>
 			{/if}
 			{#if hasSemanticSearch}
 				<span class={`axon-label border px-1.5 py-0.5 ${dark ? 'border-white/20 text-white/70' : 'border-black/20 text-black/70'}`}>Semantic</span>
@@ -64,15 +61,6 @@
 				/>
 			</label>
 
-			<button
-				type="button"
-				onclick={() => authClient.signOut()}
-				class={`${iconButtonClass(theme)} lg:hidden ${dark ? 'hover:text-red-400' : 'hover:text-red-600'}`}
-				aria-label="Sign out"
-			>
-				<LogOut class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-			</button>
-
 			{#if onOpenFilters}
 				<button onclick={onOpenFilters} class={`${iconButtonClass(theme, 'muted')} lg:hidden`} aria-label="Open filters">
 					<SlidersHorizontal class="h-4 w-4 sm:h-3.5 sm:w-3.5" />
@@ -90,13 +78,10 @@
 		{#if hasSemanticSearch}
 			<span class={`axon-label border px-1.5 py-0.5 ${dark ? 'border-white/20 text-white/70' : 'border-black/20 text-black/70'}`}>Semantic</span>
 		{/if}
-		<span class={`axon-label ml-auto flex shrink-0 items-center gap-2 tabular-nums ${muted}`}>
-			<span class={`axon-live ${dark ? 'text-white' : 'text-black'} ${syncIndicator ? '' : 'opacity-70'}`}></span>
-			{#if win}
+		{#if win}
+			<span class={`axon-label ml-auto shrink-0 tabular-nums ${muted}`}>
 				{formatCount(win.kept)}/{formatCount(win.scanned)} kept · {lastAgo}
-			{:else}
-				Live
-			{/if}
-		</span>
+			</span>
+		{/if}
 	</div>
 </header>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ArrowUp, Zap } from 'lucide-svelte';
 	import type { Article } from '$lib/api';
-	import { getBrandColor, formatEngagement, relativeTime, stripHtml, readingTime } from '$lib/ui';
+	import { getBrandColor, formatEngagement, relativeTime, stripHtml } from '$lib/ui';
 	import { analytics } from '$lib/analytics';
 
 	type Props = {
@@ -40,7 +40,7 @@
 	}
 </script>
 
-<article class={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-2xl border px-4 py-4 transition duration-300 active:scale-[0.99] sm:px-5 sm:py-5 ${cardClass()}`}>
+<article class={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-2xl border px-4 py-3.5 transition duration-300 active:scale-[0.99] sm:px-5 sm:py-4 ${cardClass()}`}>
 	<!-- Full-card open button (behind everything) -->
 	<button type="button" onclick={handleOpen} class="absolute inset-0 rounded-xl" aria-label={`Open ${article.title}`}></button>
 
@@ -54,39 +54,24 @@
 			<span class={`shrink-0 ${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>/</span>
 			<span class="min-w-0 truncate">{article.category}</span>
 		</div>
-		<div class="flex shrink-0 items-center gap-1.5">
-			{#if readingTime(article.insight || article.content_snippet || '')}
-				<span class={`text-xs font-medium ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>{readingTime(article.insight || article.content_snippet || '')}</span>
-				<span class={`${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>·</span>
+		<div class={`flex shrink-0 items-center gap-1.5 text-xs tabular-nums ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+			{#if formatEngagement(article.likes)}
+				<span class="flex items-center gap-0.5"><ArrowUp class="h-3 w-3" />{formatEngagement(article.likes)}</span>
+				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>·</span>
 			{/if}
-			<span class={`text-xs font-semibold ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>{relativeTime(article.published_date)}</span>
-		</div>
-	</div>
-
-	<!-- Title -->
-	<h3 class={`mt-3 mb-2 line-clamp-2 min-w-0 break-words text-lg font-semibold leading-[1.3] tracking-[-0.02em] transition-colors sm:text-xl ${dark ? 'text-zinc-100 group-hover:text-white' : 'text-zinc-900'}`} style="overflow-wrap: anywhere;">{article.title}</h3>
-
-	<!-- Snippet + actions row -->
-	<p class={`line-clamp-3 min-w-0 overflow-hidden text-sm leading-6 sm:text-[15px] ${dark ? 'text-zinc-400' : 'text-zinc-600'}`} style="overflow-wrap: anywhere;">{stripHtml(article.insight || article.content_snippet || '')}</p>
-
-	<!-- Primary article actions -->
-	<div class="mt-4 flex items-center justify-between border-t pt-3 {dark ? 'border-white/[0.05]' : 'border-zinc-100'}">
-		{#if formatEngagement(article.likes)}
-			<span class={`flex items-center gap-1 text-xs tabular-nums ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
-				<ArrowUp class="h-3 w-3" />{formatEngagement(article.likes)}
-			</span>
-		{:else}
-			<span></span>
-		{/if}
-		<div class="pointer-events-auto flex items-center">
+			<span class="font-semibold">{relativeTime(article.published_date)}</span>
 			<button
 				type="button"
 				onclick={handleSave}
-				class={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${dark ? 'text-zinc-500 hover:bg-white/[0.06] hover:text-white' : 'text-zinc-400 hover:bg-zinc-100 hover:text-black'}`}
+				class={`relative z-10 -my-2 -mr-2 flex h-8 w-8 items-center justify-center rounded-full transition-colors ${dark ? 'hover:bg-white/[0.06] hover:text-white' : 'hover:bg-zinc-100 hover:text-black'}`}
 				aria-label={isSaved ? 'Remove from saved' : 'Save article'}
 			>
 				<Zap class={`h-3.5 w-3.5 ${isSaved ? (dark ? 'fill-white text-white' : 'fill-black text-black') : ''}`} />
 			</button>
 		</div>
 	</div>
+
+	<h3 class={`mt-2.5 mb-1.5 line-clamp-2 min-w-0 break-words text-lg font-semibold leading-[1.3] tracking-[-0.02em] transition-colors sm:text-xl ${dark ? 'text-zinc-100 group-hover:text-white' : 'text-zinc-900'}`} style="overflow-wrap: anywhere;">{article.title}</h3>
+
+	<p class={`line-clamp-2 min-w-0 overflow-hidden text-sm leading-6 sm:line-clamp-3 sm:text-[15px] ${dark ? 'text-zinc-400' : 'text-zinc-600'}`} style="overflow-wrap: anywhere;">{stripHtml(article.insight || article.content_snippet || '')}</p>
 </article>

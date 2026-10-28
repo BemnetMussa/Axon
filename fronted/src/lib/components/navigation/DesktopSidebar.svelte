@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { MessageSquare, Moon, Sun, Zap, Sparkles, LogOut } from 'lucide-svelte';
-	import { authClient } from '$lib/auth-client';
+	import { signOutToHome } from '$lib/auth-client';
 	import type { NavItem } from '$lib/ui';
 	import type { Trend } from '$lib/api';
 	import { pulseStore } from '$lib/pulse-store.svelte';
 	import { sweepAgo, sweepIn, keptPercent, pulseWindow, formatCount } from '$lib/pulse';
 	import FeedbackModal from '../feedback/FeedbackModal.svelte';
 	import NotificationToggle from '../ui/NotificationToggle.svelte';
-	import SignalTrace from '../ui/SignalTrace.svelte';
 
 	type Props = {
 		navigation: NavItem[];
@@ -48,6 +47,10 @@
 		return dark ? 'text-white/60 hover:bg-white/[0.05] hover:text-white' : 'text-black/60 hover:bg-black/[0.04] hover:text-black';
 	}
 
+	let utilClass = $derived(
+		`flex w-full items-center gap-3 px-2 py-2 text-left transition-colors ${dark ? 'text-white/50 hover:bg-white/[0.05] hover:text-white' : 'text-black/50 hover:bg-black/[0.04] hover:text-black'}`
+	);
+
 	function velocityMark(t: Trend): string {
 		if (t.is_new || t.velocity === 'New') return 'New';
 		if (t.velocity === 'Surging') return '↑↑';
@@ -65,9 +68,6 @@
 			</span>
 			<span class="text-[12px] font-semibold uppercase tracking-[0.24em]">Axon</span>
 		</div>
-		<span class={`axon-label flex items-center gap-2 ${muted}`}>
-			<span class={`axon-live ${dark ? 'text-white' : 'text-black'}`}></span>Live
-		</span>
 	</div>
 
 	<!-- Sweep readout -->
@@ -76,9 +76,6 @@
 			<span>Filter</span>
 			<span>{pulse?.last_sweep_at ? lastAgo : 'standby'}</span>
 		</div>
-
-		<SignalTrace compact class={`mt-3 h-9 ${dark ? '[--trace-bg:#0a0a0a]' : '[--trace-bg:#fafafa]'}`} />
-
 		{#if win}
 			<div class="mt-3 flex items-baseline justify-between">
 				<p class="text-[22px] font-medium leading-none tracking-tight tabular-nums">
@@ -157,37 +154,27 @@
 	</section>
 
 	<!-- Utilities -->
-	<div class={`shrink-0 border-t px-2.5 py-2 ${rule}`}>
-		<button
-			onclick={() => onToggleTheme()}
-			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-white/45 hover:text-white' : 'text-black/45 hover:text-black'}`}
-		>
+	<div class={`shrink-0 border-t px-3 py-2 ${rule}`}>
+		<button onclick={() => onToggleTheme()} class={utilClass}>
 			{#if dark}
-				<Sun class="h-4 w-4 shrink-0" />
-				<span class="text-[10px] font-semibold">Light mode</span>
+				<Sun class="h-3.5 w-3.5 shrink-0" />
+				<span class="text-[13px] font-medium">Light mode</span>
 			{:else}
-				<Moon class="h-4 w-4 shrink-0" />
-				<span class="text-[10px] font-semibold">Dark mode</span>
+				<Moon class="h-3.5 w-3.5 shrink-0" />
+				<span class="text-[13px] font-medium">Dark mode</span>
 			{/if}
 		</button>
 
 		<NotificationToggle {theme} variant="sidebar" />
 
-		<button
-			onclick={() => (showFeedbackModal = true)}
-			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-white/45 hover:text-white' : 'text-black/45 hover:text-black'}`}
-		>
-			<MessageSquare class="h-4 w-4 shrink-0" />
-			<span class="text-[10px] font-semibold">Feedback</span>
+		<button onclick={() => (showFeedbackModal = true)} class={utilClass}>
+			<MessageSquare class="h-3.5 w-3.5 shrink-0" />
+			<span class="text-[13px] font-medium">Feedback</span>
 		</button>
 
-		<button
-			type="button"
-			onclick={() => authClient.signOut()}
-			class={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-white/45 hover:text-red-400' : 'text-black/45 hover:text-red-600'}`}
-		>
-			<LogOut class="h-4 w-4 shrink-0" />
-			<span class="text-[10px] font-semibold">Sign out</span>
+		<button type="button" onclick={signOutToHome} class={utilClass}>
+			<LogOut class="h-3.5 w-3.5 shrink-0" />
+			<span class="text-[13px] font-medium">Sign out</span>
 		</button>
 	</div>
 </nav>

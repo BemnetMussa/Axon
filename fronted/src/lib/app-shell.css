@@ -1,5 +1,7 @@
 /* App-wide rules for the feed shell (/app and the /preview frames). */
-body {
+/* Toggled by the shell on mount: this stylesheet stays in the document after a
+   client-side redirect to `/`, and the landing page scrolls on <body>. */
+body.app-shell-lock {
 	overflow: hidden;
 }
 html {

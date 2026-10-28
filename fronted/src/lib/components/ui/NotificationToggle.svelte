@@ -59,10 +59,10 @@
 	let rowClass = $derived(
 		variant === 'mobile'
 			? `flex w-full items-center gap-3 rounded-xl px-3 py-3 transition-all ${dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'}`
-			: `flex w-full items-center gap-3 rounded-md px-3 py-2 transition-all ${dark ? 'text-zinc-600 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`
+			: `flex w-full items-center gap-3 px-2 py-2 text-left transition-colors ${dark ? 'text-white/50 hover:bg-white/[0.05] hover:text-white' : 'text-black/50 hover:bg-black/[0.04] hover:text-black'}`
 	);
-	let iconClass = $derived(variant === 'mobile' ? 'h-5 w-5 shrink-0' : 'h-4 w-4 shrink-0');
-	let textClass = $derived(variant === 'mobile' ? 'text-[13px] font-semibold' : 'text-[10px] font-semibold');
+	let iconClass = $derived(variant === 'mobile' ? 'h-5 w-5 shrink-0' : 'h-3.5 w-3.5 shrink-0');
+	let textClass = $derived(variant === 'mobile' ? 'text-[13px] font-semibold' : 'text-[13px] font-medium');
 </script>
 
 {#if supported}
@@ -84,7 +84,7 @@
 		<span class={textClass}>{busy ? 'Working…' : label}</span>
 	</button>
 	{#if error}
-		<p class={`px-3 pb-1 ${variant === 'mobile' ? 'text-[11px]' : 'text-[9px]'} ${dark ? 'text-amber-400/80' : 'text-amber-600'}`}>
+		<p class={`px-3 pb-1 ${variant === 'mobile' ? 'text-[11px]' : 'text-[9px]'} ${dark ? 'text-white/60' : 'text-black/60'}`}>
 			{error}
 		</p>
 	{/if}

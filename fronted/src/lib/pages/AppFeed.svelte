@@ -681,10 +681,12 @@
 	// Keep teardown inside onMount's return — onDestroy also runs during SSR
 	// close_render, where `document` does not exist and used to 500 /app on refresh.
 	onMount(() => {
+		document.body.classList.add('app-shell-lock');
 		load();
 		pulseStore.start();
 		document.addEventListener('visibilitychange', handleVisibility);
 		return () => {
+			document.body.classList.remove('app-shell-lock');
 			if (pollTimer) clearInterval(pollTimer);
 			pulseStore.stop();
 			document.removeEventListener('visibilitychange', handleVisibility);
@@ -697,7 +699,7 @@
 	<meta name="theme-color" content={theme === 'dark' ? '#0a0a0a' : '#fafafa'} />
 </svelte:head>
 
-<div class={`relative flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a] text-[#ededed]' : 'bg-[#fafafa] text-[#0a0a0a]'}`}>
+<div class={`relative flex h-dvh overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a] text-[#ededed]' : 'bg-[#fafafa] text-[#0a0a0a]'}`}>
 	<div class="mx-auto flex h-full w-full max-w-[1600px] min-w-0 overflow-hidden">
 	<DesktopSidebar
 		navigation={NAVIGATION}
@@ -718,19 +720,19 @@
 		<div class={`min-w-0 overflow-hidden ${selectedArticle || showDigestView ? 'hidden lg:flex lg:w-[340px] lg:shrink-0 xl:w-[400px]' : 'flex min-w-0 flex-1'}`}>
 			<div class={`flex min-w-0 flex-1 flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a]' : 'bg-[#fafafa]'}`}>
 				{#if fetchError}
-					<div class={`mx-3 mt-3 flex flex-col gap-2 rounded-xl border px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between ${theme === 'dark' ? 'border-amber-400/35 bg-amber-500/10 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>
+					<div class={`mx-3 mt-3 flex flex-col gap-2 border px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between ${theme === 'dark' ? 'border-white/20 bg-white/[0.04] text-white/80' : 'border-black/20 bg-black/[0.03] text-black/80'}`}>
 						<p class="min-w-0 flex-1 leading-relaxed">{fetchError}</p>
 						<div class="flex shrink-0 gap-2">
 							<button
 								type="button"
 								onclick={clearFetchError}
-								class={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${theme === 'dark' ? 'text-amber-200/80 hover:text-white' : 'text-amber-900/80 hover:text-amber-950'}`}
+								class={`axon-label px-2.5 py-1.5 ${theme === 'dark' ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black'}`}
 							>Dismiss</button>
 						</div>
 					</div>
 				{/if}
 				{#if uiNotice}
-					<div class={`mx-3 mt-3 rounded-xl border px-3 py-2 text-xs ${theme === 'dark' ? 'border-amber-400/40 bg-amber-500/10 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+					<div class={`mx-3 mt-3 border px-3 py-2 text-xs ${theme === 'dark' ? 'border-white/20 bg-white/[0.04] text-white/80' : 'border-black/20 bg-black/[0.03] text-black/80'}`}>
 						{uiNotice}
 					</div>
 				{/if}
@@ -741,7 +743,6 @@
                             onclick={scrollFeedToTop}
                             class={`axon-label pointer-events-auto mt-24 flex items-center gap-2 px-4 py-2 shadow-xl transition-transform active:scale-95 lg:mt-36 ${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}
                         >
-                            <span class="axon-live"></span>
                             {pendingNewArticlesCount} new {pendingNewArticlesCount === 1 ? 'story' : 'stories'} kept · show
                         </button>
                     </div>

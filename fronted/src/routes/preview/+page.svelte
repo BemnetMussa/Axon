@@ -72,6 +72,7 @@
 			else if (msg?.type === 'axon-preview:theme') theme = msg.theme;
 			else if (msg?.type === 'axon-preview:pulse') pulseStore.set(msg.pulse);
 		};
+		document.body.classList.add('app-shell-lock');
 		window.addEventListener('message', onMessage);
 		post({ type: 'axon-preview:ready' });
 
@@ -85,6 +86,7 @@
 		}
 
 		return () => {
+			document.body.classList.remove('app-shell-lock');
 			window.removeEventListener('message', onMessage);
 			clearTimeout(timer);
 		};

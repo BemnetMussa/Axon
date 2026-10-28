@@ -21,7 +21,7 @@
 	let {
 		items,
 		scrollEl,
-		estimateHeight = 185,
+		estimateHeight = 165,
 		overscan = 6,
 		padTop = 8,
 		padBottom = 8,

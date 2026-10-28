@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { Zap, Sparkles, Menu, Sun, Moon, X } from 'lucide-svelte';
+	import { Zap, Sparkles, Menu, Sun, Moon, X, MessageSquare, LogOut } from 'lucide-svelte';
 	import type { NavItem } from '$lib/ui';
+	import { signOutToHome } from '$lib/auth-client';
 	import NotificationToggle from '../ui/NotificationToggle.svelte';
+	import FeedbackModal from '../feedback/FeedbackModal.svelte';
 
 	type Props = {
 		items: NavItem[];
@@ -18,6 +20,7 @@
 	let { items, activeCategory, showSavedOnly, showDigestView, theme, onNavigate, onShowSaved, onShowDigest, onToggleTheme }: Props = $props();
 	let dark = $derived(theme === 'dark');
 	let showMenu = $state(false);
+	let showFeedback = $state(false);
 
 	// Frontier + Trending as primary tabs
 	let mainTabs = $derived(items.filter(i => i.id === null || i.id === 'Trending'));
@@ -103,6 +106,22 @@
 					<span class="text-[13px] font-semibold">Dark mode</span>
 				{/if}
 			</button>
+
+			<button
+				onclick={() => { showMenu = false; showFeedback = true; }}
+				class={`flex items-center gap-3 rounded-xl px-3 py-3 ${dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'}`}
+			>
+				<MessageSquare class="h-5 w-5 shrink-0" />
+				<span class="text-[13px] font-semibold">Feedback</span>
+			</button>
+
+			<button
+				onclick={signOutToHome}
+				class={`flex items-center gap-3 rounded-xl px-3 py-3 ${dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'}`}
+			>
+				<LogOut class="h-5 w-5 shrink-0" />
+				<span class="text-[13px] font-semibold">Sign out</span>
+			</button>
 		</div>
 	</div>
 {/if}
@@ -139,3 +158,5 @@
 		<span class="axon-label truncate !text-[9px] leading-none">More</span>
 	</button>
 </nav>
+
+<FeedbackModal bind:show={showFeedback} {theme} />

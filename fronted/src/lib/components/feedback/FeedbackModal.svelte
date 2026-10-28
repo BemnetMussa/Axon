@@ -1,159 +1,126 @@
 <script lang="ts">
-    import { api } from '$lib/api';
-    import { Sparkles, Star, MessageSquare, Send, X } from 'lucide-svelte';
-    import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
-    import { fade, fly } from 'svelte/transition';
+	import { api } from '$lib/api';
+	import { X } from 'lucide-svelte';
+	import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
+	import { fade } from 'svelte/transition';
 
-    let { show = $bindable(false), theme = 'dark' } = $props();
+	let { show = $bindable(false), theme = 'dark' } = $props();
 
-    let rating = $state(0);
-    let comment = $state('');
-    let submitting = $state(false);
-    let success = $state(false);
-    let error = $state<string | null>(null);
+	let rating = $state(0);
+	let comment = $state('');
+	let submitting = $state(false);
+	let success = $state(false);
+	let error = $state<string | null>(null);
 
-    async function handleSubmit() {
-        if (rating === 0) {
-            error = "Please select a rating.";
-            return;
-        }
-        submitting = true;
-        error = null;
-        try {
-            await api.submitFeedback(rating, comment);
-            success = true;
-            setTimeout(() => {
-                show = false;
-                // Reset after closing
-                setTimeout(() => {
-                    success = false;
-                    rating = 0;
-                    comment = '';
-                }, 500);
-            }, 2000);
-        } catch (e: any) {
-            error = "Failed to submit feedback. Please try again.";
-        } finally {
-            submitting = false;
-        }
-    }
+	let dark = $derived(theme === 'dark');
+	let muted = $derived(dark ? 'text-white/40' : 'text-black/45');
+	let rule = $derived(dark ? 'border-white/10' : 'border-black/10');
 
-    function close() {
-        if (!submitting) show = false;
-    }
+	async function handleSubmit() {
+		if (rating === 0) {
+			error = 'Pick a number first.';
+			return;
+		}
+		submitting = true;
+		error = null;
+		try {
+			await api.submitFeedback(rating, comment);
+			success = true;
+			setTimeout(() => {
+				show = false;
+				setTimeout(() => {
+					success = false;
+					rating = 0;
+					comment = '';
+				}, 300);
+			}, 1600);
+		} catch {
+			error = 'Could not send. Try again.';
+		} finally {
+			submitting = false;
+		}
+	}
+
+	function close() {
+		if (!submitting) show = false;
+	}
+
+	function ratingClass(n: number) {
+		if (rating === n) return dark ? 'border-white bg-white text-black' : 'border-black bg-black text-white';
+		return dark
+			? 'border-white/15 text-white/60 hover:border-white/40 hover:text-white'
+			: 'border-black/15 text-black/60 hover:border-black/40 hover:text-black';
+	}
 </script>
 
 {#if show}
-    <!-- Backdrop -->
-    <div 
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-black/40"
-        transition:fade={{ duration: 200 }}
-    >
-        <button type="button" class="absolute inset-0 cursor-default" onclick={close} aria-label="Close feedback dialog"></button>
-        <!-- Modal -->
-        <div 
-            class={`relative w-full max-w-md overflow-hidden rounded-[2rem] border shadow-2xl transition-all ${theme === 'dark' ? 'border-white/10 bg-[#0B0F17]/95 text-white shadow-black/20' : 'border-zinc-200 bg-white/95 text-zinc-900 shadow-xl'}`}
-            transition:fly={{ y: 20, duration: 300, delay: 100 }}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="feedback-title"
-        >
-            <div class="p-8">
-                <div class="flex items-center justify-between mb-8">
-                    <div class="flex items-center gap-3">
-                        <div class={`flex h-10 w-10 items-center justify-center rounded-xl ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-black/10 text-black'}`}>
-                            <Sparkles class="h-5 w-5" />
-                        </div>
-                        <h2 id="feedback-title" class="text-xl font-bold">Feedback</h2>
-                    </div>
-                    <button 
-                        type="button"
-                        onclick={close}
-                        class={`p-2 rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-white/5 text-zinc-400' : 'hover:bg-zinc-100 text-zinc-500'}`}
-                        aria-label="Close feedback dialog"
-                    >
-                        <X class="h-5 w-5" />
-                    </button>
-                </div>
+	<div class="fixed inset-0 z-[100] flex items-center justify-center p-4" transition:fade={{ duration: 150 }}>
+		<button type="button" class="absolute inset-0 cursor-default bg-black/60" onclick={close} aria-label="Close feedback"></button>
 
-                {#if success}
-                    <div class="flex flex-col items-center justify-center py-10 text-center" in:fade>
-                        <div class="mb-4 h-16 w-16 items-center justify-center rounded-full bg-green-500/20 text-green-500 flex">
-                            <Send class="h-8 w-8" />
-                        </div>
-                        <h3 class="text-lg font-bold mb-2">Thank you!</h3>
-                        <p class={`text-sm ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-600'}`}>Your feedback helps us build a better Axon.</p>
-                    </div>
-                {:else}
-                    <div class="space-y-6">
-                        <fieldset>
-                            <legend class={`block text-xs font-semibold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                                Overall Rating
-                            </legend>
-                            <div class="flex gap-2">
-                                {#each [1, 2, 3, 4, 5] as star}
-                                    <button 
-                                        type="button"
-                                        onclick={() => rating = star}
-                                        class={`group relative p-2 transition-transform hover:scale-110 active:scale-95`}
-                                        aria-label={`${star} out of 5 stars`}
-                                        aria-pressed={rating === star}
-                                    >
-                                        <Star 
-                                            class={`h-8 w-8 transition-colors ${rating >= star ? 'fill-yellow-400 text-yellow-400' : theme === 'dark' ? 'text-zinc-700' : 'text-zinc-300'}`} 
-                                        />
-                                    </button>
-                                {/each}
-                            </div>
-                        </fieldset>
+		<div
+			class={`relative w-full max-w-sm border ${rule} ${dark ? 'bg-[#0a0a0a] text-[#ededed]' : 'bg-[#fafafa] text-[#0a0a0a]'}`}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="feedback-title"
+		>
+			<div class={`flex h-12 items-center justify-between border-b px-5 ${rule}`}>
+				<h2 id="feedback-title" class="axon-label">Feedback</h2>
+				<button type="button" onclick={close} class={`-mr-2 p-2 transition-colors ${muted} ${dark ? 'hover:text-white' : 'hover:text-black'}`} aria-label="Close feedback">
+					<X class="h-4 w-4" />
+				</button>
+			</div>
 
-                        <div>
-                            <label for="feedback-comment" class={`block text-xs font-semibold uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                                Thoughts & Suggestions
-                            </label>
-                            <div class="relative">
-                                <textarea
-                                    id="feedback-comment"
-                                    name="feedback-comment"
-                                    bind:value={comment}
-                                    placeholder="Tell us what you think..."
-                                    class={`w-full rounded-2xl border p-4 text-sm min-h-[120px] outline-none transition-all resize-none ${theme === 'dark' ? 'bg-[#0B0F17]/50 border-white/10 focus:border-white/30 text-white placeholder:text-zinc-600' : 'bg-zinc-50 border-zinc-200 focus:border-black/30 text-zinc-900 placeholder:text-zinc-400'}`}
-                                ></textarea>
-                                <MessageSquare class={`absolute right-4 bottom-4 h-4 w-4 ${theme === 'dark' ? 'text-zinc-700' : 'text-zinc-300'}`} />
-                            </div>
-                        </div>
+			{#if success}
+				<div class="px-5 py-10 text-center" in:fade>
+					<p class="text-[15px] font-semibold">Thanks. Got it.</p>
+					<p class={`mt-1.5 text-[13px] ${muted}`}>Every note gets read.</p>
+				</div>
+			{:else}
+				<div class="space-y-5 px-5 py-5">
+					<fieldset>
+						<legend class={`axon-label mb-2.5 ${muted}`}>How useful is Axon? 1–5</legend>
+						<div class="grid grid-cols-5 gap-1.5">
+							{#each [1, 2, 3, 4, 5] as n}
+								<button
+									type="button"
+									onclick={() => { rating = n; error = null; }}
+									class={`h-10 border text-[14px] font-medium tabular-nums transition-colors ${ratingClass(n)}`}
+									aria-pressed={rating === n}
+									aria-label={`${n} out of 5`}
+								>{n}</button>
+							{/each}
+						</div>
+					</fieldset>
 
-                        {#if error}
-                            <p role="alert" class="text-xs font-medium text-red-500">{error}</p>
-                        {/if}
+					<div>
+						<label for="feedback-comment" class={`axon-label mb-2.5 block ${muted}`}>What should change?</label>
+						<textarea
+							id="feedback-comment"
+							bind:value={comment}
+							placeholder="Optional"
+							class={`min-h-[110px] w-full resize-none border bg-transparent p-3 text-[14px] outline-none transition-colors ${dark ? 'border-white/15 placeholder:text-white/30 focus:border-white/40' : 'border-black/15 placeholder:text-black/30 focus:border-black/40'}`}
+						></textarea>
+					</div>
 
-                        <button 
-                            type="button"
-                            onclick={handleSubmit}
-                            disabled={submitting}
-                            class={`w-full group inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 font-bold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-lg ${theme === 'dark' ? 'bg-black text-white hover:bg-zinc-800 shadow-black/10' : 'bg-white text-black hover:bg-zinc-200 shadow-black/20'}`}
-                        >
-                            {#if submitting}
-                                <SignalLoader size={16} />
-                                Sending...
-                            {:else}
-                                Submit Feedback
-                                <Send class="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                            {/if}
-                        </button>
-                        
-                        <p class={`text-[11px] text-center ${theme === 'dark' ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                            Your blood and tears made this great. We just keep it running.
-                        </p>
-                    </div>
-                {/if}
-            </div>
-        </div>
-    </div>
+					{#if error}
+						<p role="alert" class="text-[12px] text-red-500">{error}</p>
+					{/if}
+
+					<button
+						type="button"
+						onclick={handleSubmit}
+						disabled={submitting}
+						class={`axon-label inline-flex h-11 w-full items-center justify-center gap-2 transition-opacity disabled:opacity-50 ${dark ? 'bg-white text-black hover:opacity-90' : 'bg-black text-white hover:opacity-90'}`}
+					>
+						{#if submitting}
+							<SignalLoader size={14} />
+							Sending
+						{:else}
+							Send
+						{/if}
+					</button>
+				</div>
+			{/if}
+		</div>
+	</div>
 {/if}
-
-<style>
-    textarea::-webkit-scrollbar {
-        display: none;
-    }
-</style>
