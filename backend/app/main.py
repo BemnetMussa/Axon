@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 import time
 import base64
@@ -1029,6 +1030,9 @@ def pulse(session: Session = Depends(get_session)):
         "sweeps_total": int(sweeps_total or 0),
         "scanned_total": int(scanned_total or 0),
         "running_since": _as_utc(first_at).isoformat() if first_at else None,
+        "engine": "full"
+        if {"axon_private_fetcher", "axon_private_analyzer"} <= sys.modules.keys()
+        else "community",
     }
     _pulse_cache.set(value)
     return value

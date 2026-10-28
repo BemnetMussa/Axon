@@ -8,7 +8,7 @@
 	import MobileBottomNav from '$lib/components/navigation/MobileBottomNav.svelte';
 	import ReaderPanel from '$lib/components/reader/ReaderPanel.svelte';
 	import DigestView from '$lib/components/reader/DigestView.svelte';
-	import { NAVIGATION, SECONDARY_CATEGORIES, SUGGESTIONS } from '$lib/ui';
+	import { NAVIGATION, SUGGESTIONS } from '$lib/ui';
 	import { analytics } from '$lib/analytics';
 	import OnboardingOverlay from '$lib/components/onboarding/OnboardingOverlay.svelte';
 	import NotificationPrompt from '$lib/components/ui/NotificationPrompt.svelte';
@@ -27,21 +27,20 @@
 	let fetchError = $state<string | null>(null);
 	let syncIndicator = $state(false);
 	let searchQuery = $state('');
-	let activeSource = $state<string | null>(null);
 	let activeCategory = $state<string | null>(null);
 	let selectedArticle = $state<Article | null>(null);
 	let showDigestView = $state(false);
 	let digestContent = $state<{ content: string; created_at: string } | null>(null);
 	let digestLoading = $state(false);
 	let savedArticleIds = $state<number[]>([]);
+	// Full saved stories from the server — Saved must not depend on which feed pages are loaded.
+	let savedArticles = $state<Article[]>([]);
 	let showSavedOnly = $state(false);
 	let chatInput = $state('');
 	let chatMessages = $state<ChatMessage[]>([]);
 	let chatLoading = $state(false);
 	let chatSuggestions = $state<string[]>([...SUGGESTIONS]);
 	let suggestionsLoading = $state(false);
-	let sortBy = $state<'date' | 'engagement' | 'views'>('date');
-	let timeFilter = $state<'all' | 'today' | 'week' | 'month'>('all');
 	let theme = $state<'dark' | 'light'>('dark');
 
 	let nextCursor = $state<string | null>(null);
@@ -63,21 +62,6 @@
 	const POLL_INTERVAL_MS = 60_000;
 
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-	let sources = $derived([...new Set(allArticles.map((a) => a.source))].sort());
-	let sourceCounts = $derived.by(() => {
-		const counts: Record<string, number> = {};
-		// Using allArticles ensuring we count from the full session set
-		allArticles.forEach((a) => {
-			counts[a.source] = (counts[a.source] || 0) + 1;
-		});
-		return counts;
-	});
-	function parseDate(dateStr: string): number {
-		let d = dateStr;
-		if (!d.endsWith('Z') && !d.includes('+') && !d.includes('-', 10)) d += 'Z';
-		return new Date(d).getTime();
-	}
 
 	let semanticSearchResults = $state<Article[] | null>(null);
 	let searchingSemantic = $state(false);
@@ -132,28 +116,12 @@
 		}
 	});
 
-	let savedIdSet = $derived(new Set(savedArticleIds));
-
 	let filtered = $derived.by(() => {
 		if (semanticSearchResults && searchQuery.trim().length > 2) return semanticSearchResults;
-		if (activeCategory === 'Trending' && !showSavedOnly) return trendingArticles;
 
-		// The active category/GitHub tab is filtered server-side (see feedParams),
-		// so `allArticles` already holds only that tab's articles. Here we apply
-		// the lighter, client-side refinements layered on top of the loaded set.
-		let list = allArticles;
-		if (showSavedOnly) list = list.filter((a) => savedIdSet.has(a.id));
-		if (activeSource) list = list.filter((a) => a.source === activeSource);
-		if (timeFilter !== 'all') {
-			const now = Date.now();
-			const cutoff =
-				timeFilter === 'today'
-					? now - 86_400_000
-					: timeFilter === 'week'
-						? now - 7 * 86_400_000
-						: now - 30 * 86_400_000;
-			list = list.filter((a) => parseDate(a.published_date) >= cutoff);
-		}
+		// The active tab is filtered server-side (see feedParams), so `allArticles`
+		// already holds only that tab's articles; only the search box narrows it here.
+		let list = showSavedOnly ? savedArticles : activeCategory === 'Trending' ? trendingArticles : allArticles;
 		const q = searchQuery.trim().toLowerCase();
 		if (q) {
 			list = list.filter(
@@ -163,20 +131,12 @@
 					(a.content_snippet || '').toLowerCase().includes(q)
 			);
 		}
-		if (sortBy === 'engagement') list = [...list].sort((a, b) => (b.likes || 0) - (a.likes || 0));
-		else if (sortBy === 'views') list = [...list].sort((a, b) => (b.views || 0) - (a.views || 0));
 		return list;
 	});
-	let currentTitle = $derived(showSavedOnly ? 'Saved' : (activeCategory ?? 'Frontier'));
-	let dbEmpty = $derived(!loading && allArticles.length === 0 && !fetchError);
-	let hasActiveFilters = $derived(
-		!!searchQuery.trim() ||
-		!!activeSource ||
-		!!activeCategory ||
-		showSavedOnly ||
-		timeFilter !== 'all' ||
-		sortBy !== 'date'
+	let currentTitle = $derived(
+		showSavedOnly ? 'Saved' : (NAVIGATION.find((n) => n.id === activeCategory)?.label ?? 'Frontier')
 	);
+	let dbEmpty = $derived(!loading && allArticles.length === 0 && !fetchError && activeCategory === null);
 
 	function applyTheme(t: 'dark' | 'light') {
 		theme = t;
@@ -190,6 +150,10 @@
 
 	function toggleTheme() {
 		applyTheme(theme === 'dark' ? 'light' : 'dark');
+	}
+
+	function sortNewestFirst(list: Article[]): Article[] {
+		return [...list].sort((a, b) => b.published_date.localeCompare(a.published_date));
 	}
 
 	function finishOnboarding() {
@@ -207,6 +171,7 @@
 
 		try {
 			const savedRes = await api.getSavedArticles();
+			savedArticles = sortNewestFirst(savedRes.articles);
 			savedArticleIds = savedRes.articles.map(a => a.id);
 		} catch {
 			const saved = localStorage.getItem(SAVED_KEY);
@@ -465,7 +430,6 @@
 	async function selectCategory(id: string | null) {
 		const changed = activeCategory !== id || showSavedOnly || showDigestView;
 		activeCategory = id;
-		if (changed) activeSource = null;
 		selectedArticle = null;
 		showSavedOnly = false;
 		showDigestView = false;
@@ -479,37 +443,19 @@
 	}
 
 	async function showSavedView() {
-		// Saved filters over the broad feed, so make sure the default feed is loaded
-		// when arriving from a narrow tab.
-		const wasFiltered = activeCategory !== null;
 		showSavedOnly = true;
-		activeCategory = null;
-		activeSource = null;
 		selectedArticle = null;
 		showDigestView = false;
-		if (wasFiltered) await loadDefaultFeed();
-	}
-
-	function selectSource(source: string | null) {
-		activeSource = source;
-	}
-
-	async function clearCategoryOrSaved() {
-		const wasFiltered = activeCategory !== null;
-		showSavedOnly = false;
-		activeCategory = null;
-		if (wasFiltered) await loadDefaultFeed();
-	}
-
-	async function clearAllFilters() {
-		const wasFiltered = activeCategory !== null;
-		searchQuery = '';
-		activeSource = null;
-		activeCategory = null;
-		showSavedOnly = false;
-		sortBy = 'date';
-		timeFilter = 'all';
-		if (wasFiltered) await loadDefaultFeed();
+		feedScrollArea?.scrollTo({ top: 0 });
+		try {
+			// Saves made on another device show up without a reload.
+			const res = await api.getSavedArticles();
+			savedArticles = sortNewestFirst(res.articles);
+			savedArticleIds = res.articles.map((a) => a.id);
+			persistSaved();
+		} catch {
+			/* keep what we have */
+		}
 	}
 
 	async function fetchTrendingPage() {
@@ -537,7 +483,6 @@
 		const wasFiltered = activeCategory !== null;
 		showDigestView = true;
 		activeCategory = null;
-		activeSource = null;
 		selectedArticle = null;
 		showSavedOnly = false;
 		// Keep the underlying feed = Frontier so closing the digest lands on it.
@@ -576,22 +521,36 @@
 		}
 	}
 
+	function findLoadedArticle(id: number): Article | undefined {
+		if (selectedArticle?.id === id) return selectedArticle;
+		return (
+			allArticles.find((a) => a.id === id) ??
+			trendingArticles.find((a) => a.id === id) ??
+			semanticSearchResults?.find((a) => a.id === id)
+		);
+	}
+
+	function applySaved(id: number, saved: boolean) {
+		savedArticleIds = saved ? [...savedArticleIds, id] : savedArticleIds.filter((s) => s !== id);
+		if (saved) {
+			const article = findLoadedArticle(id);
+			if (article && !savedArticles.some((a) => a.id === id)) savedArticles = [article, ...savedArticles];
+		} else {
+			savedArticles = savedArticles.filter((a) => a.id !== id);
+		}
+		persistSaved();
+	}
+
 	async function toggleSave(id: number) {
 		const isCurrentlySaved = savedArticleIds.includes(id);
-		savedArticleIds = isCurrentlySaved
-			? savedArticleIds.filter((s) => s !== id)
-			: [...savedArticleIds, id];
-		persistSaved();
-		
+		applySaved(id, !isCurrentlySaved);
+
 		try {
 			await api.toggleSave(id);
 		} catch (e) {
 			console.error("Failed to sync save status to backend", e);
 			flashNotice('Save failed to sync. Reverted.');
-			savedArticleIds = isCurrentlySaved
-				? [...savedArticleIds, id]
-				: savedArticleIds.filter((s) => s !== id);
-			persistSaved();
+			applySaved(id, isCurrentlySaved);
 		}
 	}
 
@@ -751,13 +710,9 @@
 					title={currentTitle}
 					articles={filtered}
 					{dbEmpty}
-					{sources}
-					{activeSource}
 					{searchQuery}
-					{sortBy}
-					{timeFilter}
 					{theme}
-					{hasMore}
+					hasMore={hasMore && !showSavedOnly && !semanticSearchActive}
 					{loadingMore}
 					selectedArticleId={selectedArticle?.id ?? null}
 					{savedArticleIds}
@@ -765,20 +720,14 @@
 					{loading}
 					{syncIndicator}
 					{newArticleIds}
-					{activeCategory}
+					tabs={NAVIGATION}
+					activeTab={activeCategory}
 					{showSavedOnly}
 					{semanticSearchActive}
-					secondaryCategories={SECONDARY_CATEGORIES}
-					onCategorySelect={selectCategory}
+					onTabSelect={selectCategory}
 					onSearchChange={(value) => (searchQuery = value)}
-					onSourceSelect={selectSource}
-					onSortChange={(value) => (sortBy = value)}
-					onTimeFilterChange={(value) => (timeFilter = value)}
-					onClearCategoryOrSaved={clearCategoryOrSaved}
-					onClearAllFilters={clearAllFilters}
-				onArticleOpen={openArticle}
-				onToggleSave={toggleSave}
-					onShowDigest={showDigest}
+					onArticleOpen={openArticle}
+					onToggleSave={toggleSave}
 					onLoadMore={loadMore}
 					onRefresh={refreshNewArticles}
 					bind:scrollArea={feedScrollArea}
@@ -825,7 +774,6 @@
 
 	{#if !selectedArticle}
 		<MobileBottomNav
-			items={NAVIGATION}
 			{activeCategory}
 			{showSavedOnly}
 			{showDigestView}

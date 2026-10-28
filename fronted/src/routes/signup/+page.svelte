@@ -2,7 +2,8 @@
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Zap, ArrowRight, AlertCircle } from 'lucide-svelte';
+	import { ArrowRight, AlertCircle } from 'lucide-svelte';
+	import AxonMark from '$lib/components/ui/AxonMark.svelte';
 	import { authClient } from '$lib/auth-client';
 	import { slide } from 'svelte/transition';
 
@@ -83,10 +84,10 @@
 			
 			<div class="absolute inset-0 flex flex-col justify-between p-12">
 				<div class="flex items-center gap-2">
-					<div class="flex h-8 w-8 items-center justify-center rounded bg-black dark:bg-white text-white dark:text-black shadow-lg">
-						<Zap class="h-4 w-4 fill-current" />
+					<div class="flex h-8 w-8 items-center justify-center bg-black dark:bg-white text-white dark:text-black">
+						<AxonMark class="h-[18px] w-[18px]" />
 					</div>
-					<span class="text-lg font-black uppercase tracking-[0.2em] italic text-zinc-900 dark:text-white">Axon</span>
+					<span class="text-[15px] font-semibold uppercase tracking-[0.24em] text-zinc-900 dark:text-white">Axon</span>
 				</div>
 
 				<div class="max-w-md">
@@ -94,7 +95,7 @@
 						The feed
 					</p>
 					<h2 class="text-3xl font-medium tracking-tight text-zinc-900 dark:text-white mb-4">
-						The leading edge, in one feed.
+						You can’t keep up with everything. You don’t have to.
 					</h2>
 					<p class="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
 						The feed is already aimed at what is coming up. An account keeps your saves and the questions you ask.
@@ -110,10 +111,10 @@
 				
 				<!-- Mobile Logo -->
 				<div class="mb-12 flex lg:hidden items-center gap-3">
-					<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-black dark:bg-white text-white dark:text-black shadow-md">
-						<Zap class="h-5 w-5 fill-current" />
+					<div class="flex h-9 w-9 items-center justify-center bg-black dark:bg-white text-white dark:text-black">
+						<AxonMark class="h-5 w-5" />
 					</div>
-					<span class="text-xl font-black uppercase tracking-[0.2em] italic text-zinc-900 dark:text-white">Axon</span>
+					<span class="text-[15px] font-semibold uppercase tracking-[0.24em] text-zinc-900 dark:text-white">Axon</span>
 				</div>
 
 				<!-- Header -->

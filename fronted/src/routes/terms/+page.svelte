@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Zap, ArrowLeft } from 'lucide-svelte';
+	import { ArrowLeft } from 'lucide-svelte';
+	import AxonMark from '$lib/components/ui/AxonMark.svelte';
 </script>
 
 <svelte:head>
@@ -13,7 +14,7 @@
 		<div class="mx-auto flex max-w-3xl items-center justify-between px-5 py-5 sm:px-8">
 			<a href="/" class="flex items-center gap-2 text-sm font-semibold tracking-wide">
 				<span class="flex h-7 w-7 items-center justify-center rounded-md bg-black text-white dark:bg-white dark:text-black">
-					<Zap class="h-3.5 w-3.5 fill-current" />
+					<AxonMark class="h-4 w-4" />
 				</span>
 				AXON
 			</a>

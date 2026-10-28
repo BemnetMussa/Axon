@@ -1,4 +1,4 @@
-import { Boxes, Home, Sparkles, Lightbulb, Github, Flame, AlertTriangle } from 'lucide-svelte';
+import { Boxes, Home, Lightbulb, Github, Flame } from 'lucide-svelte';
 
 export type NavItem = {
 	id: string | null;
@@ -14,23 +14,15 @@ export const SUGGESTIONS = [
 	'Why does this matter now?',
 ];
 
-// Primary tabs — kept deliberately short. A 3-minute brief reads best as a few
-// dense feeds rather than many thin ones, and each tab is server-paginated so
-// "Load more" pulls the next page *of that tab*. Narrower topics live in the
-// feed's Topics filter (SECONDARY_CATEGORIES) instead of as top-level tabs.
+// The only way to narrow the feed besides search. Each tab is server-paginated,
+// so "Load more" pulls the next page *of that tab*. Ids are the backend category
+// ids ('GitHub' is a source filter, 'Trending' its own endpoint; see feedParams).
 export const NAVIGATION: NavItem[] = [
 	{ id: null, label: 'Frontier', icon: Home },
 	{ id: 'Trending', label: 'Trending', icon: Flame },
-	{ id: 'GitHub', label: 'GitHub', icon: Github },
 	{ id: 'Signal', label: 'Research', icon: Lightbulb },
-];
-
-// Demoted from top-level tabs into the in-feed "Topics" filter. Same category
-// ids the backend filters on, so selecting one scopes (and paginates) the feed.
-export const SECONDARY_CATEGORIES: NavItem[] = [
-	{ id: 'AI', label: 'AI & News', icon: Sparkles },
-	{ id: 'Discovery', label: 'Cool Tools', icon: Boxes },
-	{ id: 'Concerns', label: 'Concerns', icon: AlertTriangle },
+	{ id: 'Discovery', label: 'Tools', icon: Boxes },
+	{ id: 'GitHub', label: 'GitHub', icon: Github },
 ];
 
 const BRAND_COLORS: Record<string, string> = {

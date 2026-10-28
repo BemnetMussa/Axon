@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/state';
 	import type { Article } from '$lib/api';
-	import { NAVIGATION, SECONDARY_CATEGORIES } from '$lib/ui';
+	import { NAVIGATION } from '$lib/ui';
 	import { pulseStore } from '$lib/pulse-store.svelte';
 	import FeedPanel from '$lib/components/feed/FeedPanel.svelte';
 	import MobileBottomNav from '$lib/components/navigation/MobileBottomNav.svelte';
@@ -107,11 +107,7 @@
 						title="Frontier"
 						{articles}
 						dbEmpty={false}
-						sources={[]}
-						activeSource={null}
 						searchQuery=""
-						sortBy="date"
-						timeFilter="all"
 						{theme}
 						hasMore={false}
 						loadingMore={false}
@@ -121,19 +117,13 @@
 						loading={false}
 						syncIndicator={false}
 						{newArticleIds}
-						activeCategory={null}
+						tabs={NAVIGATION}
+						activeTab={null}
 						showSavedOnly={false}
-						secondaryCategories={SECONDARY_CATEGORIES}
-						onCategorySelect={noop}
+						onTabSelect={noop}
 						onSearchChange={noop}
-						onSourceSelect={noop}
-						onSortChange={noop}
-						onTimeFilterChange={noop}
-						onClearCategoryOrSaved={noop}
-						onClearAllFilters={noop}
 						onArticleOpen={noop}
 						onToggleSave={noop}
-						onShowDigest={noop}
 						onLoadMore={noop}
 						bind:scrollArea={feedScrollArea}
 					/>
@@ -166,7 +156,6 @@
 
 		{#if screen === 'feed' || screen === 'digest'}
 			<MobileBottomNav
-				items={NAVIGATION}
 				activeCategory={null}
 				showSavedOnly={false}
 				showDigestView={screen === 'digest'}

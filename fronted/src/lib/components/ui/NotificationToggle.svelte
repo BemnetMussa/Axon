@@ -58,11 +58,11 @@
 	// Sizing/styling differs between the two placements but the logic is shared.
 	let rowClass = $derived(
 		variant === 'mobile'
-			? `flex w-full items-center gap-3 rounded-xl px-3 py-3 transition-all ${dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'}`
+			? `flex w-full items-center gap-3 px-3 py-3 text-left ${dark ? 'text-white/70 active:bg-white/[0.05]' : 'text-black/70 active:bg-black/[0.04]'}`
 			: `flex w-full items-center gap-3 px-2 py-2 text-left transition-colors ${dark ? 'text-white/50 hover:bg-white/[0.05] hover:text-white' : 'text-black/50 hover:bg-black/[0.04] hover:text-black'}`
 	);
-	let iconClass = $derived(variant === 'mobile' ? 'h-5 w-5 shrink-0' : 'h-3.5 w-3.5 shrink-0');
-	let textClass = $derived(variant === 'mobile' ? 'text-[13px] font-semibold' : 'text-[13px] font-medium');
+	let iconClass = $derived(variant === 'mobile' ? 'h-[18px] w-[18px] shrink-0' : 'h-3.5 w-3.5 shrink-0');
+	let textClass = $derived(variant === 'mobile' ? 'text-[14px] font-medium' : 'text-[13px] font-medium');
 </script>
 
 {#if supported}

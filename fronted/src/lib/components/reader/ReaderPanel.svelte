@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { fly } from 'svelte/transition';
-	import { ArrowLeft, ArrowUp, ExternalLink, Share2, Zap, Check } from 'lucide-svelte';
+	import { ArrowLeft, ArrowUp, ExternalLink, Share2, Bookmark, Check } from 'lucide-svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import type { Article } from '$lib/api';
 	import ChatDock from '$lib/components/reader/ChatDock.svelte';
@@ -95,7 +95,7 @@
 				class={`${iconButtonClass(theme)} sm:w-auto sm:gap-1.5 sm:px-2.5`}
 				aria-label={isSaved ? 'Unsave' : 'Save'}
 			>
-				<Zap class={`h-3 w-3 ${savedStyle()}`} />
+				<Bookmark class={`h-3 w-3 ${savedStyle()}`} />
 				<span class={`hidden text-[10px] font-semibold sm:inline ${savedLabel()}`}>
 					{isSaved ? 'Saved' : 'Save'}
 				</span>

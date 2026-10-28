@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { Zap, RefreshCw, Home } from 'lucide-svelte';
+	import { RefreshCw, Home } from 'lucide-svelte';
+	import AxonMark from '$lib/components/ui/AxonMark.svelte';
 
 	async function hardRecover() {
 		try {
@@ -33,7 +34,7 @@
 	<div class="relative z-10 flex flex-col items-center">
 		<!-- Logo mark -->
 		<div class="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.06] ring-1 ring-white/[0.08]">
-			<Zap class="h-5 w-5 text-white/60" />
+			<AxonMark class="h-6 w-6 text-white/60" />
 		</div>
 
 		<!-- Status code -->

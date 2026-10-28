@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { reveal } from '$lib/actions/reveal';
-	import { ArrowRight, Zap } from 'lucide-svelte';
+	import { ArrowRight } from 'lucide-svelte';
+	import AxonMark from '$lib/components/ui/AxonMark.svelte';
 	import IntakeMachine from '$lib/components/hero/IntakeMachine.svelte';
 	import FeatureShowcase from '$lib/components/hero/FeatureShowcase.svelte';
 	import { sweepAgo, sweepIn } from '$lib/pulse';
@@ -157,7 +158,7 @@
 		<div class="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
 			<a href="/" class="flex items-center gap-2.5">
 				<span class="flex h-7 w-7 items-center justify-center bg-black text-white dark:bg-white dark:text-black">
-					<Zap class="h-3.5 w-3.5 fill-current" />
+					<AxonMark class="h-4 w-4" />
 				</span>
 				<span class="text-[13px] font-semibold uppercase tracking-[0.24em]">Axon</span>
 			</a>
@@ -410,7 +411,7 @@
 			<div class="sm:col-span-2 lg:col-span-1">
 				<a href="/" class="flex items-center gap-2.5">
 					<span class="flex h-7 w-7 items-center justify-center bg-black text-white dark:bg-white dark:text-black">
-						<Zap class="h-3.5 w-3.5 fill-current" />
+						<AxonMark class="h-4 w-4" />
 					</span>
 					<span class="text-[13px] font-semibold uppercase tracking-[0.24em]">Axon</span>
 				</a>

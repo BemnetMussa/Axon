@@ -1,5 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <!-- Axon app icon (maskable, bolt inside the 80% safe zone): the brand bolt on full-bleed black. No baked-in corner radius; the OS applies its own mask. -->
+  <!-- Axon app icon (maskable, mark inside the 80% safe zone): the signal-field mark on full-bleed black. No baked-in corner radius; the OS applies its own mask. -->
   <rect width="512" height="512" fill="#0a0a0a"/>
-  <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" fill="#fafafa" transform="translate(124.00 124.00) scale(11)"/>
+  <g transform="translate(130 130) scale(10.5)" fill="#fafafa">
+    <circle cx="5" cy="5" r="1.5" opacity="0.43"/>
+    <circle cx="12" cy="5" r="1.5" opacity="0.55"/>
+    <circle cx="5" cy="12" r="1.5" opacity="0.3"/>
+    <circle cx="12" cy="12" r="1.5" opacity="0.43"/>
+    <circle cx="19" cy="12" r="1.5" opacity="0.55"/>
+    <circle cx="5" cy="19" r="1.5" opacity="0.18"/>
+    <circle cx="12" cy="19" r="1.5" opacity="0.3"/>
+    <circle cx="19" cy="19" r="1.5" opacity="0.43"/>
+    <circle cx="19" cy="5" r="3.3"/>
+  </g>
 </svg>

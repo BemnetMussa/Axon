@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { SOURCE_ICONS } from '$lib/source-icons';
+	import { MARK_DOTS, MARK_PICK } from '$lib/components/ui/AxonMark.svelte';
 
 	// Source bubbles wired into the Axon core. A canvas firehose of items runs
 	// along the wires; nearly all die at the core, and every few seconds one
@@ -94,9 +95,6 @@
 			B('arstechnica', 328, 152, 14, 'Ars Technica')
 		]
 	};
-
-	const ZAP =
-		'M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z';
 
 	const REASONS = ['Listicle', 'Duplicate ×4', 'Hype', 'Career post', 'Evergreen list', 'Low traction', 'Tutorial', 'Repost', 'Clickbait', 'Stale'];
 
@@ -444,7 +442,12 @@
 
 		<circle class="core-ring" cx={G.core.x} cy={G.core.y} r={G.core.r + 12} />
 		<circle class="core" cx={G.core.x} cy={G.core.y} r={G.core.r} />
-		<path class="core-mark" d={ZAP} transform={`translate(${G.core.x - 12 * (G.core.r / 30)} ${G.core.y - 12 * (G.core.r / 30)}) scale(${G.core.r / 30})`} />
+		<g class="core-mark" transform={`translate(${G.core.x - 12 * (G.core.r / 30)} ${G.core.y - 12 * (G.core.r / 30)}) scale(${G.core.r / 30})`}>
+			{#each MARK_DOTS as d (`${d.x}-${d.y}`)}
+				<circle cx={d.x} cy={d.y} r="1.5" opacity={d.o} />
+			{/each}
+			<circle cx={MARK_PICK.x} cy={MARK_PICK.y} r={MARK_PICK.r} />
+		</g>
 	</svg>
 
 	<canvas bind:this={canvas} class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
@@ -549,7 +552,7 @@
 		fill: currentColor;
 	}
 
-	.core-mark {
+	.core-mark circle {
 		fill: var(--stage-bg, #0a0a0a);
 	}
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Zap, MessageSquare, BookOpen, ArrowRight, X } from 'lucide-svelte';
+	import { Home, Layers, Bookmark, ArrowRight, X } from 'lucide-svelte';
 	import { analytics } from '$lib/analytics';
 
 	type Props = {
@@ -13,28 +13,28 @@
 
 	const steps = [
 		{
-			icon: Zap,
+			icon: Home,
 			color: 'text-current',
 			darkBg: 'bg-white/[0.06]',
 			lightBg: 'bg-black/[0.04]',
 			title: 'The feed',
-			body: 'Stories from GitHub, Hacker News, ArXiv, and the labs. Start with the title and the short note under it.',
+			body: 'Every few hours Axon sweeps the labs, papers, GitHub and Hacker News, and keeps only what matters. Newest day first, best story first.',
 		},
 		{
-			icon: MessageSquare,
+			icon: Layers,
 			color: 'text-current',
 			darkBg: 'bg-white/[0.06]',
 			lightBg: 'bg-black/[0.04]',
-			title: 'Ask about a story',
-			body: 'Open one and tap Ask Axon. The chat stays on that article.',
+			title: 'Narrow it down',
+			body: 'Research, Tools, GitHub and Trending are one tap away in the tabs. Search finds anything else.',
 		},
 		{
-			icon: BookOpen,
+			icon: Bookmark,
 			color: 'text-current',
 			darkBg: 'bg-white/[0.06]',
 			lightBg: 'bg-black/[0.04]',
-			title: 'Save what you want back',
-			body: 'The lightning bolt saves a story. The weekly digest is the longer view, when you want it.',
+			title: 'Read, ask, keep',
+			body: 'Open a story to read the short note and ask questions about it. The bookmark keeps it in Saved.',
 		},
 	];
 
@@ -59,15 +59,11 @@
 <div class="fixed inset-0 z-[200] flex items-center justify-center p-5" onclick={(e) => { if (e.target === e.currentTarget) skip(); }}>
 	<div class={`pointer-events-none absolute inset-0 ${dark ? 'bg-black/75' : 'bg-white/70'} backdrop-blur-sm`}></div>
 
-	<div class={`relative w-full max-w-sm rounded-3xl border shadow-2xl ${
-		dark
-			? 'border-white/[0.08] bg-[#121212] shadow-[0_24px_64px_rgba(0,0,0,0.7)]'
-			: 'border-zinc-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]'
-	}`}>
+	<div class={`relative w-full max-w-sm border ${dark ? 'border-white/10 bg-[#0a0a0a]' : 'border-black/10 bg-[#fafafa]'}`}>
 		<!-- Skip -->
 		<button
 			onclick={skip}
-			class={`absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${dark ? 'text-zinc-600 hover:bg-white/[0.06] hover:text-zinc-300' : 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700'}`}
+			class={`absolute right-4 top-4 flex h-7 w-7 items-center justify-center transition-colors ${dark ? 'text-zinc-600 hover:bg-white/[0.06] hover:text-zinc-300' : 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700'}`}
 			aria-label="Skip onboarding"
 		>
 			<X class="h-3.5 w-3.5" />
@@ -77,7 +73,7 @@
 			<!-- Step counter dots -->
 			<div class="mb-5 flex items-center gap-1.5">
 				{#each steps as _, i}
-					<div class={`h-1.5 rounded-full transition-all ${i === step
+					<div class={`h-[3px] transition-all ${i === step
 						? (dark ? 'w-5 bg-white' : 'w-5 bg-zinc-900')
 						: (dark ? 'w-1.5 bg-white/20' : 'w-1.5 bg-zinc-200')
 					}`}></div>
@@ -87,7 +83,7 @@
 			{#each steps as s, i}
 				{#if i === step}
 					<!-- Step icon -->
-					<div class={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl ${dark ? s.darkBg : s.lightBg}`}>
+					<div class={`mb-5 flex h-12 w-12 items-center justify-center ${dark ? s.darkBg : s.lightBg}`}>
 						<s.icon class={`h-6 w-6 ${s.color}`} />
 					</div>
 
@@ -102,8 +98,8 @@
 
 			<button
 				onclick={next}
-				class={`mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[13px] font-bold transition-all ${
-					dark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-zinc-700'
+				class={`axon-label mt-7 inline-flex h-11 w-full items-center justify-center gap-2 transition-opacity hover:opacity-90 ${
+					dark ? 'bg-white text-black' : 'bg-black text-white'
 				}`}
 			>
 				{step < steps.length - 1 ? 'Next' : 'Get started'}

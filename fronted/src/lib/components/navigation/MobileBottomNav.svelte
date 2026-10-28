@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { Zap, Sparkles, Menu, Sun, Moon, X, MessageSquare, LogOut } from 'lucide-svelte';
-	import type { NavItem } from '$lib/ui';
+	import { Home, Bookmark, Sparkles, Menu, Sun, Moon, X, MessageSquare, LogOut } from 'lucide-svelte';
 	import { signOutToHome } from '$lib/auth-client';
 	import NotificationToggle from '../ui/NotificationToggle.svelte';
 	import FeedbackModal from '../feedback/FeedbackModal.svelte';
 
 	type Props = {
-		items: NavItem[];
 		activeCategory: string | null;
 		showSavedOnly: boolean;
 		showDigestView: boolean;
@@ -17,19 +15,12 @@
 		onToggleTheme: () => void;
 	};
 
-	let { items, activeCategory, showSavedOnly, showDigestView, theme, onNavigate, onShowSaved, onShowDigest, onToggleTheme }: Props = $props();
+	let { activeCategory, showSavedOnly, showDigestView, theme, onNavigate, onShowSaved, onShowDigest, onToggleTheme }: Props = $props();
 	let dark = $derived(theme === 'dark');
 	let showMenu = $state(false);
 	let showFeedback = $state(false);
 
-	// Frontier + Trending as primary tabs
-	let mainTabs = $derived(items.filter(i => i.id === null || i.id === 'Trending'));
-	// Everything else goes into overflow menu
-	let overflowTabs = $derived(items.filter(i => i.id !== null && i.id !== 'Trending'));
-
-	function navBg() {
-		return dark ? 'border-white/10 bg-[#0a0a0a]/95' : 'border-black/10 bg-[#fafafa]/95';
-	}
+	let feedActive = $derived(!showSavedOnly && !showDigestView && !showMenu);
 
 	function tabColor(active: boolean) {
 		if (active) return dark ? 'text-white' : 'text-black';
@@ -39,120 +30,75 @@
 	function marker(active: boolean) {
 		return active ? (dark ? 'bg-white' : 'bg-black') : 'bg-transparent';
 	}
+
+	let rowClass = $derived(
+		`flex w-full items-center gap-3 px-3 py-3 text-left ${dark ? 'text-white/70 active:bg-white/[0.05]' : 'text-black/70 active:bg-black/[0.04]'}`
+	);
+	const tabClass = 'relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors';
 </script>
 
-<!-- Overflow menu sheet -->
 {#if showMenu}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-[51] bg-black/60 lg:hidden" onclick={() => (showMenu = false)}></div>
 	<div
-		class="fixed inset-0 z-[51] bg-black/60 backdrop-blur-sm lg:hidden"
-		onclick={() => (showMenu = false)}
-	></div>
-	<div
-		class={`fixed inset-x-0 z-[52] max-h-[min(85vh,calc(100dvh-5rem))] overflow-y-auto border-t px-3 pt-4 lg:hidden ${dark ? 'border-white/10 bg-[#0a0a0a]' : 'border-black/10 bg-[#fafafa]'}`}
-		style="bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px)); padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));"
+		class={`fixed inset-x-0 z-[52] border-t px-2 pt-2 lg:hidden ${dark ? 'border-white/10 bg-[#0a0a0a]' : 'border-black/10 bg-[#fafafa]'}`}
+		style="bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px)); padding-bottom: 0.5rem;"
 	>
-		<div class="mb-3 flex items-center justify-between px-1">
-			<h3 class={`text-sm font-bold ${dark ? 'text-white' : 'text-black'}`}>Explore</h3>
-			<button
-				onclick={() => (showMenu = false)}
-				class={`flex h-8 w-8 items-center justify-center rounded-lg ${dark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'}`}
-			>
-				<X class="h-5 w-5" />
+		<div class="flex items-center justify-between px-3 py-2">
+			<p class={`axon-label ${dark ? 'text-white/40' : 'text-black/45'}`}>More</p>
+			<button onclick={() => (showMenu = false)} class={`-mr-1 p-1 ${dark ? 'text-white/50' : 'text-black/50'}`} aria-label="Close menu">
+				<X class="h-4 w-4" />
 			</button>
 		</div>
 
-		<div class="flex flex-col gap-1">
-			{#each overflowTabs as item}
-				<button
-					onclick={() => { onNavigate(item.id); showMenu = false; }}
-					class={`flex items-center gap-3 rounded-xl px-3 py-3 text-left ${
-						activeCategory === item.id
-							? dark ? 'bg-white/10 text-white' : 'bg-black/5 text-black'
-							: dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'
-					}`}
-				>
-					<item.icon class="h-5 w-5 shrink-0" />
-					<span class="text-[13px] font-semibold">{item.label}</span>
-				</button>
-			{/each}
+		<NotificationToggle {theme} variant="mobile" />
 
-			<button
-				onclick={() => { onShowDigest(); showMenu = false; }}
-				class={`flex items-center gap-3 rounded-xl px-3 py-3 ${
-					showDigestView
-						? dark ? 'bg-white/10 text-white' : 'bg-black/5 text-black'
-						: dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'
-				}`}
-			>
-				<Sparkles class="h-5 w-5 shrink-0" />
-				<span class="text-[13px] font-semibold">Weekly Digest</span>
-			</button>
+		<button onclick={() => { onToggleTheme(); showMenu = false; }} class={rowClass}>
+			{#if dark}
+				<Sun class="h-[18px] w-[18px] shrink-0" />
+				<span class="text-[14px] font-medium">Light mode</span>
+			{:else}
+				<Moon class="h-[18px] w-[18px] shrink-0" />
+				<span class="text-[14px] font-medium">Dark mode</span>
+			{/if}
+		</button>
 
-			<div class={`my-2 h-px ${dark ? 'bg-white/[0.06]' : 'bg-zinc-100'}`}></div>
+		<button onclick={() => { showMenu = false; showFeedback = true; }} class={rowClass}>
+			<MessageSquare class="h-[18px] w-[18px] shrink-0" />
+			<span class="text-[14px] font-medium">Feedback</span>
+		</button>
 
-			<NotificationToggle {theme} variant="mobile" />
-
-			<button
-				onclick={() => { onToggleTheme(); showMenu = false; }}
-				class={`flex items-center gap-3 rounded-xl px-3 py-3 ${dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'}`}
-			>
-				{#if dark}
-					<Sun class="h-5 w-5 shrink-0" />
-					<span class="text-[13px] font-semibold">Light mode</span>
-				{:else}
-					<Moon class="h-5 w-5 shrink-0" />
-					<span class="text-[13px] font-semibold">Dark mode</span>
-				{/if}
-			</button>
-
-			<button
-				onclick={() => { showMenu = false; showFeedback = true; }}
-				class={`flex items-center gap-3 rounded-xl px-3 py-3 ${dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'}`}
-			>
-				<MessageSquare class="h-5 w-5 shrink-0" />
-				<span class="text-[13px] font-semibold">Feedback</span>
-			</button>
-
-			<button
-				onclick={signOutToHome}
-				class={`flex items-center gap-3 rounded-xl px-3 py-3 ${dark ? 'text-zinc-400 hover:bg-white/[0.04]' : 'text-zinc-600 hover:bg-zinc-50'}`}
-			>
-				<LogOut class="h-5 w-5 shrink-0" />
-				<span class="text-[13px] font-semibold">Sign out</span>
-			</button>
-		</div>
+		<button onclick={signOutToHome} class={rowClass}>
+			<LogOut class="h-[18px] w-[18px] shrink-0" />
+			<span class="text-[14px] font-medium">Sign out</span>
+		</button>
 	</div>
 {/if}
 
-<!-- Bottom nav bar -->
 <nav
-	class={`fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t backdrop-blur-md lg:hidden ${navBg()}`}
+	class={`fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t lg:hidden ${dark ? 'border-white/10 bg-[#0a0a0a]' : 'border-black/10 bg-[#fafafa]'}`}
 	style="padding-bottom: env(safe-area-inset-bottom, 0px);"
 >
-	{#each mainTabs as item}
-		{@const active = activeCategory === item.id && !showSavedOnly && !showDigestView}
-		<button onclick={() => onNavigate(item.id)} class={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors ${tabColor(active)}`}>
-			<span class={`absolute top-0 h-[2px] w-8 ${marker(active)}`}></span>
-			<item.icon class="h-5 w-5 shrink-0" />
-			<span class="axon-label truncate !text-[9px] leading-none">{item.label}</span>
-		</button>
-	{/each}
+	<button onclick={() => { showMenu = false; onNavigate(activeCategory); }} class={`${tabClass} ${tabColor(feedActive)}`}>
+		<span class={`absolute top-0 h-[2px] w-8 ${marker(feedActive)}`}></span>
+		<Home class="h-5 w-5 shrink-0" />
+		<span class="axon-label truncate !text-[9px] leading-none">Feed</span>
+	</button>
 
-	<button onclick={onShowSaved} class={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors ${tabColor(showSavedOnly)}`}>
-		<span class={`absolute top-0 h-[2px] w-8 ${marker(showSavedOnly)}`}></span>
-		<Zap class={`h-5 w-5 shrink-0 ${showSavedOnly ? 'fill-current' : ''}`} />
+	<button onclick={() => { showMenu = false; onShowSaved(); }} class={`${tabClass} ${tabColor(showSavedOnly && !showMenu)}`}>
+		<span class={`absolute top-0 h-[2px] w-8 ${marker(showSavedOnly && !showMenu)}`}></span>
+		<Bookmark class={`h-5 w-5 shrink-0 ${showSavedOnly ? 'fill-current' : ''}`} />
 		<span class="axon-label truncate !text-[9px] leading-none">Saved</span>
 	</button>
 
-	<button onclick={onShowDigest} class={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors ${tabColor(showDigestView)}`}>
-		<span class={`absolute top-0 h-[2px] w-8 ${marker(showDigestView)}`}></span>
+	<button onclick={() => { showMenu = false; onShowDigest(); }} class={`${tabClass} ${tabColor(showDigestView && !showMenu)}`}>
+		<span class={`absolute top-0 h-[2px] w-8 ${marker(showDigestView && !showMenu)}`}></span>
 		<Sparkles class="h-5 w-5 shrink-0" />
 		<span class="axon-label truncate !text-[9px] leading-none">Digest</span>
 	</button>
 
-	<button onclick={() => (showMenu = true)} class={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors ${tabColor(showMenu)}`}>
+	<button onclick={() => (showMenu = !showMenu)} class={`${tabClass} ${tabColor(showMenu)}`}>
 		<span class={`absolute top-0 h-[2px] w-8 ${marker(showMenu)}`}></span>
 		<Menu class="h-5 w-5 shrink-0" />
 		<span class="axon-label truncate !text-[9px] leading-none">More</span>

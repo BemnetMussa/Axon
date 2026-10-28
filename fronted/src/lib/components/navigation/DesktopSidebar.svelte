@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { MessageSquare, Moon, Sun, Zap, Sparkles, LogOut } from 'lucide-svelte';
+	import { MessageSquare, Moon, Sun, Bookmark, Sparkles, LogOut } from 'lucide-svelte';
+	import AxonMark from '../ui/AxonMark.svelte';
 	import { signOutToHome } from '$lib/auth-client';
 	import type { NavItem } from '$lib/ui';
 	import type { Trend } from '$lib/api';
@@ -64,7 +65,7 @@
 	<div class={`flex h-14 shrink-0 items-center justify-between border-b px-5 ${rule}`}>
 		<div class="flex items-center gap-2.5">
 			<span class={`flex h-6 w-6 items-center justify-center ${dark ? 'bg-white text-black' : 'bg-black text-white'}`}>
-				<Zap class="h-3 w-3 fill-current" />
+				<AxonMark class="h-4 w-4" />
 			</span>
 			<span class="text-[12px] font-semibold uppercase tracking-[0.24em]">Axon</span>
 		</div>
@@ -116,7 +117,7 @@
 			{/each}
 			<button onclick={onShowSaved} class={`flex items-center gap-3 px-2 py-2 text-left transition-colors ${rowClass(showSavedOnly)}`}>
 				<span class="axon-label w-5 opacity-50">{pad(navigation.length + 1)}</span>
-				<Zap class="h-3.5 w-3.5 shrink-0" />
+				<Bookmark class="h-3.5 w-3.5 shrink-0" />
 				<span class="text-[13px] font-medium">Saved</span>
 			</button>
 			<button onclick={onShowDigest} class={`flex items-center gap-3 px-2 py-2 text-left transition-colors ${rowClass(showDigestView)}`}>

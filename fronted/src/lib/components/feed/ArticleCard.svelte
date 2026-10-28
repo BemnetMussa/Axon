@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowUp, Zap } from 'lucide-svelte';
+	import { ArrowUp, Bookmark } from 'lucide-svelte';
 	import type { Article } from '$lib/api';
 	import { getBrandColor, formatEngagement, relativeTime, stripHtml } from '$lib/ui';
 	import { analytics } from '$lib/analytics';
@@ -66,7 +66,7 @@
 				class={`relative z-10 -my-2 -mr-2 flex h-8 w-8 items-center justify-center rounded-full transition-colors ${dark ? 'hover:bg-white/[0.06] hover:text-white' : 'hover:bg-zinc-100 hover:text-black'}`}
 				aria-label={isSaved ? 'Remove from saved' : 'Save article'}
 			>
-				<Zap class={`h-3.5 w-3.5 ${isSaved ? (dark ? 'fill-white text-white' : 'fill-black text-black') : ''}`} />
+				<Bookmark class={`h-3.5 w-3.5 ${isSaved ? (dark ? 'fill-white text-white' : 'fill-black text-black') : ''}`} />
 			</button>
 		</div>
 	</div>
