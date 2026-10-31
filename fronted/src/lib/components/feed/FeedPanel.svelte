@@ -2,7 +2,7 @@
 	import { Check } from 'lucide-svelte';
 	import SignalLoader from '$lib/components/ui/SignalLoader.svelte';
 	import { type Article } from '$lib/api';
-	import type { NavItem } from '$lib/ui';
+	import { dayLabel, utcDay, type NavItem } from '$lib/ui';
 	import ArticleCard from '$lib/components/feed/ArticleCard.svelte';
 	import VirtualFeed from '$lib/components/feed/VirtualFeed.svelte';
 	import FeedHeader from '$lib/components/feed/FeedHeader.svelte';
@@ -102,6 +102,21 @@
 		runRefresh();
 	}
 
+	// Day dividers only where the list is day-ordered (see /articles sort key);
+	// Trending, search and Saved use other orders.
+	let dayStarts = $derived.by(() => {
+		const starts = new Map<number, string>();
+		if (activeTab === 'Trending' || showSavedOnly || searchQuery.trim()) return starts;
+		let prev: number | null = null;
+		for (const a of articles) {
+			if (!a.published_date) continue;
+			const day = utcDay(a.published_date);
+			if (day !== prev) starts.set(a.id, dayLabel(a.published_date));
+			prev = day;
+		}
+		return starts;
+	});
+
 	let rule = $derived(dark ? 'border-white/10' : 'border-black/10');
 	let muted = $derived(dark ? 'text-white/40' : 'text-black/45');
 
@@ -180,9 +195,13 @@
 				</div>
 			</div>
 		{:else}
-			<div class="w-full min-w-0 max-w-full overflow-hidden px-2.5 py-1 sm:px-4">
-				<VirtualFeed items={articles} scrollEl={scrollArea}>
+			<div class="mx-auto w-full min-w-0 max-w-3xl overflow-hidden px-2.5 py-1 sm:px-4">
+				<VirtualFeed items={articles} scrollEl={scrollArea} gap={8}>
 					{#snippet item(article)}
+						{@const day = dayStarts.get(article.id)}
+						{#if day}
+							<p class={`axon-label px-1 pb-2 ${article.id === articles[0]?.id ? 'pt-1' : 'pt-5'} ${muted}`}>{day}</p>
+						{/if}
 						<ArticleCard
 							{article}
 							selected={selectedArticleId === article.id}

@@ -5,7 +5,7 @@
 	import { renderMarkdown } from '$lib/markdown';
 	import type { Article } from '$lib/api';
 	import ChatDock from '$lib/components/reader/ChatDock.svelte';
-	import { formatEngagement, getBrandColor } from '$lib/ui';
+	import { categoryLabel, formatEngagement, getBrandColor } from '$lib/ui';
 	import { iconButtonClass } from '$lib/ui-styles';
 
 	type ChatMessage = {
@@ -139,7 +139,7 @@
 	<div bind:this={scrollArea} class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scroll-smooth">
 		<div class="mx-auto w-full min-w-0 max-w-[720px] px-5 pb-8 pt-7 sm:px-9 sm:pb-10 sm:pt-11 lg:px-12 lg:pt-14" style="overflow-wrap: anywhere;">
 			<div class={`mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[9px] font-medium uppercase tracking-[0.14em] ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
-				<span>{article.category}</span>
+				<span>{categoryLabel(article.category)}</span>
 				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
 				<span>{new Date(article.published_date).toLocaleDateString()}</span>
 				<span class={`sm:hidden ${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>/</span>

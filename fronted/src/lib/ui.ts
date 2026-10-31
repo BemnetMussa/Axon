@@ -63,18 +63,23 @@ export function stripHtml(content: string): string {
 		.trim();
 }
 
-export function relativeTime(dateStr: string): string {
-	if (!dateStr) return '';
+// Backend sends naive UTC datetimes; without the Z they would parse as local time.
+function parseApiDate(dateStr: string): Date {
 	let d = dateStr;
 	if (!d.endsWith('Z') && !d.includes('+') && !d.includes('-', 10)) {
 		d += 'Z';
 	}
-	const date = new Date(d);
+	return new Date(d);
+}
+
+export function relativeTime(dateStr: string): string {
+	if (!dateStr) return '';
+	const date = parseApiDate(dateStr);
 	const diff = Date.now() - date.getTime();
 	if (diff < 0) return 'Just now';
 	const mins = Math.floor(diff / 60_000);
 	if (mins < 1) return 'Just now';
-	if (mins < 60) return `${mins} min`;
+	if (mins < 60) return `${mins}m ago`;
 	const hours = Math.floor(diff / 3_600_000);
 	if (hours < 24) return `${hours}h ago`;
 	const days = Math.floor(hours / 24);
@@ -101,4 +106,53 @@ export function formatEngagement(likes: number): string {
 	if (!likes || likes <= 0) return '';
 	if (likes >= 1000) return `${(likes / 1000).toFixed(1)}k`;
 	return String(likes);
+}
+
+// Card labels use the tab words, so a "Research" card lives under the Research tab.
+const CATEGORY_LABELS: Record<string, string> = {
+	Signal: 'Research',
+	Discovery: 'Tools',
+	Momentum: 'Rising',
+	Concerns: 'Discussion',
+};
+
+export function categoryLabel(category: string): string {
+	return CATEGORY_LABELS[category] ?? category;
+}
+
+const ENGAGEMENT_UNITS: Record<string, string> = {
+	HackerNews: 'points',
+	Lobsters: 'points',
+	GitHub: 'stars',
+	ProductHunt: 'votes',
+	Reddit: 'upvotes',
+};
+
+const PRIMARY_SOURCES = new Set([
+	'OpenAI', 'Anthropic', 'DeepMind', 'GoogleAI', 'GoogleResearch', 'HuggingFace', 'NVIDIA', 'Together', 'BAIR',
+	'Karpathy', 'SimonW', 'LilianWeng', 'Altman', 'Fast.ai',
+]);
+
+/** The main reason a story made the cut, in the filter's own terms (traction or source trust). */
+export function whyKept(article: { source: string; likes: number }): string {
+	const count = formatEngagement(article.likes);
+	if (count) {
+		const unit = ENGAGEMENT_UNITS[article.source];
+		return unit ? `${count} ${unit}` : count;
+	}
+	if (article.source === 'ArXiv') return 'New paper';
+	if (PRIMARY_SOURCES.has(article.source)) return 'Primary source';
+	return '';
+}
+
+/** UTC calendar day, matching the backend's day bucket for feed ordering. */
+export function utcDay(dateStr: string): number {
+	return Math.floor(parseApiDate(dateStr).getTime() / 86_400_000);
+}
+
+export function dayLabel(dateStr: string, now = Date.now()): string {
+	const diff = Math.floor(now / 86_400_000) - utcDay(dateStr);
+	if (diff <= 0) return 'Today';
+	if (diff === 1) return 'Yesterday';
+	return parseApiDate(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 }

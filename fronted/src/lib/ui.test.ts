@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getBrandColor, stripHtml, relativeTime, readingTime, formatEngagement } from './ui';
+import { getBrandColor, stripHtml, relativeTime, readingTime, formatEngagement, categoryLabel, whyKept, dayLabel } from './ui';
 
 describe('getBrandColor', () => {
 	it('returns brand colors for known sources and a fallback otherwise', () => {
@@ -36,7 +36,7 @@ describe('relativeTime', () => {
 	});
 
 	it('formats minutes, hours, days, weeks', () => {
-		expect(relativeTime('2026-07-06T11:30:00Z')).toBe('30 min');
+		expect(relativeTime('2026-07-06T11:30:00Z')).toBe('30m ago');
 		expect(relativeTime('2026-07-06T07:00:00Z')).toBe('5h ago');
 		expect(relativeTime('2026-07-05T09:00:00Z')).toBe('Yesterday');
 		expect(relativeTime('2026-07-03T12:00:00Z')).toBe('3d ago');
@@ -46,7 +46,7 @@ describe('relativeTime', () => {
 	it('treats naive timestamps (no timezone suffix) as UTC', () => {
 		// Backend sends naive UTC datetimes; without the Z-append they would be
 		// parsed as local time and drift by the machine's UTC offset.
-		expect(relativeTime('2026-07-06T11:30:00')).toBe('30 min');
+		expect(relativeTime('2026-07-06T11:30:00')).toBe('30m ago');
 	});
 });
 
@@ -69,5 +69,34 @@ describe('formatEngagement', () => {
 	it('formats plain and thousand-scale counts', () => {
 		expect(formatEngagement(42)).toBe('42');
 		expect(formatEngagement(1500)).toBe('1.5k');
+	});
+});
+
+describe('categoryLabel', () => {
+	it('uses the tab words for backend categories', () => {
+		expect(categoryLabel('Signal')).toBe('Research');
+		expect(categoryLabel('Discovery')).toBe('Tools');
+		expect(categoryLabel('AI')).toBe('AI');
+	});
+});
+
+describe('whyKept', () => {
+	it('names the traction unit per source', () => {
+		expect(whyKept({ source: 'HackerNews', likes: 412 })).toBe('412 points');
+		expect(whyKept({ source: 'GitHub', likes: 2100 })).toBe('2.1k stars');
+	});
+	it('falls back to source trust when there is no count', () => {
+		expect(whyKept({ source: 'Anthropic', likes: 0 })).toBe('Primary source');
+		expect(whyKept({ source: 'ArXiv', likes: 0 })).toBe('New paper');
+		expect(whyKept({ source: 'TechCrunch', likes: 0 })).toBe('');
+	});
+});
+
+describe('dayLabel', () => {
+	const now = new Date('2026-07-06T12:00:00Z').getTime();
+	it('labels by UTC day', () => {
+		expect(dayLabel('2026-07-06T00:30:00', now)).toBe('Today');
+		expect(dayLabel('2026-07-05T23:59:00Z', now)).toBe('Yesterday');
+		expect(dayLabel('2026-07-03T09:00:00Z', now)).toBe('Fri, Jul 3');
 	});
 });

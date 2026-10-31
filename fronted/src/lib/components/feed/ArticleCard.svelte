@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { ArrowUp, Bookmark } from 'lucide-svelte';
+	import { Bookmark } from 'lucide-svelte';
 	import type { Article } from '$lib/api';
-	import { getBrandColor, formatEngagement, relativeTime, stripHtml } from '$lib/ui';
+	import { getBrandColor, categoryLabel, whyKept, relativeTime, stripHtml } from '$lib/ui';
 	import { analytics } from '$lib/analytics';
 
 	type Props = {
@@ -17,6 +17,7 @@
 
 	let { article, selected, isSaved, isNew = false, isRead = false, theme, onOpen, onToggleSave }: Props = $props();
 	let dark = $derived(theme === 'dark');
+	let why = $derived(whyKept(article));
 
 	function cardClass() {
 		if (selected && dark) return 'border-white/20 bg-white/[0.06]';
@@ -42,7 +43,7 @@
 
 <article class={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-2xl border px-4 py-3.5 transition duration-300 active:scale-[0.99] sm:px-5 sm:py-4 ${cardClass()}`}>
 	<!-- Full-card open button (behind everything) -->
-	<button type="button" onclick={handleOpen} class="absolute inset-0 rounded-xl" aria-label={`Open ${article.title}`}></button>
+	<button type="button" onclick={handleOpen} class="absolute inset-0 rounded-2xl" aria-label={`Open ${article.title}`}></button>
 
 	<!-- Source / category / signal meta row -->
 	<div class="flex min-w-0 items-center justify-between gap-3">
@@ -52,14 +53,14 @@
 			{/if}
 			<span class="shrink-0 truncate" style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
 			<span class={`shrink-0 ${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>/</span>
-			<span class="min-w-0 truncate">{article.category}</span>
+			<span class="min-w-0 truncate">{categoryLabel(article.category)}</span>
 		</div>
 		<div class={`flex shrink-0 items-center gap-1.5 text-xs tabular-nums ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
-			{#if formatEngagement(article.likes)}
-				<span class="flex items-center gap-0.5"><ArrowUp class="h-3 w-3" />{formatEngagement(article.likes)}</span>
+			{#if why}
+				<span class={`font-medium ${dark ? 'text-zinc-300' : 'text-zinc-700'}`} title="Why it made the cut">{why}</span>
 				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>·</span>
 			{/if}
-			<span class="font-semibold">{relativeTime(article.published_date)}</span>
+			<span>{relativeTime(article.published_date)}</span>
 			<button
 				type="button"
 				onclick={handleSave}
