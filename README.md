@@ -174,7 +174,7 @@ More detail in [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md).
 
 ## Self-hosting
 
-Sweeps run on APScheduler inside the API process, so the API must stay up. `GET /health` reports scheduler state and the last ingest.
+Sweeps run on APScheduler inside the API process, so the API must stay up. `GET /health` reports scheduler state and the last ingest. The weekly digest is written automatically every Sunday at 15:00 UTC.
 
 | Variable | Effect |
 |---|---|

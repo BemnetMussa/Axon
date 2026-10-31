@@ -248,11 +248,6 @@ export const api = {
         return jsonOrThrow<{ content: string; created_at: string }>(res);
     },
 
-    generateDigest: async (): Promise<{ status: string; digest?: string; detail?: string }> => {
-        const res = await fetch(`${BASE_URL}/digests/generate`, { method: 'POST' });
-        return jsonOrThrow<{ status: string; digest?: string; detail?: string }>(res);
-    },
-    
     submitFeedback: async (rating: number, comment?: string): Promise<{ status: string }> => {
         const res = await fetch(`${BASE_URL}/feedback`, {
             method: 'POST',

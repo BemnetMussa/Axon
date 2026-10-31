@@ -24,6 +24,7 @@ from sqlmodel import Session, select, col
 from sqlalchemy import update, func, or_, and_, case, cast, text, BigInteger
 from pydantic import BaseModel, Field as PydField
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.core.database import init_db, get_session, get_script_session, engine as db_engine
@@ -291,6 +292,31 @@ def _max_article_id(session: Session) -> int:
     return session.exec(select(func.max(Article.id))).one() or 0
 
 
+async def scheduled_weekly_digest():
+    """One digest a week, Sunday 15:00 UTC. Skips if one was written in the last 6 days."""
+    session = get_script_session()
+    try:
+        latest = session.exec(select(Digest).order_by(col(Digest.created_at).desc())).first()
+        if latest and latest.created_at:
+            created = latest.created_at
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            age = datetime.now(timezone.utc) - created
+            if age < timedelta(days=6):
+                print(f"AXON: weekly digest skipped — last one is {age.days}d {age.seconds // 3600}h old")
+                return
+        content = await asyncio.to_thread(generate_weekly_digest, session)
+        if content:
+            _digest_cache.clear()
+            print(f"AXON: weekly digest written ({len(content)} chars)")
+        else:
+            print("AXON: weekly digest skipped — no articles")
+    except Exception as e:
+        print(f"AXON: weekly digest failed: {e}")
+    finally:
+        session.close()
+
+
 async def scheduled_ingest():
     """Runs ingestion + analysis on a timer."""
     global _last_ingest_at_utc, _last_ingest_ok, _last_ingest_detail
@@ -347,8 +373,15 @@ async def lifespan(app: FastAPI):
             id="axon_ingest",
             replace_existing=True,
         )
+        scheduler.add_job(
+            scheduled_weekly_digest,
+            trigger=CronTrigger(day_of_week="sun", hour=15, minute=0, timezone="UTC"),
+            id="axon_weekly_digest",
+            replace_existing=True,
+            misfire_grace_time=6 * 3600,
+        )
         scheduler.start()
-        print(f"AXON: Scheduler started (every {_scheduler_interval_hours}h)")
+        print(f"AXON: Scheduler started (ingest every {_scheduler_interval_hours}h, digest Sundays 15:00 UTC)")
     else:
         print("AXON: APScheduler disabled (DISABLE_SCHEDULER=1) — use external cron if needed")
 
