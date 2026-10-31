@@ -504,6 +504,12 @@ def _feed_sort_key():
     return day_bucket * 1000 + score
 
 
+def _highest_sort_key():
+    """Stored score in hundred-thousandths. Highest is a 7-day reorder of the same
+    number the day feed uses, so the key only has to stay stable for pagination."""
+    return cast(func.floor(func.coalesce(Article.engagement_score, 0) * 100000), BigInteger)
+
+
 def _encode_cursor(sort_key: int, article_id: int) -> str:
     """Opaque cursor carrying the keyset (feed_sort_key, id)."""
     raw = f"{int(sort_key)}|{article_id}"
@@ -522,19 +528,27 @@ def read_articles(
     cursor: str | None = Query(default=None),
     category: str | None = Query(default=None),
     source: str | None = Query(default=None),
+    order: str | None = Query(default=None),
     session: Session = Depends(get_session),
 ):
-    # Score-ordered keyset pagination. Sort key = day-bucket * 1000 + ingest score,
-    # so the feed reads "newest day first, best stories first within a day", with
-    # id as the unique tiebreaker. The key is deterministic/stable so
-    # cursoring never skips or duplicates rows. The cursor carries (sort_key, id).
+    # Default sort key = day-bucket * 1000 + ingest score, so the feed reads
+    # "newest day first, best stories first within a day". `order=highest`
+    # ignores the day and lists the strongest stored scores from the last 7
+    # days. id is the unique tiebreaker. The key is deterministic, so cursoring
+    # never skips or duplicates rows. The cursor carries (sort_key, id).
     #
     # Optional `category`/`source` filters scope the feed to a single tab. They're
     # plain WHERE clauses applied before the keyset predicate, so each tab is its
     # own properly-paginated feed (Load More returns the next page *of that tab*,
     # not the next page of the global feed).
-    sk = _feed_sort_key()
+    if order not in (None, "highest"):
+        raise HTTPException(status_code=422, detail="order must be 'highest'")
+    highest = order == "highest"
+    sk = _highest_sort_key() if highest else _feed_sort_key()
     query = select(Article, sk.label("sk")).order_by(sk.desc(), col(Article.id).desc())
+    if highest:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        query = query.where(col(Article.published_date) >= cutoff)
     if category:
         query = query.where(Article.category == category)
     if source:

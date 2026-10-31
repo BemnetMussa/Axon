@@ -95,6 +95,7 @@ def test_feed_payload_excludes_full_content_and_embedding(client, auth_headers, 
     article = get_feed(client, auth_headers)["articles"][0]
     assert "full_content" not in article
     assert "embedding" not in article
+    assert "score_recency" not in article
     # Fields the frontend renders must survive the slimming.
     for key in ("id", "title", "url", "source", "category", "published_date", "views", "likes"):
         assert key in article
@@ -110,3 +111,28 @@ def test_count_since(client, auth_headers, session):
     )
     assert res.status_code == 200
     assert res.json()["new_count"] == 2
+
+
+def test_highest_puts_the_strongest_week_first(client, auth_headers, session):
+    make_article(session, title="today-weak", score=0.2, days_ago=0)
+    make_article(session, title="monday-best", score=1.4, days_ago=3)
+    make_article(session, title="ancient", score=1.9, days_ago=8)
+
+    titles = [a["title"] for a in get_feed(client, auth_headers, order="highest")["articles"]]
+    assert titles == ["monday-best", "today-weak"]
+
+
+def test_highest_cursor_pages_without_duplicates(client, auth_headers, session):
+    for i, score in enumerate((0.2, 0.5, 0.9, 1.2)):
+        make_article(session, title=f"s{i}", score=score, days_ago=i)
+
+    page1 = get_feed(client, auth_headers, order="highest", limit=2)
+    page2 = get_feed(client, auth_headers, order="highest", limit=2, cursor=page1["next_cursor"])
+    titles = [a["title"] for a in page1["articles"] + page2["articles"]]
+    assert titles == ["s3", "s2", "s1", "s0"]
+    assert len(set(titles)) == 4
+
+
+def test_unknown_order_is_rejected(client, auth_headers):
+    res = client.get("/articles", params={"order": "hot"}, headers=auth_headers)
+    assert res.status_code == 422

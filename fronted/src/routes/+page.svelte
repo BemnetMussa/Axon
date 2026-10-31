@@ -66,7 +66,7 @@
 		{
 			sym: 'r',
 			name: 'Freshness',
-			body: 'Decays exponentially with age on a 72-hour scale. A story one day old scores 0.72, three days 0.37, a week 0.10.'
+			body: 'Measured once, when the story is kept, on a 72-hour scale. A story one day old scores 0.72, three days 0.37, a week 0.10. That number stays put. If the same link comes back with more points, only the traction half can rise.'
 		},
 		{
 			sym: 'w',
@@ -223,7 +223,7 @@
 				<h2 class="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">One score, then five checks.</h2>
 				<p class="mt-6 max-w-2xl text-lg leading-relaxed text-black/65 dark:text-white/60">
 					{interval ? `Every ${interval} hours` : 'On each sweep'}, Axon fetches all {sourceCount} sources at once and scores every candidate.
-					It sorts the list, then walks down it and admits a story only if it passes all five checks. It stops at 20, so a sweep is something you can actually read. The same score orders the feed: newest day first, best story first within each day.
+					It sorts the list, then walks down it and admits a story only if it passes all five checks. It stops at 20, so a sweep is something you can actually read. Latest keeps that order: newest day first, best story first within each day. Highest lists the strongest scores from the last 7 days.
 				</p>
 				{#if pulse?.last_sweep_at}
 					<p class="axon-label mt-6 flex items-center gap-2 text-black/60 dark:text-white/55">

@@ -707,7 +707,31 @@ def _score_signals(signals: list[dict]) -> None:
         recency = math.exp(-age_hours / RECENCY_SCALE_HOURS)
 
         weight = SOURCE_WEIGHTS.get(src, 1.0)
+        s["norm_eng"] = round(norm_eng, 5)
+        s["recency"] = round(recency, 5)
         s["score"] = round(weight * (0.55 * norm_eng + 0.45 * recency), 5)
+
+
+def _raise_kept_score(article: Article, sig: dict) -> bool:
+    """Move a kept story up when the same link comes back with more points.
+
+    Only the traction half can change, and only upward. The freshness stored
+    at ingest stays put, so a later sweep cannot age the score down. Stories
+    saved before that field existed lock freshness on the first bump, then
+    stop aging too. Returns True when the row changed and needs a commit.
+    """
+    likes_now = int(sig.get("likes") or 0)
+    if likes_now <= int(article.likes or 0):
+        return False
+    weight = SOURCE_WEIGHTS.get((article.source or "").lower(), 1.0)
+    norm = float(sig.get("norm_eng", 0.5))
+    if article.score_recency is None:
+        article.score_recency = float(sig.get("recency") or 0.0)
+    new_score = round(weight * (0.55 * norm + 0.45 * float(article.score_recency)), 5)
+    article.likes = likes_now
+    if new_score > float(article.engagement_score or 0.0):
+        article.engagement_score = new_score
+    return True
 
 
 # Title-overlap threshold for treating two cross-source items as the same story.
@@ -807,22 +831,32 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
         # Only check the URLs we actually fetched against the DB, instead of
         # loading every existing URL into memory (which grows unbounded).
         candidate_urls = {s.get("url") for s in raw_signals if s.get("url")}
-        all_existing_urls = (
-            set(session.exec(select(Article.url).where(col(Article.url).in_(candidate_urls))).all())
+        existing_by_url = (
+            {
+                article.url: article
+                for article in session.exec(
+                    select(Article).where(col(Article.url).in_(candidate_urls))
+                ).all()
+            }
             if candidate_urls
-            else set()
+            else {}
         )
         final: list[dict] = []
         seen: set[str] = set()
         source_counts: dict[str, int] = {}
         accepted_fingerprints: list[tuple[str, set[str]]] = []
         freshness_cutoff = _now() - timedelta(days=FRESHNESS_DAYS)
+        raised = 0
 
         for sig in raw_signals:
             url = sig.get("url")
             source = sig["source"]
             engagement = sig.get("likes", 0)
-            if not url or url in all_existing_urls or url in seen:
+            if not url or url in seen:
+                continue
+            if url in existing_by_url:
+                if _raise_kept_score(existing_by_url[url], sig):
+                    raised += 1
                 continue
             # Freshness gate: never let stale RSS or resurfaced old threads enter.
             pub = sig.get("published")
@@ -839,11 +873,13 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
             tokens = _title_fingerprint(sig.get("title", ""))
             if _is_near_dup(tokens, source, accepted_fingerprints):
                 continue
+            if len(final) >= MAX_TOTAL_PER_RUN:
+                # Still walk the rest of the sweep so a link we already kept can
+                # pick up a higher point count. New admits stay capped at 20.
+                continue
             source_counts[source] = source_counts.get(source, 0) + 1
             if source_counts[source] > MAX_PER_SOURCE:
                 continue
-            if len(final) >= MAX_TOTAL_PER_RUN:
-                break
             final.append(sig)
             seen.add(url)
             accepted_fingerprints.append((source, tokens))
@@ -861,7 +897,11 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
             for src in sorted(set(raw_by_source) | set(ingested_by_source))
         }
 
+        if raised:
+            session.commit()
         if not final:
+            if raised:
+                print(f"AXON: Raised {raised} stored scores")
             return 0
 
         # Pull readable long-form text for the selected articles so the AI writes
@@ -884,6 +924,7 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
                 category=category,
                 likes=sig.get("likes", 0),
                 engagement_score=sig.get("score", 0.0),
+                score_recency=sig.get("recency"),
             )
             try:
                 session.add(article)
@@ -893,5 +934,7 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
                 session.rollback()
 
         session.commit()
+        if raised:
+            print(f"AXON: Raised {raised} stored scores")
         print(f"AXON: Ingested {added} signals from {len(source_counts)} sources")
         return added

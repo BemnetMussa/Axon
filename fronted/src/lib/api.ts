@@ -164,7 +164,7 @@ export const api = {
     getArticles: async (
         cursor?: string | null,
         limit = PAGE_SIZE,
-        filter?: { category?: string | null; source?: string | null }
+        filter?: { category?: string | null; source?: string | null; order?: 'highest' | null }
     ): Promise<ArticlesResponse> => {
         const params = new URLSearchParams({ limit: String(limit) });
         if (cursor) params.set('cursor', cursor);
@@ -172,6 +172,7 @@ export const api = {
         // so the cursor returned here is the next page *of this tab*.
         if (filter?.category) params.set('category', filter.category);
         if (filter?.source) params.set('source', filter.source);
+        if (filter?.order) params.set('order', filter.order);
         // no-store: never let the browser/HTTP cache answer the feed — always fresh.
         const res = await fetch(`${BASE_URL}/articles?${params}`, { cache: 'no-store' });
         return jsonOrThrow<ArticlesResponse>(res);

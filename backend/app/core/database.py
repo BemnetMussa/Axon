@@ -80,13 +80,17 @@ def init_db():
             "CREATE INDEX IF NOT EXISTS ix_article_pubdate_id ON article (published_date, id)",
             "CREATE INDEX IF NOT EXISTS ix_trend_trend_date ON trend (trend_date)",
         ]
+        # create_all will not add columns to an existing article table.
+        _COLUMN_BACKFILL = [
+            "ALTER TABLE article ADD COLUMN IF NOT EXISTS score_recency FLOAT",
+        ]
         with engine.connect() as conn:
-            for ddl in _INDEX_BACKFILL:
+            for ddl in _COLUMN_BACKFILL + _INDEX_BACKFILL:
                 try:
                     conn.execute(text(ddl))
                     conn.commit()
                 except Exception as e:
-                    print(f"AXON: index backfill skipped ({ddl.split(' ON ')[0]}): {e}")
+                    print(f"AXON: schema backfill skipped ({ddl.split(' ON ')[0]}): {e}")
 
         print("AXON: Database schema synchronized successfully!")
     except Exception as e:

@@ -30,6 +30,8 @@
 		scrollArea?: HTMLDivElement;
 		onTabSelect: (id: string | null) => void;
 		onSearchChange: (value: string) => void;
+		feedOrder?: 'latest' | 'highest';
+		onOrderChange?: (order: 'latest' | 'highest') => void;
 		onArticleOpen: (article: Article) => void;
 		onToggleSave: (id: number) => void;
 		onLoadMore: () => void;
@@ -40,7 +42,7 @@
 		title, articles, searchQuery, theme, hasMore, loadingMore, selectedArticleId,
 		savedArticleIds, readArticleIds, loading, syncIndicator, newArticleIds = new Set(),
 		tabs, activeTab, showSavedOnly, semanticSearchActive = false, dbEmpty = false,
-		scrollArea = $bindable(), onTabSelect, onSearchChange, onArticleOpen, onToggleSave,
+		scrollArea = $bindable(), onTabSelect, onSearchChange, feedOrder = 'latest', onOrderChange = () => {}, onArticleOpen, onToggleSave,
 		onLoadMore, onRefresh
 	}: Props = $props();
 
@@ -106,7 +108,7 @@
 	// Trending, search and Saved use other orders.
 	let dayStarts = $derived.by(() => {
 		const starts = new Map<number, string>();
-		if (activeTab === 'Trending' || showSavedOnly || searchQuery.trim()) return starts;
+		if (activeTab === 'Trending' || feedOrder === 'highest' || showSavedOnly || searchQuery.trim()) return starts;
 		let prev: number | null = null;
 		for (const a of articles) {
 			if (!a.published_date) continue;
@@ -127,7 +129,18 @@
 </script>
 
 <section class={`relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${dark ? 'bg-[#0a0a0a]' : 'bg-[#fafafa]'}`}>
-	<FeedHeader {title} articleCount={articles.length} {searchQuery} {syncIndicator} {theme} {onSearchChange} hasSemanticSearch={semanticSearchActive} />
+	<FeedHeader
+		{title}
+		articleCount={articles.length}
+		{searchQuery}
+		{syncIndicator}
+		{theme}
+		{onSearchChange}
+		hasSemanticSearch={semanticSearchActive}
+		{feedOrder}
+		showOrder={activeTab !== 'Trending' && !showSavedOnly}
+		{onOrderChange}
+	/>
 
 	<!-- Mobile tabs: desktop lists the same tabs in the sidebar -->
 	<nav class={`no-scrollbar flex shrink-0 gap-5 overflow-x-auto border-b px-4 lg:hidden ${rule}`} aria-label="Feeds">

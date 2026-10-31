@@ -28,6 +28,9 @@ class Article(SQLModel, table=True):
     views: int = Field(default=0)
     likes: int = Field(default=0)
     engagement_score: float = Field(default=0.0)
+    # Freshness half of the score, frozen at ingest. Later point updates reuse it
+    # so age does not tick the stored score down. Hidden from feed payloads.
+    score_recency: Optional[float] = Field(default=None, exclude=True)
     last_viewed: Optional[datetime] = None
     embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(384)), exclude=True)
     

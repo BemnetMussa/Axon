@@ -43,6 +43,8 @@
 	let keepable = $derived(Object.keys(KEY_SOURCE).filter((k) => !articles.some((a) => a.source === KEY_SOURCE[k])));
 	let feedScrollArea = $state<HTMLDivElement | undefined>();
 	let readerHost = $state<HTMLDivElement | undefined>();
+	let searchQuery = $state('');
+	let feedOrder = $state<'latest' | 'highest'>('latest');
 
 	const noop = () => {};
 
@@ -107,7 +109,7 @@
 						title="Frontier"
 						{articles}
 						dbEmpty={false}
-						searchQuery=""
+						searchQuery={searchQuery}
 						{theme}
 						hasMore={false}
 						loadingMore={false}
@@ -120,8 +122,10 @@
 						tabs={NAVIGATION}
 						activeTab={null}
 						showSavedOnly={false}
+						{feedOrder}
 						onTabSelect={noop}
-						onSearchChange={noop}
+						onSearchChange={(value) => (searchQuery = value)}
+						onOrderChange={(order) => (feedOrder = order)}
 						onArticleOpen={noop}
 						onToggleSave={noop}
 						onLoadMore={noop}

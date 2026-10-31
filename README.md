@@ -49,12 +49,12 @@ score = w · (0.55 · e + 0.45 · r)
 | Term | Meaning |
 |---|---|
 | **e** · Traction | The story's rank by points, stars or votes within its own source that sweep: 1 for the top, 0 for the bottom. That puts 300 Hacker News points and 3,000 GitHub stars on one scale. Sources without votes sit at 0.5. |
-| **r** · Freshness | Exponential decay on a 72-hour scale. One day old scores 0.72, three days 0.37, a week 0.10. |
+| **r** · Freshness | Measured once, when the story is kept, on a 72-hour scale. One day old scores 0.72, three days 0.37, a week 0.10. That number stays put. If the same link comes back with more points, only the traction half can rise. |
 | **w** · Trust | A fixed weight per source, from 0.9 for news rewrites to 1.6 for OpenAI and Anthropic (`SOURCE_WEIGHTS`). |
 
 ### 2. Admit, in order
 
-Candidates are sorted by score. Axon walks down the list and admits a story only if it passes all five checks, and stops at 20.
+Candidates are sorted by score. Axon walks down the list and admits a story only if it passes all five checks, and stops at 20. Latest keeps that order: newest day first, best story first within each day. Highest lists the strongest scores from the last 7 days.
 
 | # | Check | Rule |
 |---|---|---|

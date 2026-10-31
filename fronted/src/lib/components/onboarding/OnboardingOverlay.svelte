@@ -26,7 +26,7 @@
 			darkBg: 'bg-white/[0.06]',
 			lightBg: 'bg-black/[0.04]',
 			title: 'Narrow it down',
-			body: 'Research, Tools, GitHub and Trending are one tap away in the tabs. Search finds anything else.',
+			body: 'Research, Tools, GitHub and Trending are the tabs. Latest keeps each day together. Highest ranks the last 7 days by score. Search is the icon beside them.',
 		},
 		{
 			icon: Bookmark,
