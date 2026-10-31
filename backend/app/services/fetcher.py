@@ -1,6 +1,7 @@
-"""Curation engine entrypoint (open-core).
+"""Curation engine entrypoint.
 
-Loads ``private/services/fetcher.py`` when present; otherwise the community stub.
+Loads ``backend/engine/fetcher.py`` (see ``_engine.py`` for the search order);
+falls back to the community stub if it is missing.
 """
 
 from app.services._engine import load_engine

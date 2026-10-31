@@ -1,13 +1,9 @@
-# Private overlay (gitignored)
+# Local engine override (gitignored)
 
-This folder holds the **proprietary** curation + AI analysis engine on maintainer machines.
+Optional. Drop `services/fetcher.py` or `services/analyzer.py` here to run a
+local variant of the engine instead of the copy in `backend/engine/`.
 
-Drop these files here (they are ignored by git):
+Load order is set in `backend/app/services/_engine.py`: `AXON_ENGINE_DIR`,
+then `backend/engine/`, then `/etc/secrets/`, then this folder.
 
-- `services/fetcher.py`
-- `services/analyzer.py`
-
-The open loaders in `backend/app/services/fetcher.py` and `analyzer.py` import them when present.
-Without them, community stubs keep the API shell bootable.
-
-Do not commit secrets, prompts, or this overlay.
+Do not commit secrets here.

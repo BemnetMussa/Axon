@@ -260,7 +260,10 @@ async def _notify_new_signals(session: Session, new_count: int, since_id: int = 
     other error is swallowed so a push failure can never break or delay ingestion.
     The frontend endpoint owns the subscriber list + web-push (see
     fronted/src/routes/api/push/notify)."""
-    if new_count <= 0 or not FRONTEND_URL:
+    if new_count <= 0:
+        return
+    if not FRONTEND_URL:
+        print("AXON: push notify skipped — AXON_FRONTEND_URL is not set")
         return
     try:
         top = session.exec(
@@ -271,11 +274,15 @@ async def _notify_new_signals(session: Session, new_count: int, since_id: int = 
         ).all()
         titles = [a.title for a in top if a.title]
         async with httpx.AsyncClient(timeout=10) as client:
-            await client.post(
+            resp = await client.post(
                 f"{FRONTEND_URL.rstrip('/')}/api/push/notify",
                 headers={"X-Axon-Internal-Secret": INTERNAL_SECRET},
                 json={"count": new_count, "title": titles[0] if titles else "", "titles": titles},
             )
+        if resp.status_code >= 400:
+            print(f"AXON: push notify failed: HTTP {resp.status_code} {resp.text[:200]}")
+        else:
+            print(f"AXON: push notify ok ({resp.status_code})")
     except Exception as e:
         print(f"AXON: push notify failed: {e}")
 

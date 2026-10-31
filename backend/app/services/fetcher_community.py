@@ -1,9 +1,7 @@
-"""Community stub for the curation engine.
+"""Fallback stub for the curation engine.
 
-The hosted Axon product and full ingest pipeline stay proprietary.
-This stub keeps the open API bootable and documents the public contract.
-Point the UI at the live demo, or drop a private overlay at
-``private/services/fetcher.py`` for a full local engine.
+Used only when ``backend/engine/fetcher.py`` is missing (see ``_engine.py``).
+Keeps the API bootable and documents the public contract.
 """
 
 from __future__ import annotations
@@ -20,11 +18,8 @@ last_fetch_report: dict = {
 
 
 async def ingest_intelligence(session: Session, context_id: str | None = None) -> int:
-    """No-op ingest. Install the private overlay or use the hosted product."""
+    """No-op ingest. Restore ``backend/engine/fetcher.py`` for the real pipeline."""
     _ = session, context_id
     last_fetch_report["mode"] = "community-stub"
-    print(
-        "AXON: community stub — curation engine not bundled. "
-        "Use https://axon-phi-ruby.vercel.app or private/services/fetcher.py"
-    )
+    print("AXON: community stub — backend/engine/fetcher.py not found, ingest is a no-op")
     return 0

@@ -4,9 +4,9 @@
 > and how every piece fits together. Read this top-to-bottom and you'll understand
 > the whole system without opening the code.
 
-> **Open-core:** Public clones ship the API shell + community stubs. The full
-> curation / AI engine loads from a local `private/services/` overlay (maintainers)
-> or runs on the hosted product. See [OPEN_CORE.md](../OPEN_CORE.md).
+> **Engine:** The curation and AI engine lives in `backend/engine/` and ships with
+> the repo (AGPL-3.0). `app/services/_engine.py` loads it, falling back to the
+> community stubs only if it is missing.
 
 ---
 

@@ -1,6 +1,7 @@
-"""AI analysis entrypoint (open-core).
+"""AI analysis entrypoint.
 
-Loads ``private/services/analyzer.py`` when present; otherwise the community stub.
+Loads ``backend/engine/analyzer.py`` (see ``_engine.py`` for the search order);
+falls back to the community stub if it is missing.
 """
 
 from app.services._engine import load_engine

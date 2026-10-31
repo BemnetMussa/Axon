@@ -1,7 +1,6 @@
-"""Community stub for the AI analysis layer.
+"""Fallback stub for the AI analysis layer.
 
-Prompts, classification, insights, digests, and article chat remain proprietary.
-This stub keeps imports working for OSS contributors working on the API shell.
+Used only when ``backend/engine/analyzer.py`` is missing (see ``_engine.py``).
 """
 
 from __future__ import annotations
@@ -10,15 +9,11 @@ from sqlmodel import Session
 
 from app.models import Article
 
-_HOSTED = "https://axon-phi-ruby.vercel.app"
-_STUB_MSG = (
-    f"AI analysis is part of the hosted Axon product. Try it at {_HOSTED} "
-    "or install private/services/analyzer.py for a full local engine."
-)
+_STUB_MSG = "AI analysis is unavailable: backend/engine/analyzer.py not found."
 
 
 def get_last_ai_error() -> str | None:
-    return "community-stub: proprietary AI layer not installed"
+    return "community-stub: AI layer not installed"
 
 
 def get_embed_model():
@@ -48,14 +43,14 @@ def probe_groq() -> dict:
     return {
         "key_present": False,
         "reachable": False,
-        "error": "community-stub: proprietary AI layer not installed",
+        "error": "community-stub: AI layer not installed",
         "mode": "community-stub",
     }
 
 
 def analyze_articles(session: Session, progress=None) -> int:
     _ = session, progress
-    print("AXON: community stub — analyze_articles is a no-op without private/services/analyzer.py")
+    print("AXON: community stub — analyze_articles is a no-op without backend/engine/analyzer.py")
     return 0
 
 

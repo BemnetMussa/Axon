@@ -14,11 +14,11 @@ Contact the maintainer privately:
 - X/Twitter DM: [@BemnetMussa](https://x.com/BemnetMussa)
 
 Include steps to reproduce, impact, and whether the issue affects the open
-package, the hosted product, or both.
+code in this repo, the hosted product, or both.
 
 We aim to acknowledge reports within a few days.
 
 ## Secrets
 
-Never commit `.env`, API keys, database URLs, or the `private/` engine overlay.
+Never commit `.env`, API keys, or database URLs.
 Use the committed `*.env.example` templates only.

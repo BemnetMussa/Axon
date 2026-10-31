@@ -43,7 +43,7 @@
 				<p>
 					AXON aggregates publicly available technical and research sources, summarizes them with AI,
 					and provides authenticated reading tools (saves, history, article chat, optional push).
-					The curation engine and hosted software are proprietary (open-core); see the product license.
+					AXON's source code, including the curation engine, is open source under the AGPL-3.0 license.
 					Hosted deployments may have additional operational limits.
 				</p>
 			</section>

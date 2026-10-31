@@ -25,9 +25,7 @@ node_modules/
 !**/.env.example
 !**/.env.test
 
-# === Proprietary engine (local overlay — never publish) ===
-# Full curation + AI analysis lives here on the maintainer machine.
-# Public clones use the community stubs under backend/app/services/*_community.py
+# === Optional local engine override (see private/README.md) ===
 /private/**
 !/private/README.md
 
