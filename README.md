@@ -1,8 +1,14 @@
 <div align="center">
 
-<img src="fronted/static/og.png" alt="Axon — You can't keep up with everything. You don't have to." width="100%" />
+<h1>Axon</h1>
 
-<h3>The signal from the frontier of technology, without the noise.</h3>
+<h3>You can't keep up with everything. You don't have to.</h3>
+
+<p>The signal from the frontier of technology, without the noise.</p>
+
+<img src="docs/assets/axon-hero.gif" alt="17 sources stream into the Axon filter; the stories that pass land in the feed on a phone" width="100%" />
+
+<sub>Recorded from the live landing page. The animation and stories are illustrative.</sub>
 
 <p>
   <a href="https://axon-phi-ruby.vercel.app"><b>Open the feed →</b></a>
