@@ -145,6 +145,19 @@ export function whyKept(article: { source: string; likes: number }): string {
 	return '';
 }
 
+export function formatDate(dateStr: string): string {
+	if (!dateStr) return '';
+	return parseApiDate(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export function hostname(url: string): string {
+	try {
+		return new URL(url).hostname.replace(/^www\./, '');
+	} catch {
+		return '';
+	}
+}
+
 /** UTC calendar day, matching the backend's day bucket for feed ordering. */
 export function utcDay(dateStr: string): number {
 	return Math.floor(parseApiDate(dateStr).getTime() / 86_400_000);

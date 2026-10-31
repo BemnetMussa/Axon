@@ -46,6 +46,13 @@ button {
 	text-decoration: underline;
 	text-underline-offset: 2px;
 }
+.prose code::before,
+.prose code::after {
+	content: none;
+}
+.axon-reader-body p {
+	margin-bottom: 1.25em !important;
+}
 /* backdrop-filter removed: it re-blurred the whole feed/reader region on
    every scroll frame (and was nested under blurred sticky headers), which
    was the main source of scroll jank. Panels now use near-solid backgrounds

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getBrandColor, stripHtml, relativeTime, readingTime, formatEngagement, categoryLabel, whyKept, dayLabel } from './ui';
+import { getBrandColor, stripHtml, relativeTime, readingTime, formatEngagement, categoryLabel, whyKept, dayLabel, formatDate, hostname } from './ui';
 
 describe('getBrandColor', () => {
 	it('returns brand colors for known sources and a fallback otherwise', () => {
@@ -89,6 +89,20 @@ describe('whyKept', () => {
 		expect(whyKept({ source: 'Anthropic', likes: 0 })).toBe('Primary source');
 		expect(whyKept({ source: 'ArXiv', likes: 0 })).toBe('New paper');
 		expect(whyKept({ source: 'TechCrunch', likes: 0 })).toBe('');
+	});
+});
+
+describe('formatDate', () => {
+	it('writes an unambiguous date', () => {
+		expect(formatDate('2026-10-06T12:00:00')).toBe('Oct 6, 2026');
+		expect(formatDate('')).toBe('');
+	});
+});
+
+describe('hostname', () => {
+	it('strips www and tolerates bad URLs', () => {
+		expect(hostname('https://www.pola.rs/posts/2.0')).toBe('pola.rs');
+		expect(hostname('not a url')).toBe('');
 	});
 });
 

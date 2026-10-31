@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { fly } from 'svelte/transition';
-	import { ArrowLeft, ArrowUp, ExternalLink, Share2, Bookmark, Check } from 'lucide-svelte';
+	import { ArrowLeft, ArrowUpRight, ExternalLink, Share2, Bookmark, Check } from 'lucide-svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import type { Article } from '$lib/api';
 	import ChatDock from '$lib/components/reader/ChatDock.svelte';
-	import { categoryLabel, formatEngagement, getBrandColor } from '$lib/ui';
+	import { categoryLabel, formatDate, getBrandColor, hostname, whyKept } from '$lib/ui';
 	import { iconButtonClass } from '$lib/ui-styles';
 
 	type ChatMessage = {
@@ -37,6 +37,9 @@
 	let scrollArea = $state<HTMLDivElement | undefined>();
 	let shareSuccess = $state(false);
 	let dark = $derived(theme === 'dark');
+	let why = $derived(whyKept(article));
+	let host = $derived(hostname(article.url));
+	let isBrief = $derived(Boolean(article.insight));
 
 	$effect(() => {
 		chatMessages.length;
@@ -95,7 +98,7 @@
 				class={`${iconButtonClass(theme)} sm:w-auto sm:gap-1.5 sm:px-2.5`}
 				aria-label={isSaved ? 'Unsave' : 'Save'}
 			>
-				<Bookmark class={`h-3 w-3 ${savedStyle()}`} />
+				<Bookmark class={`h-3.5 w-3.5 ${savedStyle()}`} />
 				<span class={`hidden text-[10px] font-semibold sm:inline ${savedLabel()}`}>
 					{isSaved ? 'Saved' : 'Save'}
 				</span>
@@ -113,18 +116,6 @@
 				{/if}
 			</button>
 
-			<div class={`hidden items-center gap-1.5 rounded-md border px-2.5 py-1.5 sm:flex ${dark ? 'border-white/[0.06]' : 'border-zinc-200'}`}>
-				<div class="h-1.5 w-1.5 rounded-full" style={`background-color: ${getBrandColor(article.source)}`}></div>
-				<span class={`text-[10px] font-semibold ${dark ? 'text-zinc-400' : 'text-zinc-500'}`}>{article.source}</span>
-			</div>
-
-			{#if formatEngagement(article.likes)}
-				<div class={`hidden items-center gap-1 rounded-md border px-2 py-1.5 sm:flex ${dark ? 'border-white/[0.06]' : 'border-zinc-200'}`}>
-					<ArrowUp class={`h-3 w-3 ${dark ? 'text-zinc-500' : 'text-zinc-400'}`} />
-					<span class={`text-[10px] font-semibold tabular-nums ${dark ? 'text-zinc-400' : 'text-zinc-500'}`}>{formatEngagement(article.likes)}</span>
-				</div>
-			{/if}
-
 			<button
 				onclick={() => onOpenExternal(article.url)}
 				class={`${iconButtonClass(theme, 'muted')} sm:w-auto sm:gap-1.5 sm:px-3 ${dark ? 'hover:border-white/30 hover:text-white' : 'hover:border-black/30 hover:text-black'}`}
@@ -138,25 +129,38 @@
 
 	<div bind:this={scrollArea} class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scroll-smooth">
 		<div class="mx-auto w-full min-w-0 max-w-[720px] px-5 pb-8 pt-7 sm:px-9 sm:pb-10 sm:pt-11 lg:px-12 lg:pt-14" style="overflow-wrap: anywhere;">
-			<div class={`mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[9px] font-medium uppercase tracking-[0.14em] ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+			<div class={`mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+				<span style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
+				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
 				<span>{categoryLabel(article.category)}</span>
 				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
-				<span>{new Date(article.published_date).toLocaleDateString()}</span>
-				<span class={`sm:hidden ${dark ? 'text-zinc-700' : 'text-zinc-300'}`}>/</span>
-				<span class="sm:hidden" style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
+				<span>{formatDate(article.published_date)}</span>
 			</div>
 
-			<h2 class={`axon-editorial-title mb-7 text-[29px] font-bold leading-[1.08] sm:text-[38px] lg:text-[42px] ${dark ? 'text-white' : 'text-zinc-950'}`}>{article.title}</h2>
+			<h2 class={`axon-editorial-title mb-5 text-[29px] font-bold leading-[1.08] sm:text-[38px] lg:text-[42px] ${dark ? 'text-white' : 'text-zinc-950'}`}>{article.title}</h2>
 
-			{#if dark}
-				<div class="prose prose-invert max-w-none text-[15px] leading-8 text-zinc-300 sm:text-[16px] sm:leading-9 prose-headings:tracking-tight prose-strong:text-white">
-					{@html renderMarkdown(article.insight || article.content_snippet)}
-				</div>
-			{:else}
-				<div class="prose max-w-none text-[15px] leading-8 text-zinc-700 sm:text-[16px] sm:leading-9 prose-headings:tracking-tight prose-strong:text-zinc-950">
-					{@html renderMarkdown(article.insight || article.content_snippet)}
-				</div>
-			{/if}
+			<div class={`mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 border-y py-3 text-[12px] ${dark ? 'border-white/10 text-zinc-500' : 'border-black/10 text-zinc-500'}`}>
+				{#if why}
+					<span>Made the cut: <span class={`font-medium ${dark ? 'text-zinc-200' : 'text-zinc-800'}`}>{why}</span></span>
+				{/if}
+				<span class="sm:ml-auto">{isBrief ? 'Axon brief · AI summary of the original' : 'Excerpt from the source'}</span>
+			</div>
+
+			<div class={`axon-reader-body prose max-w-none text-[16px] leading-[1.7] sm:text-[17px] sm:leading-[1.75] prose-headings:tracking-tight ${dark ? 'prose-invert text-zinc-300 prose-strong:text-white' : 'text-zinc-700 prose-strong:text-zinc-950'}`}>
+				{@html renderMarkdown(article.insight || article.content_snippet)}
+			</div>
+
+			<button
+				type="button"
+				onclick={() => onOpenExternal(article.url)}
+				class={`group mt-8 flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3.5 text-left transition-colors ${dark ? 'border-white/10 hover:border-white/25 hover:bg-white/[0.03]' : 'border-black/10 hover:border-black/25 hover:bg-black/[0.02]'}`}
+			>
+				<span class="min-w-0">
+					<span class={`block text-[14px] font-semibold ${dark ? 'text-white' : 'text-black'}`}>Read the original</span>
+					{#if host}<span class={`block truncate text-[12px] ${dark ? 'text-zinc-500' : 'text-zinc-500'}`}>{host}</span>{/if}
+				</span>
+				<ArrowUpRight class={`h-4 w-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 ${dark ? 'text-zinc-400' : 'text-zinc-500'}`} />
+			</button>
 
 			<div class={`mt-10 rounded-2xl border p-4 sm:p-5 ${dark ? 'border-white/10 bg-white/[0.02]' : 'border-black/10 bg-black/[0.015]'}`}>
 				<div class="mb-4 flex items-center justify-between">
@@ -174,13 +178,13 @@
 									</div>
 								</div>
 							{:else}
-								<div class={`min-w-0 max-w-full overflow-hidden rounded-lg rounded-bl-sm border px-4 py-3 ${dark ? 'border-white/[0.04] bg-white/[0.02]' : 'border-zinc-100 bg-zinc-50'}`}>
+								<div class="min-w-0 max-w-full overflow-hidden px-1">
 									{#if dark}
-										<div class="prose prose-invert prose-sm max-w-full overflow-hidden break-words text-[13.5px] leading-7 text-zinc-300 prose-p:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-li:break-words">
+										<div class="prose prose-invert prose-sm max-w-full overflow-hidden break-words text-[14px] leading-6 text-zinc-300 prose-p:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-li:break-words">
 											{@html renderMarkdown(msg.content)}
 										</div>
 									{:else}
-										<div class="prose prose-sm max-w-full overflow-hidden break-words text-[13.5px] leading-7 text-zinc-700 prose-p:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-li:break-words">
+										<div class="prose prose-sm max-w-full overflow-hidden break-words text-[14px] leading-6 text-zinc-700 prose-p:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-li:break-words">
 											{@html renderMarkdown(msg.content)}
 										</div>
 									{/if}
