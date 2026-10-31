@@ -52,7 +52,7 @@ One short paragraph only if several briefs state the same theme. Otherwise omit 
 
 ## What landed
 One bullet per story, in the order given:
-* **Title** (Source): the story's actual point, from its brief only. One or two sentences. No advice and no added implications. If a brief is empty, write the title and source only.
+* **Title** (Source): the story's actual point, from its brief only. One or two sentences. No advice and no added implications. If a brief is empty, write the title and source only. Copy the title exactly, in bold. Do not add a link.
 
 Cover every story. Output only the digest.
 

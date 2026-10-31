@@ -506,6 +506,27 @@ def generate_chat_suggestions(
     return []
 
 
+def _link_titles(markdown: str, articles: list[Article]) -> str:
+    """Turn each bold title into a link to that story's original URL."""
+    for article in sorted(articles, key=lambda a: len(a.title or ""), reverse=True):
+        title = (article.title or "").strip()
+        url = (article.url or "").strip()
+        if not title or not url.startswith(("http://", "https://")):
+            continue
+        needle = f"**{title}**"
+        start = 0
+        while True:
+            index = markdown.find(needle, start)
+            if index < 0:
+                break
+            if index > 0 and markdown[index - 1] == "[":
+                start = index + len(needle)
+                continue
+            markdown = f"{markdown[:index]}[{needle}]({url}){markdown[index + len(needle):]}"
+            break
+    return markdown
+
+
 def _build_fallback_weekly_digest(top_articles: list[Article]) -> str:
     """Factual digest when AI generation is unavailable: each story's own brief, no invented theme."""
     items = []
@@ -516,7 +537,7 @@ def _build_fallback_weekly_digest(top_articles: list[Article]) -> str:
             line += f": {brief[:240]}"
         items.append(line)
     body = "\n".join(items) if items else "* No stories this week."
-    return f"## What landed\n{body}\n"
+    return _link_titles(f"## What landed\n{body}\n", top_articles)
 
 
 def generate_weekly_digest(session: Session) -> str | None:
@@ -549,7 +570,7 @@ def generate_weekly_digest(session: Session) -> str | None:
 
     try:
         content_res = _call_groq_with_fallback(messages=[{"role": "user", "content": prompt}], max_tokens=2000, temperature=0.3)
-        digest_content = content_res.strip()
+        digest_content = _link_titles(content_res.strip(), top_articles)
     except Exception as e:
         print(f"Failed to generate weekly digest: {e}")
         digest_content = _build_fallback_weekly_digest(top_articles)

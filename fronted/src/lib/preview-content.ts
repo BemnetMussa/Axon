@@ -44,10 +44,10 @@ export const digest = {
 Google Research and NVIDIA both published work on agents doing measured tasks, and Hugging Face released a weather model that runs extreme-weather simulation at a fraction of the usual cost.
 
 ## What landed
-* **Putting Earth AI to work** (Google Research): geospatial agents aimed at large-scale planet problems.
-* **Analyzing technical documents with Deep Review** (Google Research): an agent that reads technical documents.
-* **HiRO-ACEv2** (Hugging Face): extreme-weather simulation at 3 km resolution for a fraction of the cost.
-* **NeMo Gym for chip design** (NVIDIA): measured agent reliability and tool-calling efficiency on chip-design tasks.`
+* [**Putting Earth AI to work**](https://research.google) (Google Research): geospatial agents aimed at large-scale planet problems.
+* [**Analyzing technical documents with Deep Review**](https://research.google) (Google Research): an agent that reads technical documents.
+* [**HiRO-ACEv2**](https://huggingface.co) (Hugging Face): extreme-weather simulation at 3 km resolution for a fraction of the cost.
+* [**NeMo Gym for chip design**](https://developer.nvidia.com) (NVIDIA): measured agent reliability and tool-calling efficiency on chip-design tasks.`
 };
 
 type PoolItem = Pick<Article, 'source' | 'category' | 'likes' | 'title' | 'insight'>;

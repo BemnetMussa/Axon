@@ -78,7 +78,7 @@ One short paragraph, and only if several briefs state the same theme in their ow
 
 ## What landed
 One bullet for every story, in the order given:
-* **Title** (Source): the story's actual point, taken from its brief. One or two sentences. Keep its numbers and names.
+* **Title** (Source): the story's actual point, taken from its brief. One or two sentences. Keep its numbers and names. Copy the title exactly, in bold. Do not add a link.
 
 Rules:
 - Use only the briefs. Do not add context, predictions, advice, or implications the brief does not state.

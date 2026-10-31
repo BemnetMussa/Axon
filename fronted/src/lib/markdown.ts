@@ -37,7 +37,10 @@ export function renderMarkdown(src: string | null | undefined): string {
 	const key = src ?? '';
 	const hit = _cache.get(key);
 	if (hit !== undefined) return hit;
-	const html = sanitizeHtmlLite(marked.parse(key, { async: false }) as string);
+	const html = sanitizeHtmlLite(marked.parse(key, { async: false }) as string).replace(
+		/<a href="/g,
+		'<a target="_blank" rel="noopener noreferrer" href="'
+	);
 	if (_cache.size > 500) _cache.clear(); // simple bound
 	_cache.set(key, html);
 	return html;

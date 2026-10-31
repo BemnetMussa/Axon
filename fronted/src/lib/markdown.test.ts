@@ -19,6 +19,12 @@ describe('renderMarkdown', () => {
 		expect(html).not.toContain('onerror');
 	});
 
+	it('opens links in a new tab', () => {
+		const html = renderMarkdown('[the paper](https://arxiv.org/abs/1)');
+		expect(html).toContain('target="_blank"');
+		expect(html).toContain('rel="noopener noreferrer"');
+	});
+
 	it('strips javascript: urls in links', () => {
 		const html = renderMarkdown('[click](javascript:alert(1))');
 		expect(html).not.toContain('javascript:');
