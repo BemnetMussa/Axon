@@ -21,7 +21,7 @@
 			icon: BookOpen,
 			label: 'Read',
 			title: 'A brief for every story.',
-			body: 'Axon fetches the full article and writes a brief from it: what changed, how it works, and why it matters. The original is one tap away when you want the source.',
+			body: 'Axon fetches the full article and writes a brief from it: the main point, the specifics, and the caveats the source itself states. No added opinions. The original is one tap away.',
 			points: ['Written from the full text, not the headline', 'Source, date and traction on every story']
 		},
 		{

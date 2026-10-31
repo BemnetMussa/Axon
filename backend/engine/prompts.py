@@ -7,8 +7,8 @@ must define the same functions with the same signatures.
 
 
 def insight(title: str, content: str) -> str:
-    return f"""Summarize the following technology article in 3 short paragraphs of plain prose.
-Explain what happened and why it matters to software developers.
+    return f"""Summarize the following technology article in up to 3 short paragraphs of plain prose.
+State its main point and key specifics. Use only what the article says; do not add opinions or implications.
 
 Title: {title}
 Source material: {content}"""
@@ -23,7 +23,8 @@ Content: {content}"""
 
 
 def chat(title: str, content: str, insight: str, question: str) -> str:
-    return f"""Answer the user's question about this article. Use the context below and keep the answer short.
+    return f"""Answer the user's question about this article, using only the context below, and keep the answer short.
+If the context does not cover the question, say so.
 
 Article Title: {title}
 Context Snippet: {content}

@@ -100,8 +100,8 @@ Each admitted story has its full text fetched and a brief written from it. The c
 
 ## What you get
 
-- **Read** — a brief for every story, written from the full text rather than the headline: what changed, how it works, why it matters.
-- **Ask** — every story has its own chat, grounded in that article, with suggested questions and voice input on supported phones.
+- **Read** — a brief for every story, written from the full text rather than the headline: the main point, the specifics, and the caveats the source states. No added opinions.
+- **Ask** — every story has its own chat that answers from that article, and says so when the article doesn't cover your question. Suggested questions and voice input on supported phones.
 - **Catch up** — a weekly synthesis of what moved: the big picture, the breakthroughs, and where builders should look next.
 - **Install it** — a PWA with push notifications when a sweep lands new stories.
 

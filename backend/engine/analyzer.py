@@ -456,7 +456,7 @@ def chat_about_article(title: str, content: str, insight: str, question: str) ->
     if not client.api_key:
         return "AI chat is offline — no API key configured."
 
-    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:1500]
+    clean_content = re.sub(r"<[^>]+>", "", content).strip()[:6000]
 
     prompt = prompts.chat(title, clean_content, insight, question)
 

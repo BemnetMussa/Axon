@@ -21,8 +21,9 @@ EXCLUDE=(
 CANARIES=(
   "Lead Intelligence Analyst"
   "Lead Intelligence Editor"
-  "premium newsletter"
   "Technical Primitive: (Describe"
+  "You write briefs for Axon"
+  "Axon's reading assistant"
 )
 
 rm -rf "$OUT"

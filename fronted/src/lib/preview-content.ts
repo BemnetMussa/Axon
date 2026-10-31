@@ -2,7 +2,8 @@ import type { Article, Pulse } from '$lib/api';
 
 /**
  * Content for the app screens shown on the landing page (rendered by /preview).
- * The Polars story and its brief are real (feed, Oct 6 2026); the feed stories,
+ * The Polars story is real (feed, Oct 6 2026) and its brief is the hosted brief
+ * prompt's output for that article; the feed stories,
  * the chat answer and the digest summary are illustrative.
  */
 
@@ -19,11 +20,11 @@ export const story: Article = {
 	published_date: '2026-10-06T11:59:01Z',
 	content_snippet: '',
 	title: 'Release of Polars 2.0',
-	insight: `Polars 2.0 marks a pivotal shift in the data engineering landscape, signaling the end of the era where speed and usability were mutually exclusive. By elevating SQL to a first-class citizen and fundamentally restructuring its execution engine, Polars has moved from being a niche performance tool to a serious contender for general-purpose data processing.
+	insight: `Polars 2.0 introduces first-class SQL support, out-of-core (spill-to-disk) capabilities, and significant performance improvements. The release treats SQL as a primary interface, leveraging engine optimizations like join reordering, improved common-subplan-elimination, and dynamic predicates. On TPC-H and TPC-DS 1 benchmarks, Polars SQL reportedly outperforms DuckDB 1.5.6, DuckDB 2.0 alpha, and DataFusion 54.0.0. The team notes that while default Polars is fastest on most benchmarks, it exhibits constant overhead at 192 threads that hurts small data queries, an issue they have diagnosed and plan to fix in the next release.
 
-The technical substance of this release lies in its aggressive optimization of the query engine, specifically through the introduction of a default streaming engine and out-of-core capabilities. Previously, Polars was celebrated for its in-memory speed, but it often faltered when datasets exceeded available RAM. Now, calling \`collect\` on a LazyFrame defaults to the streaming engine, which drastically reduces memory footprint while maintaining high throughput.
+The streaming engine is now the default for \`collect\` on LazyFrames, which reduces memory usage but does not guarantee row-order for operations like joins and group-bys unless \`maintain_order=True\` is set. Out-of-core processing is enabled by default, starting to spill to disk at approximately 80% of RAM with a default disk budget of 64GB. Currently, this applies to sorts, window functions, and many expressions; support for joins and group-bys is on the roadmap.
 
-Concurrently, the system now spills data to disk by default when memory usage hits approximately 80%, allowing queries to complete even when the dataset is larger than the machine's RAM.`
+A new Map dtype is supported, mapping directly to the Arrow MapType rather than the previous \`List(Struct)\` representation. This allows for dictionary-like methods such as \`get\`, \`contains_key\`, \`len\`, \`keys\`, and \`values\`. The release also implements stricter dtype handling and explicitness, which the team states leads to faster feedback and AI iteration. Benchmark code and data generation scripts are available in a public GitHub repository for replication.`
 };
 
 export const suggestions = ['What changed from 1.x?', 'Will my LazyFrame code use less memory?', 'Should I move off pandas?'];

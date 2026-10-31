@@ -118,7 +118,7 @@
 
 			<button
 				onclick={() => onOpenExternal(article.url)}
-				class={`${iconButtonClass(theme, 'muted')} sm:w-auto sm:gap-1.5 sm:px-3 ${dark ? 'hover:border-white/30 hover:text-white' : 'hover:border-black/30 hover:text-black'}`}
+				class={`${iconButtonClass(theme, 'muted')} !hidden sm:!flex sm:w-auto sm:gap-1.5 sm:px-3 ${dark ? 'hover:border-white/30 hover:text-white' : 'hover:border-black/30 hover:text-black'}`}
 				aria-label="Open original article"
 			>
 				<ExternalLink class="h-3.5 w-3.5" />
@@ -130,7 +130,7 @@
 	<div bind:this={scrollArea} class="no-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scroll-smooth">
 		<div class="mx-auto w-full min-w-0 max-w-[720px] px-5 pb-8 pt-7 sm:px-9 sm:pb-10 sm:pt-11 lg:px-12 lg:pt-14" style="overflow-wrap: anywhere;">
 			<div class={`mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] ${dark ? 'text-zinc-500' : 'text-zinc-400'}`}>
-				<span style={`color: ${getBrandColor(article.source)}`}>{article.source}</span>
+				<button type="button" onclick={() => onOpenExternal(article.url)} class="uppercase underline-offset-2 hover:underline" style={`color: ${getBrandColor(article.source)}`} title={host ? `Open on ${host}` : 'Open the original'}>{article.source}</button>
 				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
 				<span>{categoryLabel(article.category)}</span>
 				<span class={dark ? 'text-zinc-700' : 'text-zinc-300'}>/</span>
@@ -162,12 +162,8 @@
 				<ArrowUpRight class={`h-4 w-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 ${dark ? 'text-zinc-400' : 'text-zinc-500'}`} />
 			</button>
 
-			<div class={`mt-10 rounded-2xl border p-4 sm:p-5 ${dark ? 'border-white/10 bg-white/[0.02]' : 'border-black/10 bg-black/[0.015]'}`}>
-				<div class="mb-4 flex items-center justify-between">
-					<p class={`font-mono text-[10px] font-semibold uppercase tracking-[0.14em] ${dark ? 'text-white' : 'text-black'}`}>Ask Axon</p>
-					<span class={`text-[10px] ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>About this article</span>
-				</div>
-
+			{#if chatMessages.length > 0 || chatLoading}
+			<div class={`mt-10 border-t pt-8 ${dark ? 'border-white/10' : 'border-black/10'}`}>
 				{#if chatMessages.length > 0}
 					<div class="min-w-0 max-w-full space-y-4">
 						{#each chatMessages as msg}
@@ -204,13 +200,8 @@
 						<span class={`text-[11px] ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>Reading this article...</span>
 					</div>
 				{/if}
-
-				{#if chatMessages.length === 0 && !chatLoading}
-					<div class={`mt-3 rounded-xl border px-3 py-2.5 text-[11px] ${dark ? 'border-white/[0.05] bg-white/[0.02] text-zinc-500' : 'border-zinc-100 bg-zinc-50 text-zinc-500'}`}>
-						Ask what the piece says, or whether it matters for what you are building.
-					</div>
-				{/if}
 			</div>
+			{/if}
 		</div>
 	</div>
 
