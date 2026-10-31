@@ -45,8 +45,15 @@ Return ONLY a JSON array of 5 strings. No markdown fences, no explanation."""
 
 
 def weekly_digest(count: int, context: str) -> str:
-    return f"""Write a weekly summary in Markdown of these {count} technology stories.
-Use these sections: ## The Big Picture, ## Core Breakthroughs, ## Developer Ecosystem, ## Key Takeaways.
-Output only the summary.
+    return f"""Write a weekly digest in Markdown of these {count} stories. They are ordered highest score first.
+
+## The week
+One short paragraph only if several briefs state the same theme. Otherwise omit this section. Do not invent a trend.
+
+## What landed
+One bullet per story, in the order given:
+* **Title** (Source): the story's actual point, from its brief only. One or two sentences. No advice and no added implications. If a brief is empty, write the title and source only.
+
+Cover every story. Output only the digest.
 
 {context}"""

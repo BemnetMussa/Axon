@@ -507,35 +507,16 @@ def generate_chat_suggestions(
 
 
 def _build_fallback_weekly_digest(top_articles: list[Article]) -> str:
-    """Return a deterministic markdown digest when AI generation is unavailable."""
-    source_counts = Counter(a.source for a in top_articles if a.source)
-    category_counts = Counter((a.category or "General") for a in top_articles)
-    top_sources = ", ".join([f"{src} ({count})" for src, count in source_counts.most_common(4)]) or "mixed sources"
-    top_categories = ", ".join([f"{cat} ({count})" for cat, count in category_counts.most_common(4)]) or "general"
-
-    top_items = []
-    for a in top_articles[:5]:
-        label = f"- **{a.title}** ({a.source})"
-        if a.insight and a.insight.strip():
-            label += f": {a.insight.strip()[:180]}"
-        top_items.append(label)
-    top_items_md = "\n".join(top_items) if top_items else "- No high-signal items captured."
-
-    return f"""## The Big Picture
-This week shows strong momentum across {top_categories}. The highest concentration of activity came from {top_sources}, indicating continued acceleration in practical AI tooling and deployment narratives.
-
-## Core Breakthroughs
-{top_items_md}
-
-## Developer Ecosystem
-- Most active sources this week: {top_sources}.
-- Top thematic concentration: {top_categories}.
-- Teams should prioritize signals that repeatedly appear across independent sources.
-
-## Key Takeaways
-- Convert recurring signals into concrete experiments (tooling, infra, or workflow updates) this week.
-- Track source/category momentum over time to distinguish short hype from durable shifts.
-"""
+    """Factual digest when AI generation is unavailable: each story's own brief, no invented theme."""
+    items = []
+    for a in top_articles:
+        brief = re.sub(r"<[^>]+>", "", (a.insight or a.content_snippet or "")).strip()
+        line = f"* **{a.title}** ({a.source})"
+        if brief:
+            line += f": {brief[:240]}"
+        items.append(line)
+    body = "\n".join(items) if items else "* No stories this week."
+    return f"## What landed\n{body}\n"
 
 
 def generate_weekly_digest(session: Session) -> str | None:
@@ -543,27 +524,31 @@ def generate_weekly_digest(session: Session) -> str | None:
     top_articles = session.exec(
         select(Article)
         .where(col(Article.published_date) >= one_week_ago)
-        .order_by(col(Article.published_date).desc())
+        .order_by(col(Article.engagement_score).desc(), col(Article.published_date).desc())
         .limit(10)
     ).all()
 
-    # Fallback to most recent articles if this week window is sparse.
+    # A quiet week still gets a digest, from the strongest recent stories.
     if not top_articles:
         top_articles = session.exec(
             select(Article)
-            .order_by(col(Article.published_date).desc())
+            .order_by(col(Article.engagement_score).desc(), col(Article.published_date).desc())
             .limit(10)
         ).all()
 
     if not top_articles:
         return None
 
-    context = "\n".join([f"Title: {a.title}\nInsight: {a.insight}\nSource: {a.source}\n---" for a in top_articles])
+    blocks = []
+    for a in top_articles:
+        brief = re.sub(r"<[^>]+>", "", (a.insight or a.content_snippet or "")).strip()[:800]
+        blocks.append(f"Title: {a.title}\nSource: {a.source}\nBrief: {brief}\n---")
+    context = "\n".join(blocks)
 
     prompt = prompts.weekly_digest(len(top_articles), context)
 
     try:
-        content_res = _call_groq_with_fallback(messages=[{"role": "user", "content": prompt}], max_tokens=1000, temperature=0.3)
+        content_res = _call_groq_with_fallback(messages=[{"role": "user", "content": prompt}], max_tokens=2000, temperature=0.3)
         digest_content = content_res.strip()
     except Exception as e:
         print(f"Failed to generate weekly digest: {e}")

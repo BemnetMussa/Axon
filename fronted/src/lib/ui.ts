@@ -147,7 +147,14 @@ export function whyKept(article: { source: string; likes: number }): string {
 
 export function formatDate(dateStr: string): string {
 	if (!dateStr) return '';
-	return parseApiDate(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	return parseApiDate(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
+export function formatDateLong(dateStr: string): string {
+	if (!dateStr) return '';
+	return parseApiDate(dateStr).toLocaleDateString('en-US', {
+		weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+	});
 }
 
 export function hostname(url: string): string {

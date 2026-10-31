@@ -24,6 +24,7 @@ CANARIES=(
   "Technical Primitive: (Describe"
   "You write briefs for Axon"
   "Axon's reading assistant"
+  "You write Axon's weekly digest"
 )
 
 rm -rf "$OUT"

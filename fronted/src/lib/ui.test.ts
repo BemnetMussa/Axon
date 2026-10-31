@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getBrandColor, stripHtml, relativeTime, readingTime, formatEngagement, categoryLabel, whyKept, dayLabel, formatDate, hostname } from './ui';
+import { getBrandColor, stripHtml, relativeTime, readingTime, formatEngagement, categoryLabel, whyKept, dayLabel, formatDate, formatDateLong, hostname } from './ui';
 
 describe('getBrandColor', () => {
 	it('returns brand colors for known sources and a fallback otherwise', () => {
@@ -93,9 +93,16 @@ describe('whyKept', () => {
 });
 
 describe('formatDate', () => {
-	it('writes an unambiguous date', () => {
+	it('writes an unambiguous UTC date', () => {
 		expect(formatDate('2026-10-06T12:00:00')).toBe('Oct 6, 2026');
 		expect(formatDate('')).toBe('');
+	});
+});
+
+describe('formatDateLong', () => {
+	it('includes the UTC weekday', () => {
+		expect(formatDateLong('2026-10-14T09:00:00')).toBe('Wednesday, October 14, 2026');
+		expect(formatDateLong('')).toBe('');
 	});
 });
 

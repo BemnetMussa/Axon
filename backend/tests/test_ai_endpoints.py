@@ -71,16 +71,20 @@ def test_digest_latest_empty(client, auth_headers):
     assert "No weekly digest" in body["content"]
 
 
-def test_digest_generate_and_read_back(client, auth_headers, session, monkeypatch):
+def test_digest_generate_rejects_non_admin(client, auth_headers):
+    assert client.post("/digests/generate", headers=auth_headers).status_code == 403
+
+
+def test_digest_generate_and_read_back(client, admin_headers, session, monkeypatch):
     monkeypatch.setattr(main, "generate_weekly_digest", lambda s: "fresh digest")
-    res = client.post("/digests/generate", headers=auth_headers)
+    res = client.post("/digests/generate", headers=admin_headers)
     assert res.status_code == 200
     assert res.json()["digest"] == "fresh digest"
 
 
-def test_digest_generate_without_articles_503(client, auth_headers, monkeypatch):
+def test_digest_generate_without_articles_503(client, admin_headers, monkeypatch):
     monkeypatch.setattr(main, "generate_weekly_digest", lambda s: None)
-    res = client.post("/digests/generate", headers=auth_headers)
+    res = client.post("/digests/generate", headers=admin_headers)
     assert res.status_code == 503
 
 

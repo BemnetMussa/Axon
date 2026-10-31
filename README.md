@@ -102,7 +102,7 @@ Each admitted story has its full text fetched and a brief written from it. The c
 
 - **Read** — a brief for every story, written from the full text rather than the headline: the main point, the specifics, and the caveats the source states. No added opinions.
 - **Ask** — every story has its own chat that answers from that article, and says so when the article doesn't cover your question. Suggested questions and voice input on supported phones.
-- **Catch up** — a weekly synthesis of what moved: the big picture, the breakthroughs, and where builders should look next.
+- **Catch up** — a weekly digest of what the strongest stories actually said, with a shared theme only when several of them state one.
 - **Install it** — a PWA with push notifications when a sweep lands new stories.
 
 Free, no card: [open the feed](https://axon-phi-ruby.vercel.app/signup).

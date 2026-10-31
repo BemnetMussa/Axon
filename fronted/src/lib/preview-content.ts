@@ -40,17 +40,14 @@ export const chat = [
 
 export const digest = {
 	created_at: '2026-10-14T09:00:00Z',
-	content: `## The Big Picture
-Agents moved from demos into tooling this week. Google Research and NVIDIA both shipped work on making agents reliable at real tasks, and the open weather-model release shows how far cheap simulation has come.
+	content: `## The week
+Google Research and NVIDIA both published work on agents doing measured tasks, and Hugging Face released a weather model that runs extreme-weather simulation at a fraction of the usual cost.
 
-## Core Breakthroughs
-- **Putting Earth AI to work: Geospatial agents for our planet's biggest challenges** (GoogleResearch)
-- **Analyzing technical documents with Deep Review** (GoogleResearch)
-- **HiRO-ACEv2: Simulating extreme weather at 3 km resolution for a fraction of the cost** (HuggingFace)
-- **Optimizing Agent Reliability and Tool Calling Efficiency for Chip Design Using NVIDIA NeMo Gym** (NVIDIA)
-
-## Key Takeaways
-- Tool-calling reliability is now a measured target, not a hope.`
+## What landed
+* **Putting Earth AI to work** (Google Research): geospatial agents aimed at large-scale planet problems.
+* **Analyzing technical documents with Deep Review** (Google Research): an agent that reads technical documents.
+* **HiRO-ACEv2** (Hugging Face): extreme-weather simulation at 3 km resolution for a fraction of the cost.
+* **NeMo Gym for chip design** (NVIDIA): measured agent reliability and tool-calling efficiency on chip-design tasks.`
 };
 
 type PoolItem = Pick<Article, 'source' | 'category' | 'likes' | 'title' | 'insight'>;

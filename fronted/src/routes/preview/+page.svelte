@@ -133,7 +133,7 @@
 			{#if screen !== 'feed'}
 				<div bind:this={readerHost} class={`absolute inset-0 z-30 flex overflow-hidden ${dark ? 'bg-[#0a0a0a]' : 'bg-white'}`}>
 					{#if screen === 'digest'}
-						<DigestView {digest} loading={false} {theme} onBack={noop} onGenerate={noop} />
+						<DigestView {digest} loading={false} {theme} onBack={noop} />
 					{:else}
 						<ReaderPanel
 							article={story}

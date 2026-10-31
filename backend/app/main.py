@@ -764,6 +764,7 @@ def get_latest_digest(session: Session = Depends(get_session)):
 @app.post("/digests/generate")
 @limiter.limit("3/hour")
 def trigger_digest(request: Request, session: Session = Depends(get_session)):
+    require_admin(request)
     content = generate_weekly_digest(session)
     if not content:
         return JSONResponse(

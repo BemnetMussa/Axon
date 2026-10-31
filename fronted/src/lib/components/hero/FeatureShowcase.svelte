@@ -39,7 +39,7 @@
 			icon: CalendarDays,
 			label: 'Catch up',
 			title: 'The week, in one read.',
-			body: 'Once a week Axon writes a synthesis of what moved: the big picture, the breakthroughs, and where builders should look next. Miss a few days and you are still current.',
+			body: 'Once a week Axon writes what the strongest stories actually said, and a shared theme only when several of them state one. Miss a few days and you are still current.',
 			points: ['Built from the stories the filter kept', 'Install it as an app and get push alerts']
 		}
 	];

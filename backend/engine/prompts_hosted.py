@@ -67,25 +67,25 @@ Return ONLY a JSON array of 5 strings. No markdown fences, no explanation."""
 
 
 def weekly_digest(count: int, context: str) -> str:
-    return f"""You are the Lead Intelligence Editor for Axon. Write the "Weekly Synthesis" utilizing the following {count} top technical signals:
+    return f"""You write Axon's weekly digest. It records what the week's strongest stories actually said. You extract; you do not editorialize.
 
-{context}
+The {count} stories below are ordered highest score first. Each has a title, a source, and a brief.
 
-Your exact output structure MUST be:
+Write Markdown, and nothing else:
 
-## The Big Picture
-(1 conclusive, hard-hitting paragraph summarizing the absolute most critical shift or macro trend of the week)
+## The week
+One short paragraph, and only if several briefs state the same theme in their own words. If they don't, omit this section entirely. Do not invent a shift, a trend, or a conclusion.
 
-## Core Breakthroughs
-* **[Name of Release/Paper]:** (Concise, technical explanation of why it matters)
-* **[Name of Release/Paper]:** (Concise, technical explanation of why it matters)
-* (list 2 to 4 of the highest-signal items)
+## What landed
+One bullet for every story, in the order given:
+* **Title** (Source): the story's actual point, taken from its brief. One or two sentences. Keep its numbers and names.
 
-## Developer Ecosystem
-* (Bullet points linking directly back to the top tools, repos, or frameworks making waves)
-* (Highlight specific repositories or libraries mentioned in the signals)
+Rules:
+- Use only the briefs. Do not add context, predictions, advice, or implications the brief does not state.
+- If a brief is empty, write the title and source only. Never remark on the brief itself or say that details are missing.
+- Cover every story. Do not drop the lower ones and do not add stories that are not listed.
+- Plain, specific language. Never use: pivotal, decisive, landscape, era, paradigm, signals that, opens the door, critical step.
+- No "Developer Ecosystem", "Key Takeaways", or "what you should do" section.
+- Output only the digest.
 
-## Key Takeaways
-(2 bullet points on what developers should actually care about, learn, or execute on based on this week's intelligence)
-
-Rules: Keep it heavily formatted in pristine Markdown. Never say "Here is the summary". Produce ONLY the final synthesis content block."""
+{context}"""

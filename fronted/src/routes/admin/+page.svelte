@@ -231,6 +231,11 @@
 							onclick={() => runAction('Process', () => api.adminProcessBacklog(), (r) => (r.status === 'already_running' ? 'already running' : 'started in background'))}
 							class="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.08] px-3 py-1.5 text-[12px] font-medium text-emerald-300 transition-colors hover:bg-emerald-500/15 disabled:opacity-40"
 						>{stats.processing.running ? 'Processing…' : 'Process backlog (analyze + retry)'}</button>
+						<button
+							disabled={actionBusy !== null}
+							onclick={() => runAction('Digest', () => api.generateDigest(), (r) => (r.status === 'success' ? 'weekly digest written' : (r.detail ?? r.status ?? 'done')))}
+							class="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[12px] font-medium text-zinc-300 transition-colors hover:border-white/20 disabled:opacity-40"
+						>{actionBusy === 'Digest' ? 'Writing…' : 'Write this week\'s digest'}</button>
 					</div>
 					{#if actionResult}<p class="mt-3 text-[12px] text-zinc-400">{actionResult}</p>{/if}
 					{#if !stats.ai.reachable}<p class="mt-2 text-[11px] text-red-400/80">Note: AI engine is offline — processing won't generate insights until GROQ_API_KEY works.</p>{/if}

@@ -501,26 +501,6 @@
 
 	}
 
-	async function generateDigest() {
-		if (!digestContent || digestLoading) return;
-		digestLoading = true;
-		digestContent = { ...digestContent, content: 'Generating new Weekly Synthesis. Please wait roughly 10 seconds...' };
-		try {
-			const data = await api.generateDigest();
-			if (data.status === 'success') {
-				const fresh = await api.getLatestDigest();
-				if (fresh) digestContent = fresh;
-			} else {
-				digestContent = { ...digestContent, content: data.detail || 'Unable to generate digest right now.' };
-			}
-		} catch (e) {
-			console.error(e);
-			digestContent = { ...digestContent, content: 'Failed to generate. Please check server logs.' };
-		} finally {
-			digestLoading = false;
-		}
-	}
-
 	function findLoadedArticle(id: number): Article | undefined {
 		if (selectedArticle?.id === id) return selectedArticle;
 		return (
@@ -743,7 +723,6 @@
 						loading={digestLoading}
 						{theme}
 						onBack={() => (showDigestView = false)}
-						onGenerate={generateDigest}
 					/>
 				{:else if selectedArticle}
 					<ReaderPanel
