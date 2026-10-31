@@ -7,6 +7,9 @@ The source code in this repository — client UI, API, curation engine, and AI
 analysis — is licensed under the GNU Affero General Public License v3.0
 (see LICENSE).
 
+The AI prompts used by the hosted product are not part of this repository.
+The repository ships default prompts in backend/engine/prompts.py instead.
+
 If you run a modified version of Axon as a network service, AGPL section 13
 requires you to offer your users the corresponding source code.
 

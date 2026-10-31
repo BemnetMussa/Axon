@@ -18,7 +18,7 @@ Axon is a builder-focused AI/tech signal reader: one place for ArXiv, Hacker New
 Everything that decides what you see:
 
 - **Curation engine** — `backend/engine/fetcher.py`: sources, freshness gate, scoring, near-duplicate detection, per-source caps, categories
-- **AI analysis** — `backend/engine/analyzer.py`: the prompts behind insights, briefs, digests, and article chat
+- **AI analysis** — `backend/engine/analyzer.py`: insights, briefs, digests, and article chat. The repo ships default prompts in `backend/engine/prompts.py`; the hosted product uses its own, which aren't published.
 - **API** — `backend/app/` (FastAPI, SQLModel, PostgreSQL)
 - **App** — `fronted/` (SvelteKit PWA, push notifications)
 

@@ -5,7 +5,8 @@
 > the whole system without opening the code.
 
 > **Engine:** The curation and AI engine lives in `backend/engine/` and ships with
-> the repo (AGPL-3.0). `app/services/_engine.py` loads it, falling back to the
+> the repo (AGPL-3.0). The hosted prompts (`prompts_hosted.py`) are excluded from
+> the public repo, which falls back to the defaults in `prompts.py`. `app/services/_engine.py` loads it, falling back to the
 > community stubs only if it is missing.
 
 ---

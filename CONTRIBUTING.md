@@ -1,7 +1,7 @@
 # Contributing to Axon
 
-Thanks for helping. Everything is open, including the curation engine and the
-AI prompts.
+Thanks for helping. The curation engine is fully open. The AI layer is open
+too, with default prompts; the hosted product's own prompts are not published.
 
 ## Ways to help
 
@@ -9,7 +9,7 @@ AI prompts.
 |------|-------|
 | UI / PWA / accessibility | `fronted/` |
 | Ranking, filters, sources, dedupe | `backend/engine/fetcher.py` |
-| AI prompts and analysis | `backend/engine/analyzer.py` |
+| AI analysis and default prompts | `backend/engine/analyzer.py`, `backend/engine/prompts.py` |
 | API / models / extractor | `backend/app/` |
 | Docs, README, examples | Keep claims honest |
 | Bug reports, ranking misses, feedback | Issues or [@BemnetMussa](https://x.com/BemnetMussa) |
