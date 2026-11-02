@@ -48,4 +48,4 @@ for a in arts[:5]:
     print(f"- [{src}] {title} | insight={ins}")
 '
 echo
-echo "Done. Open https://axon-phi-ruby.vercel.app/app and spot-check the feed."
+echo "Done. Open https://axondots.org/app and spot-check the feed."

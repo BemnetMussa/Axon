@@ -1,4 +1,4 @@
-"""Prompts used by the hosted Axon product. Not published in the public repo.
+"""Prompts used by the hosted Axon product.
 
 Must define the same functions as ``prompts.py``.
 """

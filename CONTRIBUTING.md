@@ -19,7 +19,7 @@ have kept or dropped — that's how we judge whether it helps.
 
 ## Before you start
 
-1. Try the [live demo](https://axon-phi-ruby.vercel.app)
+1. Try the [live app](https://axondots.org)
 2. Open an issue for larger changes so we can align scope
 
 ## Development setup

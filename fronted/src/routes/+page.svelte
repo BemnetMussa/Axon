@@ -10,7 +10,7 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const SITE_URL = 'https://axon-phi-ruby.vercel.app';
+	const SITE_URL = 'https://axondots.org';
 	const TITLE = 'AXON — You can’t keep up with everything. You don’t have to.';
 	const DESC =
 		'Axon reads the labs, the papers, GitHub and Hacker News every few hours, drops the reposts, listicles and hype, and keeps what actually moved: the breakthroughs, launches and repos worth your time.';

@@ -2,39 +2,55 @@
 
 <h1>Axon</h1>
 
-<h3>You can't keep up with everything. You don't have to.</h3>
+<h3>Quality dots. You connect them.</h3>
 
-<p>The signal from the frontier of technology, without the noise.</p>
+<p>An open-source filter for the frontier of tech. 17 sources in, at most 20 stories out, every 4 hours.<br/>Every rule that decides what reaches you is in this repo.</p>
+
+<p>
+  <a href="https://axondots.org"><img alt="Live: axondots.org" src="https://img.shields.io/badge/live-axondots.org-black" /></a>
+  <a href="https://github.com/BemnetMussa/Axon/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/BemnetMussa/Axon?style=flat&color=black" /></a>
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-black" /></a>
+  <img alt="SvelteKit 5" src="https://img.shields.io/badge/SvelteKit-5-black" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python-black" />
+</p>
+
+<p>
+  <a href="https://axondots.org"><b>Open the feed</b></a>
+  &nbsp;·&nbsp;
+  <a href="#how-the-filter-works">How the filter works</a>
+  &nbsp;·&nbsp;
+  <a href="#run-it-locally">Run it locally</a>
+  &nbsp;·&nbsp;
+  <a href="#report-a-ranking-miss">Report a ranking miss</a>
+</p>
 
 <img src="docs/assets/axon-hero.gif" alt="17 sources stream into the Axon filter; the stories that pass land in the feed on a phone" width="100%" />
 
 <sub>Recorded from the live landing page. The animation and stories are illustrative.</sub>
 
-<p>
-  <a href="https://axon-phi-ruby.vercel.app"><b>Open the feed →</b></a>
-  &nbsp;·&nbsp;
-  <a href="#how-the-filter-works">How the filter works</a>
-  &nbsp;·&nbsp;
-  <a href="#report-a-ranking-miss">Report a ranking miss</a>
-  &nbsp;·&nbsp;
-  <a href="CONTRIBUTING.md">Contribute</a>
-</p>
-
-<p>
-  <img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-black" />
-  <img alt="SvelteKit" src="https://img.shields.io/badge/SvelteKit-5-black" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python-black" />
-</p>
-
 </div>
 
 ---
 
-Noise is the reposts, listicles and hype. Signal is what actually moved: a breakthrough, a launch, a repo people suddenly use.
+## Why
 
-Axon reads 17 sources across the AI labs, ArXiv, GitHub and Hacker News every 4 hours, scores every candidate, and admits at most 20 stories per sweep. Each one gets a brief written from the full article, its own chat, and a place in the weekly synthesis.
+You can't keep up with everything. You don't have to.
 
-**The filter is open source.** Every rule that decides what reaches you is in this repo, so you can see why a story made the cut and argue with it when it shouldn't have.
+Most of what gets published about tech is noise: reposts, listicles, hype, the same launch on four sites. The signal is what actually moved: a breakthrough, a launch, a repo people suddenly use.
+
+Axon is a filter for that signal, and **the filter is the product.** It is one scoring formula and five checks, all in [`backend/engine/fetcher.py`](backend/engine/fetcher.py). You can read exactly why a story made the cut, and open an issue when it shouldn't have.
+
+Axon gives you the dots. Connecting them is your job. Briefs say what the source says and nothing more.
+
+## Highlights
+
+- **An open filter** — one score, five checks, no black box. [See how it works ↓](#how-the-filter-works)
+- **17 sources** — AI labs, ArXiv, GitHub, Hacker News, Lobsters and tech news, read every 4 hours.
+- **20 stories a sweep, max** — a feed you can actually finish.
+- **Briefs from the full article** — not the headline. No added opinions.
+- **A chat per story** — it answers from that article only, and says so when the article doesn't cover your question.
+- **Weekly digest** — what the strongest stories said, every Sunday.
+- **Installable PWA** — push notifications when a sweep lands.
 
 ## How the filter works
 
@@ -85,7 +101,7 @@ Each admitted story has its full text fetched and a brief written from it. The c
 | **Anthropic** · Notes on how the new model handles long tasks | Primary source |
 | **Hacker News** · What people actually ran on the small reasoning models | 412 points |
 
-<sub>Illustrative examples. The live feed is at <a href="https://axon-phi-ruby.vercel.app">axon-phi-ruby.vercel.app</a>.</sub>
+<sub>Illustrative examples. The live feed is at <a href="https://axondots.org">axondots.org</a>.</sub>
 
 ## Where it listens
 
@@ -100,12 +116,11 @@ Each admitted story has its full text fetched and a brief written from it. The c
 
 ## What you get
 
-- **Read** — a brief for every story, written from the full text rather than the headline: the main point, the specifics, and the caveats the source states. No added opinions.
-- **Ask** — every story has its own chat that answers from that article, and says so when the article doesn't cover your question. Suggested questions and voice input on supported phones.
+- **Read** — a brief for every story, written from the full text: the main point, the specifics, and the caveats the source states.
+- **Ask** — a chat per story that answers from that article. Suggested questions and voice input on supported phones.
 - **Catch up** — a weekly digest of what the strongest stories actually said, with a shared theme only when several of them state one. Each title links to the original.
-- **Install it** — a PWA with push notifications when a sweep lands new stories.
 
-Free, no card: [open the feed](https://axon-phi-ruby.vercel.app/signup).
+Free, no card: [open the feed](https://axondots.org/signup).
 
 ## Report a ranking miss
 
@@ -113,15 +128,18 @@ The filter will get things wrong. When it does, that's the most useful thing you
 
 [Open a ranking-miss issue](../../issues/new?template=ranking_miss.md) with the story, whether it should have been kept or cut, and which rule you think is at fault. Pull requests that change a rule should include a few real stories the change would have kept or dropped.
 
-## What's open, and what isn't
+## What's open
+
+Everything that decides what you read, and how it's written up:
 
 | Open (in this repo) | Not published |
 |---|---|
-| Curation engine: sources, scoring, checks, dedupe, categories | The AI prompts used by the hosted product |
-| AI pipeline: briefs, chat, weekly synthesis (with default prompts) | Production data, users, and keys |
+| Curation engine: sources, scoring, checks, dedupe, categories | Production data, users, and keys |
+| AI pipeline: briefs, chat, weekly synthesis | |
+| The prompts the hosted product uses ([`prompts_hosted.py`](backend/engine/prompts_hosted.py)) | |
 | API (FastAPI) and app (SvelteKit PWA) | |
 
-A clone runs the full pipeline. It uses the default prompts in [`backend/engine/prompts.py`](backend/engine/prompts.py), so its briefs are plainer than the hosted product's.
+A clone runs the same pipeline with the same prompts as [axondots.org](https://axondots.org).
 
 ## Run it locally
 
@@ -166,7 +184,7 @@ graph LR
 |---|---|
 | `backend/engine/fetcher.py` | The filter: sources, scoring, checks, dedupe |
 | `backend/engine/analyzer.py` | Briefs, chat, suggested questions, weekly synthesis |
-| `backend/engine/prompts.py` | Default AI prompts |
+| `backend/engine/prompts_hosted.py` | The AI prompts the hosted product uses (`prompts.py` is the fallback) |
 | `backend/app/` | FastAPI routes, models, scheduler, engine loader |
 | `fronted/` | SvelteKit 5 + Tailwind 4 app, Better Auth, web push |
 
@@ -188,6 +206,16 @@ Optional Vercel cron: `GET /api/cron/ingest` with `CRON_SECRET` calls the API's 
 On a custom domain, update `BETTER_AUTH_URL`, the OAuth redirect URIs, and `CORS_ALLOWED_ORIGINS`.
 
 Never commit `.env` files or keys.
+
+## Contributing
+
+Ranking arguments are the most useful contribution: [report a ranking miss](#report-a-ranking-miss). For code, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+If Axon saves you time, a ⭐ helps other people find it.
+
+<a href="https://star-history.com/#BemnetMussa/Axon&Date">
+  <img src="https://api.star-history.com/svg?repos=BemnetMussa/Axon&type=Date" alt="Star history" width="600" />
+</a>
 
 ## License
 

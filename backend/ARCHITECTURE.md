@@ -5,17 +5,17 @@
 > the whole system without opening the code.
 
 > **Engine:** The curation and AI engine lives in `backend/engine/` and ships with
-> the repo (AGPL-3.0). The hosted prompts (`prompts_hosted.py`) are excluded from
-> the public repo, which falls back to the defaults in `prompts.py`. `app/services/_engine.py` loads it, falling back to the
-> community stubs only if it is missing.
+> the repo (AGPL-3.0), including the prompts the hosted product uses
+> (`prompts_hosted.py`; `prompts.py` is the fallback). `app/services/_engine.py`
+> loads the engine, falling back to the community stubs only if it is missing.
 
 ---
 
 ## 1. What this backend is, in one paragraph
 
 Axon's backend is a **fan-out intelligence aggregator**. On a timer, it reaches out
-to ~25 published endpoints across the tech world (Hacker News, GitHub, ArXiv, AI-lab
-blogs, expert RSS feeds, tech news), pulls in everything new *at the same time*, runs
+to 17 published sources across the tech world (Hacker News, GitHub, ArXiv, AI-lab
+blogs, an expert feed, tech news), pulls in everything new *at the same time*, runs
 it through a **dedupe → score → rank → filter → enrich** pipeline, and then hands the
 survivors to an **AI analysis stage** that writes a human-readable insight for each one,
 turns it into a searchable vector, and tracks trending keywords. A FastAPI HTTP layer
@@ -28,11 +28,11 @@ it's this accumulated, cleaned, ranked, AI-distilled pipeline.
 
 | Layer | Technology | Why |
 |---|---|---|
-| Web framework | **FastAPI** (ASGI) | Async-native — essential for talking to 25 sites at once |
+| Web framework | **FastAPI** (ASGI) | Async-native — essential for talking to 17 sources at once |
 | Server | **Gunicorn + Uvicorn workers** | Production process manager (see Dockerfile) |
 | Database | **PostgreSQL + pgvector** | Relational store + vector column for semantic search |
 | ORM / models | **SQLModel** (SQLAlchemy under the hood) | Typed models that double as table definitions |
-| AI / LLM | **Groq — LLaMA 3.3 70B** (8B fallback) | Near-zero-latency inference for insights, briefs, chat |
+| AI / LLM | **Groq — `qwen/qwen3.8-27b`** (`openai/gpt-oss-20b` fallback; override with `GROQ_MODEL` / `GROQ_FALLBACK_MODEL`) | Near-zero-latency inference for insights, briefs, chat |
 | Embeddings | **fastembed** (384-dim, local) | Turns articles into vectors with no external API |
 | Scheduling | **APScheduler** | Fires the ingest job every N hours |
 | HTTP client | **httpx** (async) | Concurrent outbound requests |
@@ -47,7 +47,7 @@ Full dependency list lives in `requirements.txt`.
 ## 3. The big picture
 
 ```
-        every 6h (APScheduler)  ──or──  manual POST /ingest  ──or──  Vercel Cron
+        every 4h (APScheduler)  ──or──  manual POST /ingest  ──or──  Vercel Cron
                                   │
                                   ▼
                        ingest_intelligence()          ← orchestrator (fetcher.py)
@@ -61,7 +61,7 @@ Full dependency list lives in `requirements.txt`.
         1. DEDUPE   drop URLs already in Postgres + collapse cross-source near-dups
         2. SCORE    engagement_score = traction × recency × source-trust
         3. RANK     sort by score
-        4. FILTER   is_gold() drops junk · cap 8/source · cap 100/run
+        4. FILTER   is_gold() drops junk · cap 5/source · cap 20/run
         5. CLASSIFY assign category once (single source of truth)
         6. HYDRATE  fetch full article body for survivors (parallel, capped)
         7. STORE    INSERT into Postgres (is_processed = false)
@@ -70,7 +70,7 @@ Full dependency list lives in `requirements.txt`.
                        analyze_articles()              ← AI stage (analyzer.py)
                                   │  runs OFF the event loop (asyncio.to_thread)
         • classify   →  AI / Signal / Momentum / Discovery / Concerns
-        • insight    →  Groq LLaMA writes a 400–600 word brief from the full body
+        • insight    →  Groq writes a brief (at most ~300 words) from the full body
         • embed      →  384-dim vector (pgvector) for semantic search
         • trends     →  tally keyword frequency per day
                                   │
@@ -86,7 +86,7 @@ Two ideas are worth internalizing:
    The expensive LLM work is a *second* step that runs on a background thread so it
    never blocks the API. The `is_processed` flag is the handoff: ingest drops raw rows
    in, analysis later picks up whatever is unprocessed.
-2. **Everything fans out.** Talking to 25 sites sequentially would take ~40s; firing
+2. **Everything fans out.** Talking to 17 sources sequentially would take ~40s; firing
    them concurrently makes the whole run take about as long as the *slowest single
    source*. The same concurrency trick is reused for full-content extraction.
 
@@ -102,9 +102,15 @@ backend/
 │   ├── core/
 │   │   └── database.py         # Engine creation, init_db(), session factories
 │   └── services/
-│       ├── fetcher.py          # ALL data sources + ingestion pipeline + scoring
-│       ├── analyzer.py         # Groq insights, classification, embeddings, trends, digests
+│       ├── _engine.py          # Loads engine/ modules, or the community stubs if absent
+│       ├── fetcher.py          # Thin entrypoint → engine/fetcher.py
+│       ├── analyzer.py         # Thin entrypoint → engine/analyzer.py
 │       └── extractor.py        # Full article body extraction (readability)
+├── engine/
+│   ├── fetcher.py              # ALL data sources + ingestion pipeline + scoring
+│   ├── analyzer.py             # Groq insights, classification, embeddings, trends, digests
+│   ├── prompts_hosted.py       # Prompts the hosted product uses
+│   └── prompts.py              # Default prompts (fallback)
 ├── migration.py                # One-off column-add migration helper
 ├── requirements.txt
 ├── Dockerfile                  # Gunicorn + Uvicorn production image
@@ -116,7 +122,7 @@ backend/
 
 ## 5. Where the data comes from
 
-All sources live in `app/services/fetcher.py` as `hunt_*` coroutines — one per *kind*
+All sources live in `engine/fetcher.py` as `hunt_*` coroutines — one per *kind*
 of source. The backend speaks three "languages":
 
 ### JSON APIs (structured data)
@@ -128,15 +134,19 @@ of source. The backend speaks three "languages":
 | `hunt_github_trending` | GitHub Search API | Repos **created recently** with star traction |
 | `hunt_arxiv` | ArXiv Export API | Latest `cs.AI` + `cs.LG` papers |
 
-### RSS / Atom feeds (the bulk — ~17 feeds)
+### RSS / Atom feeds (the bulk)
 | Function | Sources |
 |---|---|
 | `hunt_ai_labs` | OpenAI, DeepMind, Google AI, HuggingFace |
 | `hunt_anthropic` | Anthropic (via sitemap.xml — see below) |
 | `hunt_infrastructure` | NVIDIA, Together AI, Google Research |
-| `hunt_expert_blogs` | Karpathy, Simon Willison, Lilian Weng, Fast.ai, Sam Altman, BAIR |
+| `hunt_expert_blogs` | Simon Willison |
 | `hunt_tech_news` | TechCrunch, The Verge, Ars Technica |
 | `hunt_product_launches` | Product Hunt |
+
+Karpathy, Lilian Weng, Fast.ai, Sam Altman and BAIR were cut from the expert feeds:
+they were months to a year out of date, so they never passed the 30-day freshness gate.
+Their weights are still in `SOURCE_WEIGHTS` in case they come back.
 
 > **Important:** the backend does **not** scrape arbitrary HTML. Every source is an
 > endpoint each site *publishes on purpose* (an API or an RSS feed). That's why it's
@@ -154,7 +164,7 @@ fragile HTML scraping.
 ### Sources that were removed (no working feed exists)
 Pinecone, Modal, and Cerebras were dropped — they are JS-rendered sites that publish
 **no RSS feed and no usable sitemap** (every known URL 404s). They were replaced with the
-verified-live feeds above (HuggingFace, Google AI, Google Research, Together AI, BAIR).
+verified-live feeds above (HuggingFace, Google AI, Google Research, Together AI).
 
 ---
 
@@ -222,9 +232,10 @@ engagement_score = source_weight × (0.55 × engagement + 0.45 × recency)
   its source. Pure-RSS sources (no number, `likes = 0`) all tie at a neutral 0.5, so a
   fresh lab post (weight 1.6) lands just below the top HN story instead of under all of them.
 - **recency** — exponential decay on the article's age, `exp(-age_hours / 72)`
-  (a ~3-day scale). Fresh items score higher.
-- **source_weight** — a hand-set trust multiplier (`SOURCE_WEIGHTS`). OpenAI/DeepMind/
-  Karpathy sit highest (~1.4–1.6); aggregated tech news sits lowest (~0.9).
+  (a ~3-day scale), measured once when the story is kept and frozen in `score_recency`.
+  If the same link comes back with more points, only the engagement half can rise.
+- **source_weight** — a hand-set trust multiplier (`SOURCE_WEIGHTS`). OpenAI and
+  Anthropic sit highest (1.6), DeepMind next (1.5); aggregated tech news sits lowest (0.9).
 
 The score is used to **rank before selection** and is **persisted** to the
 `engagement_score` column (which previously was always `0.0`).
@@ -245,8 +256,9 @@ Entry point: `analyze_articles(session)` in `analyzer.py`. It processes all rows
 `is_processed == false`, in batches of `BATCH_SIZE = 8` with a `BATCH_DELAY = 12s`
 pause between batches (to stay under Groq rate limits). For each article:
 
-1. **Insight** — `generate_insight()` calls Groq to write a 400–600 word, Substack-style
-   summary. **It writes from the hydrated `full_content`** (falling back to the
+1. **Insight** — `generate_insight()` calls Groq to write a brief of 2–4 short paragraphs
+   (at most ~300 words) that extracts what the source says, without added analysis.
+   **It writes from the hydrated `full_content`** (falling back to the
    snippet), with the prompt context raised to 6,000 chars — so insights are grounded in
    the real article, not a one-sentence RSS blurb.
 2. **Embed** — the whole batch is embedded in a single `fastembed` call (`title + insight`)
@@ -257,8 +269,8 @@ pause between batches (to stay under Groq rate limits). For each article:
    `Trend` row — which powers day-over-day velocity ("New / Surging / Rising / Steady").
 
 ### Resilience
-- `_call_groq_with_fallback()` retries on the smaller `llama3-8b-8192` model when the
-  70B model is rate-limited.
+- `_call_groq_with_fallback()` retries on the fallback model (`GROQ_FALLBACK_MODEL`)
+  when the primary model is rate-limited.
 - `retry_failed_insights()` re-generates insights for any article whose first pass
   failed or came back empty.
 
@@ -297,14 +309,14 @@ All routes are defined in `main.py`. Grouped by purpose:
 ### Ingestion & analysis (operational)
 | Method | Route | Notes |
 |---|---|---|
-| POST | `/ingest` | Run a fetch. **Ops/cron only — not user-facing.** 5/hour, 6-hour global cooldown unless `context_id` given |
+| POST | `/ingest` | Run a fetch. **Ops/cron only — not user-facing.** 5/hour, global cooldown of `INGEST_INTERVAL_HOURS` unless `context_id` given |
 | POST | `/analyze` | Run the AI analysis pass over unprocessed articles |
 | POST | `/retry-insights` | Re-generate failed/empty insights |
 
 ### Articles & feed
 | Method | Route | Notes |
 |---|---|---|
-| GET | `/articles` | Cursor pagination, ordered by `id DESC` (insertion order) |
+| GET | `/articles` | Keyset pagination. Default: newest day first, highest score first within a day. `order=highest`: strongest scores from the last 7 days. Optional `category` / `source` filters |
 | GET | `/articles/trending` | "Hot" sort: `(views + 5·likes) / (hours+2)^1.8`, last 7 days |
 | GET | `/articles/count-since?since_id=` | Lightweight "how many new" check (for the new-signals badge) |
 | GET | `/articles/{id}/content` | Full body; lazily extracted + cached on first request |
@@ -443,10 +455,10 @@ the `vector` extension exists, and syncs the schema. Semantic search uses pgvect
    SEO repos can still appear; no reputation/quality signal beyond the name filter.
 3. **ArXiv firehose.** Latest `cs.AI`/`cs.LG` by date only — no relevance/citation
    ranking.
-4. **Analysis cost/time.** A full run can be ~100 articles × Groq calls with 12s batch
-   gaps — fine on a long-lived host, but heavy for short serverless timeouts.
+4. **Analysis cost/time.** A full run is up to 20 articles × Groq calls with 12s batch
+   gaps — fine on a long-lived host, but tight for short serverless timeouts.
 
 ---
 
-*This document reflects the backend as built in `app/` and is intended to stay current —
+*This document reflects the backend as built in `app/` and `engine/` and is intended to stay current —
 update it whenever a source, pipeline stage, model, or endpoint changes.*
