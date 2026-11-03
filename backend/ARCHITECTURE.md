@@ -341,7 +341,7 @@ All routes are defined in `main.py`. Grouped by purpose:
 | Method | Route | Notes |
 |---|---|---|
 | GET | `/digests/latest` | Most recent weekly digest |
-| POST | `/digests/generate` | Generate a new weekly digest. 3/hour |
+| POST | `/digests/generate` | Admin only: write a digest now. The scheduler writes one every Sunday 06:00 UTC. 3/hour |
 | GET | `/trends` | Top keywords with velocity labels |
 | GET | `/rss` | Public RSS 2.0 feed of the latest 20 articles |
 

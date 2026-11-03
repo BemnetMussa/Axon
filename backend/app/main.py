@@ -255,11 +255,42 @@ def _record_ingest_run(trigger: str, ok: bool, new_articles: int, analyzed: int,
         print(f"AXON: failed to record ingest run: {e}")
 
 
+PUSH_MAX_PER_SWEEP = 2
+PUSH_MAX_PER_DAY = 10
+# A new story must score in the top 20% of the last 7 days to earn a push.
+PUSH_SCORE_PERCENTILE = 0.8
+
+
+def _pick_push_stories(session: Session, since_id: int, now: datetime | None = None) -> list[Article]:
+    """The new stories worth a push: at most PUSH_MAX_PER_SWEEP, never past
+    PUSH_MAX_PER_DAY per UTC day, and only ones scoring above the weekly bar."""
+    now = now or datetime.now(timezone.utc)
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    sent_today = session.exec(
+        select(func.count()).select_from(Article).where(col(Article.notified_at) >= day_start)
+    ).one() or 0
+    budget = min(PUSH_MAX_PER_SWEEP, PUSH_MAX_PER_DAY - sent_today)
+    if budget <= 0:
+        return []
+    week_scores = sorted(session.exec(
+        select(Article.engagement_score).where(col(Article.published_date) >= now - timedelta(days=7))
+    ).all())
+    bar = week_scores[int(len(week_scores) * PUSH_SCORE_PERCENTILE)] if week_scores else 0.0
+    return list(session.exec(
+        select(Article)
+        .where(col(Article.id) > since_id)
+        .where(col(Article.notified_at).is_(None))
+        .where(col(Article.engagement_score) >= bar)
+        .order_by(col(Article.engagement_score).desc(), col(Article.id).desc())
+        .limit(budget)
+    ).all())
+
+
 async def _notify_new_signals(session: Session, new_count: int, since_id: int = 0) -> None:
-    """Fan a Web Push "new signals" notification out via the frontend after a
-    productive ingest. Best-effort: a missing AXON_FRONTEND_URL, a timeout, or any
-    other error is swallowed so a push failure can never break or delay ingestion.
-    The frontend endpoint owns the subscriber list + web-push (see
+    """Push the strongest new stories, one notification each, via the frontend
+    after a productive ingest. Best-effort: a missing AXON_FRONTEND_URL, a timeout,
+    or any other error is swallowed so a push failure can never break or delay
+    ingestion. The frontend endpoint owns the subscriber list + web-push (see
     fronted/src/routes/api/push/notify)."""
     if new_count <= 0:
         return
@@ -267,23 +298,31 @@ async def _notify_new_signals(session: Session, new_count: int, since_id: int = 
         print("AXON: push notify skipped — AXON_FRONTEND_URL is not set")
         return
     try:
-        top = session.exec(
-            select(Article)
-            .where(col(Article.id) > since_id)
-            .order_by(col(Article.engagement_score).desc(), col(Article.id).desc())
-            .limit(3)
-        ).all()
-        titles = [a.title for a in top if a.title]
+        stories = _pick_push_stories(session, since_id)
+        if not stories:
+            print("AXON: push notify skipped — no story cleared the bar, or the daily cap is reached")
+            return
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(
                 f"{FRONTEND_URL.rstrip('/')}/api/push/notify",
                 headers={"X-Axon-Internal-Secret": INTERNAL_SECRET},
-                json={"count": new_count, "title": titles[0] if titles else "", "titles": titles},
+                json={
+                    "count": new_count,
+                    "stories": [
+                        {"id": a.id, "title": a.title, "source": a.source, "likes": a.likes}
+                        for a in stories
+                    ],
+                },
             )
         if resp.status_code >= 400:
             print(f"AXON: push notify failed: HTTP {resp.status_code} {resp.text[:200]}")
-        else:
-            print(f"AXON: push notify ok ({resp.status_code})")
+            return
+        sent_at = datetime.now(timezone.utc)
+        for a in stories:
+            a.notified_at = sent_at
+            session.add(a)
+        session.commit()
+        print(f"AXON: push notify ok ({resp.status_code}, {len(stories)} stories)")
     except Exception as e:
         print(f"AXON: push notify failed: {e}")
 
@@ -293,7 +332,12 @@ def _max_article_id(session: Session) -> int:
 
 
 async def scheduled_weekly_digest():
-    """One digest a week, Sunday 15:00 UTC. Skips if one was written in the last 6 days."""
+    """One digest a week, Sunday 06:00 UTC.
+
+    Skips only if a digest was written in the last 12 hours, so each gunicorn
+    worker's scheduler doesn't write its own copy. A manual digest earlier in
+    the week must not cancel Sunday's.
+    """
     session = get_script_session()
     try:
         latest = session.exec(select(Digest).order_by(col(Digest.created_at).desc())).first()
@@ -302,7 +346,7 @@ async def scheduled_weekly_digest():
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)
             age = datetime.now(timezone.utc) - created
-            if age < timedelta(days=6):
+            if age < timedelta(hours=12):
                 print(f"AXON: weekly digest skipped — last one is {age.days}d {age.seconds // 3600}h old")
                 return
         content = await asyncio.to_thread(generate_weekly_digest, session)
@@ -375,13 +419,13 @@ async def lifespan(app: FastAPI):
         )
         scheduler.add_job(
             scheduled_weekly_digest,
-            trigger=CronTrigger(day_of_week="sun", hour=15, minute=0, timezone="UTC"),
+            trigger=CronTrigger(day_of_week="sun", hour=6, minute=0, timezone="UTC"),
             id="axon_weekly_digest",
             replace_existing=True,
             misfire_grace_time=6 * 3600,
         )
         scheduler.start()
-        print(f"AXON: Scheduler started (ingest every {_scheduler_interval_hours}h, digest Sundays 15:00 UTC)")
+        print(f"AXON: Scheduler started (ingest every {_scheduler_interval_hours}h, digest Sundays 06:00 UTC)")
     else:
         print("AXON: APScheduler disabled (DISABLE_SCHEDULER=1) — use external cron if needed")
 
@@ -670,6 +714,16 @@ def count_since(
         select(func.count()).select_from(Article).where(col(Article.id) > since_id)
     ).one()
     return {"new_count": count}
+
+
+# Declared after /articles/trending and /articles/count-since: an int path
+# parameter declared first would answer those paths with a 422.
+@app.get("/articles/{article_id}")
+def read_article(article_id: int, session: Session = Depends(get_session)):
+    article = session.get(Article, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    return _feed_dump([article])[0]
 
 
 # ---------------------------------------------------------------------------

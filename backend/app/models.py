@@ -31,6 +31,8 @@ class Article(SQLModel, table=True):
     # Freshness half of the score, frozen at ingest. Later point updates reuse it
     # so age does not tick the stored score down. Hidden from feed payloads.
     score_recency: Optional[float] = Field(default=None, exclude=True)
+    # When this story was sent as a push notification; drives the daily push cap.
+    notified_at: Optional[datetime] = Field(default=None, exclude=True)
     last_viewed: Optional[datetime] = None
     embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(384)), exclude=True)
     

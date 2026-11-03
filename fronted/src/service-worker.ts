@@ -31,10 +31,10 @@ self.addEventListener('activate', (event) => {
 
 // --- Web Push ---------------------------------------------------------------
 // Payload is JSON sent by the server (see src/lib/server/push-sender.ts):
-// { title, body, url }. `tag` collapses repeat pushes into a single notification
-// so an active ingest cadence can't stack a wall of alerts.
+// { title, body, url, tag }. Each story push carries its own tag so they stack;
+// pushes without one share 'axon-signals' and replace each other.
 self.addEventListener('push', (event) => {
-	let data: { title?: string; body?: string; url?: string } = {};
+	let data: { title?: string; body?: string; url?: string; tag?: string } = {};
 	try {
 		data = event.data?.json() ?? {};
 	} catch {
@@ -47,7 +47,7 @@ self.addEventListener('push', (event) => {
 			body: data.body || 'New signals are in.',
 			icon: '/icon-192.png',
 			badge: '/icon-192.png',
-			tag: 'axon-signals',
+			tag: data.tag || 'axon-signals',
 			renotify: true,
 			data: { url: data.url || '/app' }
 		} as NotificationOptions)

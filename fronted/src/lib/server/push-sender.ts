@@ -9,6 +9,8 @@ export interface PushPayload {
 	body: string;
 	/** Path the SW opens on click. Defaults to /app. */
 	url?: string;
+	/** Notifications with the same tag replace each other; distinct tags stack. */
+	tag?: string;
 }
 
 export interface PushRow {
@@ -51,7 +53,8 @@ function serialize(payload: PushPayload): string {
 	return JSON.stringify({
 		title: payload.title,
 		body: payload.body,
-		url: payload.url ?? '/app'
+		url: payload.url ?? '/app',
+		tag: payload.tag
 	});
 }
 

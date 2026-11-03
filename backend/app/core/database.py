@@ -83,6 +83,7 @@ def init_db():
         # create_all will not add columns to an existing article table.
         _COLUMN_BACKFILL = [
             "ALTER TABLE article ADD COLUMN IF NOT EXISTS score_recency FLOAT",
+            "ALTER TABLE article ADD COLUMN IF NOT EXISTS notified_at TIMESTAMP",
         ]
         with engine.connect() as conn:
             for ddl in _COLUMN_BACKFILL + _INDEX_BACKFILL:

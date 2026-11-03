@@ -199,6 +199,11 @@ export const api = {
         return data.new_count ?? 0;
     },
 
+    getArticle: async (id: number): Promise<Article> => {
+        const res = await fetch(`${BASE_URL}/articles/${id}`);
+        return jsonOrThrow<Article>(res);
+    },
+
     getArticleContent: async (id: number): Promise<{ content: string }> => {
         const res = await fetch(`${BASE_URL}/articles/${id}/content`);
         return jsonOrThrow<{ content: string }>(res);

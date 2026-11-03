@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { replaceState } from '$app/navigation';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { api, feedCache, type Article, type Trend } from '$lib/api';
@@ -594,6 +595,20 @@
 		selectedArticle = null;
 	}
 
+	// Push notifications link to /app?story=<id>.
+	async function openStoryFromUrl() {
+		const url = new URL(window.location.href);
+		const id = Number(url.searchParams.get('story'));
+		if (!Number.isInteger(id) || id <= 0) return;
+		url.searchParams.delete('story');
+		replaceState(url, {});
+		try {
+			openArticle(await api.getArticle(id));
+		} catch (error) {
+			console.error('Open story from link failed', error);
+		}
+	}
+
 	async function sendChat(message?: string) {
 		const text = message || chatInput;
 		if (!text.trim() || !selectedArticle || chatLoading) return;
@@ -643,6 +658,7 @@
 	onMount(() => {
 		document.body.classList.add('app-shell-lock');
 		load();
+		openStoryFromUrl();
 		pulseStore.start();
 		document.addEventListener('visibilitychange', handleVisibility);
 		return () => {

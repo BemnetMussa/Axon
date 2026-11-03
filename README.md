@@ -49,7 +49,7 @@ Axon gives you the dots. Connecting them is your job. Briefs say what the source
 - **20 stories a sweep, max** — a feed you can actually finish.
 - **Briefs from the full article** — not the headline. No added opinions.
 - **A chat per story** — it answers from that article only, and says so when the article doesn't cover your question.
-- **Weekly digest** — what the strongest stories said, every Sunday.
+- **Weekly digest** — what the strongest stories said, every Sunday morning.
 - **Installable PWA** — push notifications when a sweep lands.
 
 ## How the filter works
@@ -192,7 +192,7 @@ More detail in [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md).
 
 ## Self-hosting
 
-Sweeps run on APScheduler inside the API process, so the API must stay up. `GET /health` reports scheduler state and the last ingest. The weekly digest is written automatically every Sunday at 15:00 UTC.
+Sweeps run on APScheduler inside the API process, so the API must stay up. `GET /health` reports scheduler state and the last ingest. The weekly digest is written automatically every Sunday at 06:00 UTC.
 
 | Variable | Effect |
 |---|---|
