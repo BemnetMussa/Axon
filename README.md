@@ -70,7 +70,7 @@ score = w · (0.55 · e + 0.45 · r)
 
 ### 2. Admit, in order
 
-Candidates are sorted by score. Axon walks down the list and admits a story only if it passes all five checks, and stops at 20. Latest keeps that order: newest day first, best story first within each day. Highest lists the strongest scores from the last 7 days.
+Candidates are sorted by score. Axon walks down the list and admits a story only if it passes all five checks, and stops at 20. Frontier keeps that order: newest day first, best story first within each day. Trending lists the strongest scores from the last 7 days.
 
 | # | Check | Rule |
 |---|---|---|

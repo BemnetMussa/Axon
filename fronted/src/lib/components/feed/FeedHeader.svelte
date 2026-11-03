@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { Search, X } from 'lucide-svelte';
 	import { tick } from 'svelte';
-	import { chipButtonClass, iconButtonClass, inputClass } from '$lib/ui-styles';
+	import { iconButtonClass, inputClass } from '$lib/ui-styles';
 	import AxonMark from '$lib/components/ui/AxonMark.svelte';
-
-	type FeedOrder = 'latest' | 'highest';
 
 	type Props = {
 		title: string;
@@ -14,9 +12,6 @@
 		theme: 'dark' | 'light';
 		onSearchChange: (value: string) => void;
 		hasSemanticSearch?: boolean;
-		feedOrder?: FeedOrder;
-		showOrder?: boolean;
-		onOrderChange?: (order: FeedOrder) => void;
 	};
 
 	let {
@@ -26,10 +21,7 @@
 		syncIndicator,
 		theme,
 		onSearchChange,
-		hasSemanticSearch = false,
-		feedOrder = 'latest',
-		showOrder = false,
-		onOrderChange = () => {}
+		hasSemanticSearch = false
 	}: Props = $props();
 
 	let dark = $derived(theme === 'dark');
@@ -75,22 +67,6 @@
 		</div>
 
 		<div class="ml-auto flex shrink-0 items-center gap-2">
-			{#if showOrder}
-				<div class="flex items-center gap-0.5" role="group" aria-label="Feed order">
-					<button
-						type="button"
-						class={`axon-label px-2 py-1 ${chipButtonClass(theme, feedOrder === 'latest')}`}
-						aria-pressed={feedOrder === 'latest'}
-						onclick={() => onOrderChange('latest')}
-					>Latest</button>
-					<button
-						type="button"
-						class={`axon-label px-2 py-1 ${chipButtonClass(theme, feedOrder === 'highest')}`}
-						aria-pressed={feedOrder === 'highest'}
-						onclick={() => onOrderChange('highest')}
-					>Highest</button>
-				</div>
-			{/if}
 			<button
 				type="button"
 				class={iconButtonClass(theme, searchQuery.trim() ? 'muted' : 'default')}

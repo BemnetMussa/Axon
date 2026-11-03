@@ -38,8 +38,6 @@
 	let lastAgo = $derived(sweepAgo(pulse?.last_sweep_at, pulseStore.now));
 	let nextIn = $derived(pulse?.next_sweep_at ? sweepIn(pulse.next_sweep_at, pulseStore.now) : null);
 
-	const pad = (n: number) => String(n).padStart(2, '0');
-
 	let muted = $derived(dark ? 'text-white/40' : 'text-black/45');
 	let rule = $derived(dark ? 'border-white/10' : 'border-black/10');
 
@@ -104,10 +102,9 @@
 	<section class={`shrink-0 border-b px-3 py-4 ${rule}`}>
 		<p class={`axon-label px-2 pb-2 ${muted}`}>Channels</p>
 		<div class="flex flex-col">
-			{#each navigation as item, i}
+			{#each navigation as item}
 				{@const active = activeCategory === item.id && !showSavedOnly && !showDigestView}
 				<button onclick={() => onNavigate(item.id)} class={`flex items-center gap-3 px-2 py-2 text-left transition-colors ${rowClass(active)}`}>
-					<span class="axon-label w-5 opacity-50">{pad(i + 1)}</span>
 					<item.icon class="h-3.5 w-3.5 shrink-0" />
 					<span class="text-[13px] font-medium">{item.label}</span>
 					{#if item.id === null && newSignalCount > 0}
@@ -116,12 +113,10 @@
 				</button>
 			{/each}
 			<button onclick={onShowSaved} class={`flex items-center gap-3 px-2 py-2 text-left transition-colors ${rowClass(showSavedOnly)}`}>
-				<span class="axon-label w-5 opacity-50">{pad(navigation.length + 1)}</span>
 				<Bookmark class="h-3.5 w-3.5 shrink-0" />
 				<span class="text-[13px] font-medium">Saved</span>
 			</button>
 			<button onclick={onShowDigest} class={`flex items-center gap-3 px-2 py-2 text-left transition-colors ${rowClass(showDigestView)}`}>
-				<span class="axon-label w-5 opacity-50">{pad(navigation.length + 2)}</span>
 				<Sparkles class="h-3.5 w-3.5 shrink-0" />
 				<span class="text-[13px] font-medium">Weekly digest</span>
 			</button>
@@ -136,13 +131,12 @@
 		</div>
 		{#if trends.length > 0}
 			<ol class="space-y-0.5">
-				{#each trends.slice(0, 8) as trend, i}
+				{#each trends.slice(0, 8) as trend}
 					<li>
 						<button
 							onclick={() => onTopicSearch(trend.keyword)}
-							class={`grid w-full grid-cols-[22px_1fr_auto] items-baseline gap-2 py-1 text-left transition-colors ${dark ? 'text-white/70 hover:text-white' : 'text-black/70 hover:text-black'}`}
+							class={`grid w-full grid-cols-[1fr_auto] items-baseline gap-2 py-1 text-left transition-colors ${dark ? 'text-white/70 hover:text-white' : 'text-black/70 hover:text-black'}`}
 						>
-							<span class={`axon-label ${muted}`}>{pad(i + 1)}</span>
 							<span class="truncate text-[12px]">{trend.keyword}</span>
 							<span class={`axon-label ${velocityMark(trend) === '·' ? muted : ''}`}>{velocityMark(trend)}</span>
 						</button>

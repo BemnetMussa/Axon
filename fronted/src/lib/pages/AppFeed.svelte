@@ -22,13 +22,11 @@
 	};
 
 	let allArticles = $state<Article[]>([]);
-	let trendingArticles = $state<Article[]>([]);
 	let trends = $state<Trend[]>([]);
 	let loading = $state(true);
 	let fetchError = $state<string | null>(null);
 	let syncIndicator = $state(false);
 	let searchQuery = $state('');
-	let feedOrder = $state<'latest' | 'highest'>('latest');
 	let activeCategory = $state<string | null>(null);
 	let selectedArticle = $state<Article | null>(null);
 	let showDigestView = $state(false);
@@ -123,7 +121,7 @@
 
 		// The active tab is filtered server-side (see feedParams), so `allArticles`
 		// already holds only that tab's articles; only the search box narrows it here.
-		let list = showSavedOnly ? savedArticles : activeCategory === 'Trending' ? trendingArticles : allArticles;
+		let list = showSavedOnly ? savedArticles : allArticles;
 		const q = searchQuery.trim().toLowerCase();
 		if (q) {
 			list = list.filter(
@@ -188,18 +186,15 @@
 	}
 
 	// The active tab maps to backend filter params, so each tab is its own
-	// server-paginated feed: "Load more" pulls the next page *of that tab*, not
-	// the next page of the global feed. GitHub is a source filter; the other
-	// category tabs filter by category; Frontier/Trending carry no category.
-	// Highest reorders whichever tab is open by the stored score, last 7 days.
+	// server-paginated feed. Frontier is newest-day-first. Trending is the same
+	// open score, last 7 days. Research is the papers category (Signal).
 	// `isDefaultFeed` gates the persistent cache + background polling, which only
 	// apply to the unfiltered day-ordered Frontier feed.
-	let isDefaultFeed = $derived(activeCategory === null && feedOrder === 'latest');
+	let isDefaultFeed = $derived(activeCategory === null);
 	function feedParams(): { category: string | null; source: string | null; order: 'highest' | null } {
-		const order = feedOrder === 'highest' ? 'highest' : null;
-		if (activeCategory === 'GitHub') return { category: null, source: 'GitHub', order };
-		if (activeCategory && activeCategory !== 'Trending') return { category: activeCategory, source: null, order };
-		return { category: null, source: null, order };
+		if (activeCategory === 'Trending') return { category: null, source: null, order: 'highest' };
+		if (activeCategory) return { category: activeCategory, source: null, order: null };
+		return { category: null, source: null, order: null };
 	}
 
 	// Loads the Frontier feed — from cache when usable (instant), otherwise the
@@ -286,10 +281,10 @@
 		// Fetches page 1 of the *current* tab and prepends any articles we don't
 		// already have. Returns the count of new ones so the UI can show real
 		// feedback, and lets errors propagate so a failed refresh shows an error
-		// instead of a fake "up to date". Highest replaces the page, because
+		// instead of a fake "up to date". Trending replaces the page, because
 		// prepending would ignore the score order.
 		const res = await api.getArticles(null, undefined, feedParams());
-		if (feedOrder === 'highest') {
+		if (feedParams().order === 'highest') {
 			const have = new Set(allArticles.map((a) => a.id));
 			const freshCount = res.articles.filter((a) => !have.has(a.id)).length;
 			allArticles = res.articles;
@@ -448,18 +443,7 @@
 		if (!changed) return;
 
 		// Each tab is its own server-paginated feed; (re)load page 1 for it.
-		if (id === 'Trending') await fetchTrendingPage();
-		else if (id === null && feedOrder === 'latest') await loadDefaultFeed();
-		else await loadCategoryFeed();
-		feedScrollArea?.scrollTo({ top: 0 });
-	}
-
-	async function selectOrder(order: 'latest' | 'highest') {
-		if (feedOrder === order || showSavedOnly || activeCategory === 'Trending') return;
-		feedOrder = order;
-		selectedArticle = null;
-		showDigestView = false;
-		if (activeCategory === null && order === 'latest') await loadDefaultFeed();
+		if (id === null) await loadDefaultFeed();
 		else await loadCategoryFeed();
 		feedScrollArea?.scrollTo({ top: 0 });
 	}
@@ -477,26 +461,6 @@
 			persistSaved();
 		} catch {
 			/* keep what we have */
-		}
-	}
-
-	async function fetchTrendingPage() {
-		loading = true;
-		syncIndicator = true;
-		fetchError = null;
-		// Trending is a fixed top-N list, not paginated — clear any leftover cursor
-		// so the "Load more" affordance doesn't appear or fire here.
-		hasMore = false;
-		nextCursor = null;
-		try {
-			const res = await api.getTrending();
-			trendingArticles = res.articles;
-		} catch (error) {
-			console.error('Fetch trending failed', error);
-			fetchError = friendlyListError(error);
-		} finally {
-			loading = false;
-			syncIndicator = false;
 		}
 	}
 
@@ -527,7 +491,6 @@
 		if (selectedArticle?.id === id) return selectedArticle;
 		return (
 			allArticles.find((a) => a.id === id) ??
-			trendingArticles.find((a) => a.id === id) ??
 			semanticSearchResults?.find((a) => a.id === id)
 		);
 	}
@@ -743,8 +706,6 @@
 					{semanticSearchActive}
 					onTabSelect={selectCategory}
 					onSearchChange={(value) => (searchQuery = value)}
-					{feedOrder}
-					onOrderChange={selectOrder}
 					onArticleOpen={openArticle}
 					onToggleSave={toggleSave}
 					onLoadMore={loadMore}

@@ -1,4 +1,4 @@
-import { Boxes, Home, Lightbulb, Github, Flame } from 'lucide-svelte';
+import { Home, Lightbulb, Flame } from 'lucide-svelte';
 
 export type NavItem = {
 	id: string | null;
@@ -15,14 +15,12 @@ export const SUGGESTIONS = [
 ];
 
 // The only way to narrow the feed besides search. Each tab is server-paginated,
-// so "Load more" pulls the next page *of that tab*. Ids are the backend category
-// ids ('GitHub' is a source filter, 'Trending' its own endpoint; see feedParams).
+// so "Load more" pulls the next page *of that tab*. Ids are backend filters
+// (see feedParams): Trending is order=highest, Signal is the papers category.
 export const NAVIGATION: NavItem[] = [
 	{ id: null, label: 'Frontier', icon: Home },
 	{ id: 'Trending', label: 'Trending', icon: Flame },
 	{ id: 'Signal', label: 'Research', icon: Lightbulb },
-	{ id: 'Discovery', label: 'Tools', icon: Boxes },
-	{ id: 'GitHub', label: 'GitHub', icon: Github },
 ];
 
 const BRAND_COLORS: Record<string, string> = {

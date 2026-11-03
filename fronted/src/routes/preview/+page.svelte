@@ -44,7 +44,6 @@
 	let feedScrollArea = $state<HTMLDivElement | undefined>();
 	let readerHost = $state<HTMLDivElement | undefined>();
 	let searchQuery = $state('');
-	let feedOrder = $state<'latest' | 'highest'>('latest');
 
 	const noop = () => {};
 
@@ -122,10 +121,8 @@
 						tabs={NAVIGATION}
 						activeTab={null}
 						showSavedOnly={false}
-						{feedOrder}
 						onTabSelect={noop}
 						onSearchChange={(value) => (searchQuery = value)}
-						onOrderChange={(order) => (feedOrder = order)}
 						onArticleOpen={noop}
 						onToggleSave={noop}
 						onLoadMore={noop}
