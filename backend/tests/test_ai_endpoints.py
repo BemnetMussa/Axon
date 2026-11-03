@@ -19,6 +19,10 @@ def test_chat_validates_question_bounds(client, auth_headers, session):
 
 
 def test_chat_answers(client, auth_headers, session, monkeypatch):
+    async def no_fetch(url):
+        return None
+
+    monkeypatch.setattr(main, "extract_article_content", no_fetch)
     monkeypatch.setattr(main, "chat_about_article", lambda **kw: f"echo: {kw['question']}")
     article = make_article(session)
     res = client.post(

@@ -47,8 +47,8 @@ Axon gives you the dots. Connecting them is your job. Briefs say what the source
 - **An open filter** — one score, five checks, no black box. [See how it works ↓](#how-the-filter-works)
 - **17 sources** — AI labs, ArXiv, GitHub, Hacker News, Lobsters and tech news, read every 4 hours.
 - **20 stories a sweep, max** — a feed you can actually finish.
-- **Briefs from the full article** — not the headline. No added opinions.
-- **A chat per story** — it answers from that article only, and says so when the article doesn't cover your question.
+- **The source's own words** — the abstract, the lede, or the description. No rewritten brief.
+- **A chat per story** — it fetches that page when you ask, and answers from it.
 - **Weekly digest** — what the strongest stories said, every Sunday morning.
 - **Installable PWA** — push notifications when a sweep lands.
 
@@ -82,7 +82,7 @@ Candidates are sorted by score. Axon walks down the list and admits a story only
 
 ### 3. Brief
 
-Each admitted story has its full text fetched and a brief written from it. The chat on a story answers from that article only.
+Each admitted story keeps the short text its source already published. Chat fetches the page only when you ask, and answers from that.
 
 ### What that looks like
 
@@ -116,7 +116,7 @@ Each admitted story has its full text fetched and a brief written from it. The c
 
 ## What you get
 
-- **Read** — a brief for every story, written from the full text: the main point, the specifics, and the caveats the source states.
+- **Read** — the source's own short text: abstract, lede, or description.
 - **Ask** — a chat per story that answers from that article. Suggested questions and voice input on supported phones.
 - **Catch up** — a weekly digest of what the strongest stories actually said, with a shared theme only when several of them state one. Each title links to the original.
 
@@ -135,7 +135,7 @@ Everything that decides what you read, and how it's written up:
 | Open (in this repo) | Not published |
 |---|---|
 | Curation engine: sources, scoring, checks, dedupe, categories | Production data, users, and keys |
-| AI pipeline: briefs, chat, weekly synthesis | |
+| AI pipeline: chat on a story | |
 | The prompts the hosted product uses ([`prompts_hosted.py`](backend/engine/prompts_hosted.py)) | |
 | API (FastAPI) and app (SvelteKit PWA) | |
 
@@ -158,9 +158,9 @@ cp .env.example .env
 uvicorn app.main:app --reload --port 8000
 ```
 
-You need PostgreSQL: put a `DATABASE_URL` (for example Supabase) in `.env`, or run `cd backend && docker compose up db -d` (Postgres on host port `5433`). Add a `GROQ_API_KEY` to `backend/.env` for briefs and chat; ingest works without it.
+You need PostgreSQL: put a `DATABASE_URL` (for example Supabase) in `.env`, or run `cd backend && docker compose up db -d` (Postgres on host port `5433`). Add a `GROQ_API_KEY` to `backend/.env` for chat. Ingest and the feed work without it.
 
-Trigger a sweep with `POST /ingest`, then `POST /analyze` to write the briefs.
+Trigger a sweep with `POST /ingest`.
 
 ### Tests
 
@@ -174,7 +174,7 @@ cd fronted && npm test
 ```mermaid
 graph LR
     Sources[17 sources] -->|fetch + score + 5 checks| Engine[Curation engine]
-    Engine -->|full text + brief| AI[AI layer · Groq]
+    Engine -->|kept stories| AI[Chat · Groq, on ask]
     AI --> DB[(PostgreSQL)]
     DB -->|REST| App[SvelteKit PWA]
     Engine -->|new stories| Push[Web push]

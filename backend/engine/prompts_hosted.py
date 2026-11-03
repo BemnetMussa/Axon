@@ -50,7 +50,6 @@ Rules:
 
 Article title: {title}
 Article text: {content}
-Axon's brief of the article: {insight}
 
 Question: {question}"""
 

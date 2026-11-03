@@ -592,28 +592,9 @@
 	}
 
 	$effect(() => {
-		const id = selectedArticle?.id;
-		if (id == null) return;
-		let cancelled = false;
-		suggestionsLoading = true;
+		if (selectedArticle?.id == null) return;
 		chatSuggestions = [...SUGGESTIONS];
-		api
-			.getChatSuggestions(id)
-			.then((res) => {
-				if (cancelled) return;
-				if (res.suggestions && res.suggestions.length >= 3) {
-					chatSuggestions = res.suggestions;
-				}
-			})
-			.catch(() => {
-				/* keep fallback SUGGESTIONS */
-			})
-			.finally(() => {
-				if (!cancelled) suggestionsLoading = false;
-			});
-		return () => {
-			cancelled = true;
-		};
+		suggestionsLoading = false;
 	});
 
 	// Keep teardown inside onMount's return — onDestroy also runs during SSR

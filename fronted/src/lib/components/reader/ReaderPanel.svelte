@@ -39,7 +39,6 @@
 	let dark = $derived(theme === 'dark');
 	let why = $derived(whyKept(article));
 	let host = $derived(hostname(article.url));
-	let isBrief = $derived(Boolean(article.insight));
 
 	$effect(() => {
 		chatMessages.length;
@@ -143,11 +142,11 @@
 				{#if why}
 					<span>Made the cut: <span class={`font-medium ${dark ? 'text-zinc-200' : 'text-zinc-800'}`}>{why}</span></span>
 				{/if}
-				<span class="sm:ml-auto">{isBrief ? 'Axon brief · AI summary of the original' : 'Excerpt from the source'}</span>
+				<span class="sm:ml-auto">Excerpt from the source</span>
 			</div>
 
 			<div class={`axon-reader-body prose max-w-none text-[16px] leading-[1.7] sm:text-[17px] sm:leading-[1.75] prose-headings:tracking-tight ${dark ? 'prose-invert text-zinc-300 prose-strong:text-white' : 'text-zinc-700 prose-strong:text-zinc-950'}`}>
-				{@html renderMarkdown(article.insight || article.content_snippet)}
+				{@html renderMarkdown(article.content_snippet || '')}
 			</div>
 
 			<button

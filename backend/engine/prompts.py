@@ -27,8 +27,7 @@ def chat(title: str, content: str, insight: str, question: str) -> str:
 If the context does not cover the question, say so.
 
 Article Title: {title}
-Context Snippet: {content}
-AI Insight: {insight}
+Article text: {content}
 
 User Question: {question}"""
 

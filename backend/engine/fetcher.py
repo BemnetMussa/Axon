@@ -11,7 +11,6 @@ from datetime import datetime, timedelta, timezone
 from time import mktime
 from sqlmodel import Session, select, col
 from app.models import Article
-from app.services.extractor import extract_article_content
 from app.services.analyzer import classify_article
 from dotenv import load_dotenv
 
@@ -50,11 +49,6 @@ MAX_TOTAL_PER_RUN = 20
 # Only ingest genuinely recent items — a "what's happening now" feed should never
 # surface months-old posts (stale RSS, resurfaced old HN threads, etc.).
 FRESHNESS_DAYS = 30
-
-# How many selected articles to hydrate with full body text per run, and how
-# many of those fetches to run concurrently. Extraction skips aggregator
-# domains (GitHub/HN/ArXiv/etc.) internally — for those the snippet IS the content.
-FULL_CONTENT_CONCURRENCY = 8
 
 # Per-source trust weights for ranking. Higher = inherently higher-signal, which
 # matters most for RSS sources that carry no engagement number (likes == 0).
@@ -763,30 +757,6 @@ def _is_near_dup(tokens: set[str], source: str, accepted: list[tuple[str, set[st
     return False
 
 
-async def _hydrate_full_content(client: httpx.AsyncClient, articles: list[dict]) -> None:
-    """Fetch readable body text for selected articles in place (best-effort).
-
-    Aggregator domains are skipped inside extract_article_content (their snippet
-    is already the payload), so this mostly hits the blog/news long-form sources
-    whose RSS summary is too thin for a good AI insight.
-    """
-    sem = asyncio.Semaphore(FULL_CONTENT_CONCURRENCY)
-
-    async def one(sig: dict) -> None:
-        url = sig.get("url")
-        if not url:
-            return
-        async with sem:
-            try:
-                text = await extract_article_content(url)
-                if text:
-                    sig["full_content"] = text
-            except Exception:
-                pass
-
-    await asyncio.gather(*[one(s) for s in articles])
-
-
 # ===========================================================================
 # MAIN INGESTION
 # ===========================================================================
@@ -904,10 +874,7 @@ async def ingest_intelligence(session: Session, context_id: str | None = None):
                 print(f"AXON: Raised {raised} stored scores")
             return 0
 
-        # Pull readable long-form text for the selected articles so the AI writes
-        # insights from the real body, not a 1-2 sentence RSS blurb.
-        await _hydrate_full_content(client, final)
-
+        # Bodies are fetched later, the first time someone asks about a story.
         added = 0
         for sig in final:
             # Classify ONCE, here, as the single source of truth. (The analyzer

@@ -74,5 +74,5 @@
 
 	<h3 class={`mt-2.5 mb-1.5 line-clamp-2 min-w-0 break-words text-lg font-semibold leading-[1.3] tracking-[-0.02em] transition-colors sm:text-xl ${dark ? 'text-zinc-100 group-hover:text-white' : 'text-zinc-900'}`} style="overflow-wrap: anywhere;">{article.title}</h3>
 
-	<p class={`line-clamp-2 min-w-0 overflow-hidden text-sm leading-6 sm:line-clamp-3 sm:text-[15px] ${dark ? 'text-zinc-400' : 'text-zinc-600'}`} style="overflow-wrap: anywhere;">{stripHtml(article.insight || article.content_snippet || '')}</p>
+	<p class={`line-clamp-2 min-w-0 overflow-hidden text-sm leading-6 sm:line-clamp-3 sm:text-[15px] ${dark ? 'text-zinc-400' : 'text-zinc-600'}`} style="overflow-wrap: anywhere;">{stripHtml(article.content_snippet || '')}</p>
 </article>

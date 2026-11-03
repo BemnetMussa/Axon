@@ -352,9 +352,11 @@ def probe_groq() -> dict:
 
 
 def analyze_articles(session: Session, progress=None):
-    """progress: optional callable(done, total, phase) for live admin reporting."""
-    # Newest first, recent only: the feed opens on today, so a story from last month
-    # without a note costs nothing, while today's story without one is what users see.
+    """Mark the recent unprocessed stories done and refresh keyword trends.
+
+    Cards show the source's own text, so this no longer calls a model or
+    builds embeddings. Older unprocessed rows stay untouched.
+    """
     cutoff = datetime.now(timezone.utc) - timedelta(days=ANALYZE_WINDOW_DAYS)
     articles = session.exec(
         select(Article)
@@ -366,46 +368,15 @@ def analyze_articles(session: Session, progress=None):
     if not articles:
         return 0
 
-    total = len(articles)
-    print(f"AXON: Analyzing {total} articles in batches of {BATCH_SIZE}...")
-    if progress:
-        progress(0, total, "analyze")
-
-    for i in range(0, total, BATCH_SIZE):
-        batch = articles[i:i + BATCH_SIZE]
-        for article in batch:
-            # Category is already set once at ingest (see fetcher.classify_article).
-            # Prefer the hydrated full body; fall back to the RSS snippet.
-            source_text = article.full_content or article.content_snippet or ""
-            insight = generate_insight(article.title, source_text)
-            article.insight = insight
-            # Only "consume" the article when an insight actually generated. If
-            # Groq is down (empty result), leave is_processed=False so the NEXT
-            # scheduled run retries it — instead of permanently burying it as
-            # processed-with-no-insight (the cause of the stuck backlog).
-            article.is_processed = bool(insight)
-            session.add(article)
-
-        # Embed the whole batch in a single fastembed call rather than one per article.
-        to_embed = [(a, f"{a.title} {a.insight}") for a in batch if a.insight]
-        if to_embed:
-            vectors = list(get_embed_model().embed([text for _, text in to_embed]))
-            for (article, _), vector in zip(to_embed, vectors):
-                article.embedding = vector.tolist()
-                session.add(article)
-
-        session.commit()
-        processed = min(i + BATCH_SIZE, total)
-        print(f"AXON: Processed {processed}/{total}")
-        if progress:
-            progress(processed, total, "analyze")
-
-        if i + BATCH_SIZE < total:
-            time.sleep(BATCH_DELAY)
-
-    update_trends(session, articles)
+    for article in articles:
+        article.is_processed = True
+        session.add(article)
     session.commit()
-    return total
+    update_trends(session, articles)
+    if progress:
+        progress(len(articles), len(articles), "analyze")
+    print(f"AXON: Recorded {len(articles)} stories (no model call)")
+    return len(articles)
 
 
 def retry_failed_insights(session: Session, progress=None):
@@ -528,10 +499,10 @@ def _link_titles(markdown: str, articles: list[Article]) -> str:
 
 
 def _build_fallback_weekly_digest(top_articles: list[Article]) -> str:
-    """Factual digest when AI generation is unavailable: each story's own brief, no invented theme."""
+    """Titles plus each source's own short text. No model."""
     items = []
     for a in top_articles:
-        brief = re.sub(r"<[^>]+>", "", (a.insight or a.content_snippet or "")).strip()
+        brief = re.sub(r"<[^>]+>", "", (a.content_snippet or "")).strip()
         line = f"* **{a.title}** ({a.source})"
         if brief:
             line += f": {brief[:240]}"
@@ -560,20 +531,7 @@ def generate_weekly_digest(session: Session) -> str | None:
     if not top_articles:
         return None
 
-    blocks = []
-    for a in top_articles:
-        brief = re.sub(r"<[^>]+>", "", (a.insight or a.content_snippet or "")).strip()[:800]
-        blocks.append(f"Title: {a.title}\nSource: {a.source}\nBrief: {brief}\n---")
-    context = "\n".join(blocks)
-
-    prompt = prompts.weekly_digest(len(top_articles), context)
-
-    try:
-        content_res = _call_groq_with_fallback(messages=[{"role": "user", "content": prompt}], max_tokens=2000, temperature=0.3)
-        digest_content = _link_titles(content_res.strip(), top_articles)
-    except Exception as e:
-        print(f"Failed to generate weekly digest: {e}")
-        digest_content = _build_fallback_weekly_digest(top_articles)
+    digest_content = _build_fallback_weekly_digest(top_articles)
 
     # Save to database (AI output or fallback output)
     digest = Digest(content=digest_content)

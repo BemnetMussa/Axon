@@ -816,15 +816,25 @@ def article_chat_suggestions(request: Request, article_id: int, session: Session
 
 @app.post("/articles/{article_id}/chat")
 @limiter.limit("20/minute")
-def article_chat(request: Request, article_id: int, req: ChatRequest, session: Session = Depends(get_session)):
+async def article_chat(request: Request, article_id: int, req: ChatRequest, session: Session = Depends(get_session)):
     article = session.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-    content = article.full_content or article.content_snippet or ""
+    # Fetch the linked page the first time someone asks, then keep it.
+    content = article.full_content
+    if not content:
+        content = await extract_article_content(article.url)
+        if content:
+            article.full_content = content
+            session.add(article)
+            session.commit()
+    text = (content or article.content_snippet or "").strip()
+    if not text:
+        return {"answer": "The source text isn't available, so I can't answer from it."}
     answer = chat_about_article(
         title=article.title,
-        content=content,
-        insight=article.insight or "",
+        content=text,
+        insight="",
         question=req.question,
     )
     return {"answer": answer}
